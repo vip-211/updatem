@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import smtplib
 import ssl
 from email.message import EmailMessage
@@ -33,12 +34,15 @@ if not app.secret_key:
     )
 
 AUDIT_PASSCODE_PEPPER = os.getenv("AUDIT_PASSCODE_PEPPER") or app.secret_key
-LOG_DIR = BASE_DIR / "logs"
+from logging.handlers import TimedRotatingFileHandler
 
+LOG_DIR = BASE_DIR / "logs"
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+LOG_BACKUP_COUNT = 90
 
 if os.getenv("VERCEL"):
-    # Vercel: write logs to stdout so they appear in Function Logs.
+    # Vercel uses an ephemeral filesystem; send logs to stdout so they
+    # remain available in Vercel Function Logs.
     logging.basicConfig(
         level=logging.INFO,
         format=LOG_FORMAT,
@@ -46,18 +50,30 @@ if os.getenv("VERCEL"):
         force=True,
     )
 else:
-    # Local development: write logs to both a file and the console.
-    LOG_DIR.mkdir(exist_ok=True)
+    # Local/server deployment: write to logs/app.log and rotate at midnight.
+    # Archived files are named app.log.YYYY-MM-DD and 90 archives are retained.
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    daily_file_handler = TimedRotatingFileHandler(
+        filename=str(LOG_DIR / "app.log"),
+        when="midnight",
+        interval=1,
+        backupCount=LOG_BACKUP_COUNT,
+        encoding="utf-8",
+        delay=True,
+        utc=False,
+    )
+    daily_file_handler.suffix = "%Y-%m-%d"
+    daily_file_handler.setLevel(logging.INFO)
+    daily_file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
     logging.basicConfig(
         level=logging.INFO,
-        format=LOG_FORMAT,
-        handlers=[
-            logging.FileHandler(
-                LOG_DIR / "app.log",
-                encoding="utf-8",
-            ),
-            logging.StreamHandler(),
-        ],
+        handlers=[daily_file_handler, console_handler],
         force=True,
     )
 
