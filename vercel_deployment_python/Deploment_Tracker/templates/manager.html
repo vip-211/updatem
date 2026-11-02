@@ -814,6 +814,147 @@ tbody tr:hover td {
     .history-pagination { justify-content: space-between; }
 }
 
+
+
+.team-export-tools {
+    display: flex; align-items: end; gap: 10px; flex-wrap: wrap;
+    padding: 0 21px 18px;
+}
+.team-export-field { display: grid; gap: 5px; min-width: 150px; }
+.team-export-field label { color: #758198; font-size: 10px; font-weight: 800; letter-spacing: .4px; }
+.team-export-field input, .team-export-field select {
+    min-width: 150px; padding: 9px 11px; border: 1px solid #dce4ef;
+    border-radius: 9px; background: #fff; color: #334155; font-size: 12px;
+}
+.team-export-tools .btn { min-height: 36px; padding: 9px 13px; }
+@media (max-width: 760px) {
+    .team-export-tools { padding: 0 14px 15px; align-items: stretch; }
+    .team-export-field, .team-export-field input, .team-export-field select { width: 100%; }
+    .team-export-tools .btn { width: 100%; }
+}
+
+/* Team-wise deployment breakdown */
+.team-deployment-panel { min-width: 0; }
+.team-record-cell { min-width: 190px; max-width: 300px; white-space: normal; line-height: 1.6; }
+.team-record-item { display: inline; color: #475569; font-size: 11px; }
+.team-record-item strong { color: #1e293b; font-weight: 850; }
+.team-record-separator { color: #a0aabd; }
+.team-record-empty { color: #94a3b8; font-size: 11px; font-style: italic; }
+.team-deployment-list { display: grid; gap: 15px; }
+.team-deployment-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 145px) minmax(50px, 1fr) 34px;
+    align-items: center;
+    gap: 10px;
+}
+.team-deployment-name {
+    min-width: 0; color: #526078; font-size: 11px;
+    font-weight: 750; overflow-wrap: anywhere;
+}
+.team-deployment-track {
+    height: 9px; overflow: hidden; border-radius: 20px; background: #edf1f7;
+}
+.team-deployment-fill {
+    height: 100%; border-radius: 20px;
+    background: linear-gradient(90deg, #526bf6, #9baaff);
+}
+.team-deployment-count {
+    color: #202b43; font-size: 12px; font-weight: 850;
+    text-align: right; font-variant-numeric: tabular-nums;
+}
+.team-deployment-total {
+    display: inline-flex; align-items: center; padding: 5px 9px;
+    border-radius: 20px; background: #edf1ff; color: #3656c8;
+    font-size: 10px; font-weight: 800;
+}
+.team-deployment-empty {
+    padding: 22px 10px; border: 1px dashed #dce4ef;
+    border-radius: 12px; color: #8792a6; font-size: 12px;
+    text-align: center; line-height: 1.6;
+}
+@media (max-width: 760px) {
+    .team-deployment-row {
+        grid-template-columns: minmax(75px, 110px) minmax(35px, 1fr) 28px;
+        gap: 7px;
+    }
+}
+
+
+
+/* Visual refresh: richer color, depth and responsive chart styling */
+:root {
+    --navy:#172554; --blue:#4f67f6; --muted:#71809a; --line:#e6ebf5;
+    --green:#059669; --orange:#d97706; --red:#dc2626; --purple:#7c3aed; --cyan:#0891b2;
+}
+body { background:linear-gradient(135deg,#f4f7ff 0%,#f8faff 48%,#f2f6ff 100%); }
+.top {
+    background:radial-gradient(circle at 12% 0%,#536df7 0,transparent 32%),
+      radial-gradient(circle at 88% 10%,#8b5cf6 0,transparent 30%),
+      linear-gradient(120deg,#111a3d 0%,#243b82 58%,#3449a5 100%);
+    box-shadow:0 12px 35px #1c2d681c;
+}
+.logo { background:linear-gradient(145deg,#ffffff25,#ffffff0b); box-shadow:inset 0 1px #ffffff30; }
+.wrap { max-width:1580px; }
+.metric {
+    border:1px solid #e4e9f6; box-shadow:0 8px 24px #20356b0b;
+    background:linear-gradient(145deg,#fff 0%,#fbfcff 100%);
+}
+.metric::after { width:125px;height:125px;right:-38px;top:-50px;opacity:.95; }
+.metric .number { letter-spacing:-1.4px; }
+.metric:hover { box-shadow:0 14px 30px #20356b18; }
+.panel {
+    border:1px solid #e4e9f6; border-radius:19px;
+    box-shadow:0 9px 26px #20356b0c;
+    background:linear-gradient(160deg,#fff 0%,#fdfdff 100%);
+}
+.panelhead { margin-bottom:18px; }
+.panel h3 { font-size:15px; font-weight:850; color:#192849; }
+.sub { color:#8491a8; }
+.gridcharts { gap:18px; }
+.chart { height:235px; }
+.donut {
+    width:158px;height:158px;
+    box-shadow:0 9px 24px #243b8214,inset 0 0 0 1px #ffffff80;
+}
+.donut::after { inset:27px; box-shadow:inset 0 0 0 1px #edf1f8; }
+.donutcenter strong { color:#182647;font-size:29px; }
+.donutlegend { gap:15px; }
+.donutlegend .item { font-size:11px; }
+.donutlegend b { font-size:13px; }
+.track { height:10px; background:#edf1fa; box-shadow:inset 0 1px 2px #1d2f5b0b; }
+.fill { border-radius:20px; box-shadow:0 2px 7px #263a751f; }
+.barrow.status-option { border-radius:11px; padding:8px; margin:-8px; }
+.barrow.status-option:hover,.barrow.status-option:focus-visible { background:#f2f5ff; }
+.team-deployment-panel { background:linear-gradient(145deg,#fff 0%,#f7f8ff 100%); }
+.team-deployment-total { background:linear-gradient(120deg,#e9edff,#f2eaff); color:#4b46b5; padding:7px 11px; }
+.team-deployment-list { gap:17px; }
+.team-deployment-row { grid-template-columns:minmax(90px,150px) minmax(50px,1fr) 38px; }
+.team-deployment-track { height:11px; background:#e9eef8; box-shadow:inset 0 1px 2px #263a7510; }
+.team-deployment-fill { box-shadow:0 3px 8px #263a7520; }
+.team-deployment-row:nth-child(6n+1) .team-deployment-fill { background:linear-gradient(90deg,#4f67f6,#8b9bff); }
+.team-deployment-row:nth-child(6n+2) .team-deployment-fill { background:linear-gradient(90deg,#0891b2,#55c7df); }
+.team-deployment-row:nth-child(6n+3) .team-deployment-fill { background:linear-gradient(90deg,#7c3aed,#b49af8); }
+.team-deployment-row:nth-child(6n+4) .team-deployment-fill { background:linear-gradient(90deg,#059669,#55d6a8); }
+.team-deployment-row:nth-child(6n+5) .team-deployment-fill { background:linear-gradient(90deg,#d97706,#f6bd60); }
+.team-deployment-row:nth-child(6n) .team-deployment-fill { background:linear-gradient(90deg,#e04455,#f49aa5); }
+.team-deployment-name { color:#4b5872;font-size:12px; }
+.team-deployment-count { color:#1c2b4b;font-size:13px; }
+.records { border-radius:19px; }
+.records .panelhead { background:linear-gradient(90deg,#fbfcff,#f5f7ff); }
+.filters input,.filters select,.team-export-field input,.team-export-field select {
+    border-color:#dce4f2; box-shadow:0 2px 5px #20356b05;
+}
+.btn { background:linear-gradient(120deg,#526bf6,#4057dc); box-shadow:0 4px 12px #4f67f629; }
+.btn.light { background:#edf1ff;color:#4057c8;box-shadow:none; }
+.btn.ghost { box-shadow:none; }
+.pill { border-radius:7px; }
+th { background:#f4f6fc; }
+tbody tr:hover td { background:#f4f7ff; }
+@media(max-width:760px) {
+    .chart { height:220px; }
+    .donut { width:140px;height:140px; }
+}
+
 </style>
 </head>
 
@@ -952,6 +1093,36 @@ tbody tr:hover td {
             <div class="barlist" id="statusBars" aria-label="Choose a deployment status"></div>
         </div>
 
+        <div class="panel team-deployment-panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Team-wise Deployment Breakdown</h3>
+                    <div class="sub">Deployment count allocated to each team in Governance Tracker</div>
+                </div>
+                <span class="team-deployment-total">{{ team_deployment_total }} total</span>
+            </div>
+            {% if team_deployment_counts %}
+                <div class="team-deployment-list">
+                    {% for item in team_deployment_counts %}
+                        <div class="team-deployment-row">
+                            <span class="team-deployment-name" title="{{ item.team }}">{{ item.team }}</span>
+                            <div class="team-deployment-track" role="img"
+                                 aria-label="{{ item.team }}: {{ item.count }} deployments">
+                                <div class="team-deployment-fill"
+                                     data-percent="{{ ((item.count / team_chart_max * 100) if team_chart_max else 0)|round(2) }}"></div>
+                            </div>
+                            <strong class="team-deployment-count">{{ item.count }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="team-deployment-empty">
+                    No team allocations found yet.<br>
+                    Add team names and deployment counts in Governance Tracker.
+                </div>
+            {% endif %}
+        </div>
+
     </section>
 
     <section class="panel records">
@@ -973,6 +1144,9 @@ tbody tr:hover td {
                     <option value="no">Roll Back: No</option>
                 </select>
 
+                <input id="recordsFromDate" type="date" aria-label="From date" title="From date">
+                <input id="recordsToDate" type="date" aria-label="To date" title="To date">
+
                 <select id="statusFilter" aria-label="Filter by status">
                     <option value="">All statuses</option>
                     <option value="pending">Pending</option>
@@ -991,8 +1165,12 @@ tbody tr:hover td {
                     {% endfor %}
                 </select>
 
-                <button class="btn light" type="button"
-                        onclick="exportTableCSV()">↓ Export CSV</button>
+                <select id="recordsExportFormat" aria-label="Export format">
+                    <option value="csv">CSV</option>
+                    <option value="xlsx">Excel (.xlsx)</option>
+                </select>
+                <button class="btn light" type="button" id="applyRecordDateFilter">View Date-wise Report</button>
+                <button class="btn" type="button" id="exportRecordsButton">↓ Export Report</button>
             </div>
         </div>
 
@@ -1007,6 +1185,7 @@ tbody tr:hover td {
                         <th><button class="sort-heading" type="button" data-record-sort="slotStart" aria-sort="none">Slot Start <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
                         <th>Slot End</th>
                         <th>Application</th>
+                        <th>Team-wise Deployment Breakdown</th>
                         <th>Type</th>
                         <th>Change Type</th>
                         <th>Released By</th>
@@ -1036,6 +1215,15 @@ tbody tr:hover td {
                         <td>{{ r.slot_end.strftime('%H:%M') if r.slot_end else '' }}</td>
 
                         <td>{{ r.application_name or '' }}</td>
+                        <td class="team-record-cell">
+                            {% if r.team_allocations_display %}
+                                {% for allocation in r.team_allocations_display %}
+                                    <span class="team-record-item">{{ allocation.team }}: <strong>{{ allocation.count }}</strong></span>{% if not loop.last %}<span class="team-record-separator"> | </span>{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="team-record-empty">Not allocated</span>
+                            {% endif %}
+                        </td>
                         <td>{{ r.deployment_type or '' }}</td>
                         <td>{{ r.change_type or '' }}</td>
                         <td>{{ r.released_by or '' }}</td>
@@ -1058,7 +1246,7 @@ tbody tr:hover td {
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="15" class="empty">
+                        <td colspan="16" class="empty">
                             No deployment records found.
                         </td>
                     </tr>
@@ -1160,9 +1348,13 @@ tbody tr:hover td {
 </main>
 
 <script>
+
 const searchBox = document.getElementById('search');
 const rollbackFilter = document.getElementById('rollbackFilter');
 const statusFilter = document.getElementById('statusFilter');
+const recordsFromDate = document.getElementById('recordsFromDate');
+const recordsToDate = document.getElementById('recordsToDate');
+const recordsExportFormat = document.getElementById('recordsExportFormat');
 const tableBody = document.querySelector('#recordsTable tbody');
 let recordRows = [...tableBody.querySelectorAll('tr[data-status]')];
 const recordPageSize = 10;
@@ -1250,7 +1442,12 @@ function filterRows(resetPage = true) {
         const matchText = row.innerText.toLocaleLowerCase().includes(query);
         const matchRollback = !rollbackFilter.value || row.dataset.rollback === rollbackFilter.value;
         const matchStatus = !statusFilter.value || row.dataset.status === statusFilter.value;
-        return matchText && matchRollback && matchStatus;
+        const rowDate = (row.dataset.date || '').trim();
+        const fromDate = recordsFromDate?.value || '';
+        const toDate = recordsToDate?.value || '';
+        const matchFromDate = !fromDate || (rowDate && rowDate >= fromDate);
+        const matchToDate = !toDate || (rowDate && rowDate <= toDate);
+        return matchText && matchRollback && matchStatus && matchFromDate && matchToDate;
     });
 
     if (resetPage) recordPage = 1;
@@ -1299,13 +1496,85 @@ function exportTableCSV() {
     const link = document.createElement('a');
 
     link.href = url;
-    link.download = 'deployment_records.csv';
+    const fromPart = recordsFromDate?.value || 'all';
+    const toPart = recordsToDate?.value || 'dates';
+    link.download = `deployment_records_${fromPart}_to_${toPart}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// Apply the selected date range to the All Deployment Records table.
+document.getElementById('applyRecordDateFilter')?.addEventListener('click', () => {
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    filterRows(true);
+});
+
+[recordsFromDate, recordsToDate].forEach(input => {
+    input?.addEventListener('change', () => {
+        const fromDate = recordsFromDate.value;
+        const toDate = recordsToDate.value;
+        if (fromDate && toDate && toDate < fromDate) {
+            alert('To Date must be on or after From Date.');
+            input.value = '';
+        }
+    });
+});
+
+async function exportTableExcel() {
+    const headers = [...document.querySelectorAll('#recordsTable thead th')]
+        .map(th => th.innerText.replace(/[↕↑↓]/g, '').trim());
+    const rows = filteredRecordRows.map((tr, index) =>
+        [...tr.cells].map((td, cellIndex) =>
+            cellIndex === 0 ? String(index + 1) : td.innerText.trim()
+        )
+    );
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    const response = await fetch('/manager/export-deployment-records.xlsx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headers, rows, from_date: fromDate, to_date: toDate })
+    });
+    if (!response.ok) {
+        const message = await response.text();
+        alert(message || 'Unable to export Excel report.');
+        return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `deployment_records_${fromDate || 'all'}_to_${toDate || 'dates'}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.getElementById('exportRecordsButton')?.addEventListener('click', () => {
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    // Ensure the export uses the latest date range and all active table filters.
+    filterRows(true);
+    if (recordsExportFormat.value === 'xlsx') exportTableExcel();
+    else exportTableCSV();
+});
 
 function dateKey(date) {
     return [
@@ -1362,28 +1631,20 @@ function updateWeekLabel() {
 function drawActivity() {
     const canvas = document.getElementById('activityChart');
     if (!canvas) return;
-
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-
-    const width = rect.width;
-    const height = rect.height;
+    const width = rect.width, height = rect.height;
     const dpr = window.devicePixelRatio || 1;
-
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
-
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    // Reserve two lines under the axis: weekday and actual calendar date.
-    const pad = { left: 30, right: 8, top: 16, bottom: 44 };
+    const pad = { left: 32, right: 16, top: 22, bottom: 48 };
     const plotWidth = width - pad.left - pad.right;
     const plotHeight = height - pad.top - pad.bottom;
-
     const days = [];
-
     for (let i = 0; i < 7; i++) {
         const date = addDays(selectedWeekStart, i);
         days.push({
@@ -1393,80 +1654,72 @@ function drawActivity() {
             count: 0
         });
     }
-
     recordRows.forEach(row => {
         const date = parseDate(row.dataset.date);
         if (!date) return;
-
         const day = days.find(item => dateKey(item.date) === dateKey(date));
         if (day) day.count++;
     });
 
     const maxCount = Math.max(4, ...days.map(day => day.count));
-
     ctx.font = '10px Segoe UI, Arial';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     for (let i = 0; i <= 4; i++) {
         const value = Math.ceil(maxCount * i / 4);
         const y = pad.top + plotHeight - (i / 4) * plotHeight;
-
-        ctx.strokeStyle = '#edf1f7';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(pad.left, y);
-        ctx.lineTo(width - pad.right, y);
-        ctx.stroke();
-
-        ctx.fillStyle = '#94a0b4';
-        ctx.fillText(String(value), pad.left - 8, y);
+        ctx.strokeStyle = '#edf1f8'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#98a4b8'; ctx.fillText(String(value), pad.left - 9, y);
     }
 
-    const step = plotWidth / days.length;
-    const barWidth = Math.min(25, step * .48);
-
-    days.forEach((day, index) => {
-        const x = pad.left + index * step + (step - barWidth) / 2;
-        const barHeight = day.count / maxCount * Math.max(0, plotHeight - 5);
-        const y = pad.top + plotHeight - barHeight;
-
-        const gradient = ctx.createLinearGradient(0, y, 0, pad.top + plotHeight);
-        gradient.addColorStop(0, '#526bf6');
-        gradient.addColorStop(1, '#aab8ff');
-        ctx.fillStyle = gradient;
-
-        const radius = Math.min(5, barWidth / 2);
-        const actualHeight = Math.max(2, barHeight);
-
-        ctx.beginPath();
-        if (typeof ctx.roundRect === 'function') {
-            ctx.roundRect(x, y, barWidth, actualHeight, radius);
-        } else {
-            ctx.rect(x, y, barWidth, actualHeight);
-        }
-        ctx.fill();
-
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.font = '10px Segoe UI, Arial';
-        ctx.fillStyle = '#77839a';
-        ctx.fillText(day.label, x + barWidth / 2, pad.top + plotHeight + 5);
-        ctx.font = '9px Segoe UI, Arial';
-        ctx.fillStyle = '#334155';
-        ctx.fillText(day.dateLabel, x + barWidth / 2, pad.top + plotHeight + 18);
-
-        if (day.count > 0) {
-            ctx.fillStyle = '#334155';
-            ctx.font = 'bold 10px Segoe UI, Arial';
-            ctx.fillText(
-                String(day.count),
-                x + barWidth / 2,
-                Math.max(5, y - 13)
-            );
+    const step = plotWidth / Math.max(1, days.length - 1);
+    const points = days.map((day, i) => ({
+        x: pad.left + i * step,
+        y: pad.top + plotHeight - (day.count / maxCount) * (plotHeight - 8),
+        day
+    }));
+    // Soft area under the line.
+    const area = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotHeight);
+    area.addColorStop(0, 'rgba(79,103,246,.28)');
+    area.addColorStop(1, 'rgba(79,103,246,.015)');
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, pad.top + plotHeight);
+    points.forEach((point, i) => {
+        if (i === 0) ctx.lineTo(point.x, point.y);
+        else {
+            const prev = points[i - 1];
+            const midX = (prev.x + point.x) / 2;
+            ctx.bezierCurveTo(midX, prev.y, midX, point.y, point.x, point.y);
         }
     });
+    ctx.lineTo(points[points.length - 1].x, pad.top + plotHeight);
+    ctx.closePath(); ctx.fillStyle = area; ctx.fill();
 
+    // Smooth line with a subtle glow.
+    ctx.beginPath();
+    points.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else {
+            const prev = points[i - 1], midX = (prev.x + point.x) / 2;
+            ctx.bezierCurveTo(midX, prev.y, midX, point.y, point.x, point.y);
+        }
+    });
+    ctx.strokeStyle = 'rgba(79,103,246,.15)'; ctx.lineWidth = 9;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.strokeStyle = '#526bf6'; ctx.lineWidth = 3; ctx.stroke();
+
+    points.forEach(({x, y, day}) => {
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#526bf6'; ctx.stroke();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.font = 'bold 10px Segoe UI, Arial'; ctx.fillStyle = '#33436a';
+        if (day.count > 0) ctx.fillText(String(day.count), x, y - 10);
+        ctx.textBaseline = 'top'; ctx.font = '10px Segoe UI, Arial'; ctx.fillStyle = '#78859c';
+        ctx.fillText(day.label, x, pad.top + plotHeight + 10);
+        ctx.font = '9px Segoe UI, Arial'; ctx.fillStyle = '#a0aabd';
+        ctx.fillText(day.dateLabel, x, pad.top + plotHeight + 24);
+    });
     updateWeekLabel();
 }
 
@@ -1490,9 +1743,9 @@ document.getElementById('currentWeekButton').addEventListener('click', function 
 
 function buildDonut() {
     const types = [
-        { name: 'Automation', color: '#4f6cf7', count: 0 },
-        { name: 'Manual', color: '#13b8a6', count: 0 },
-        { name: 'Other', color: '#cbd5e1', count: 0 }
+        { name: 'Automation', color: '#526bf6', count: 0 },
+        { name: 'Manual', color: '#10b99a', count: 0 },
+        { name: 'Other', color: '#a78bfa', count: 0 }
     ];
 
     recordRows.forEach(row => {
@@ -1541,15 +1794,15 @@ function buildStatusBars() {
     ];
 
     const colors = {
-        'Pending': '#f59e0b',
-        'Approved': '#4f6cf7',
-        'Rejected': '#ef4444',
-        'Scheduled': '#4f6cf7',
-        'In Progress': '#06b6d4',
-        'Successful': '#10b981',
-        'Failed': '#ef4444',
-        'Rolled Back': '#8b5cf6',
-        'Cancelled': '#94a3b8'
+        'Pending': 'linear-gradient(90deg,#f59e0b,#fbc56b)',
+        'Approved': 'linear-gradient(90deg,#526bf6,#9baaff)',
+        'Rejected': 'linear-gradient(90deg,#ef4444,#f99a9a)',
+        'Scheduled': 'linear-gradient(90deg,#6366f1,#a5b4fc)',
+        'In Progress': 'linear-gradient(90deg,#06b6d4,#67d8ea)',
+        'Successful': 'linear-gradient(90deg,#10b981,#6ee7b7)',
+        'Failed': 'linear-gradient(90deg,#ef4444,#fca5a5)',
+        'Rolled Back': 'linear-gradient(90deg,#8b5cf6,#c4b5fd)',
+        'Cancelled': 'linear-gradient(90deg,#94a3b8,#cbd5e1)'
     };
 
     const counts = {};
@@ -1757,6 +2010,13 @@ redraw();
 
     applyHistoryView(true);
 })();
+
+// Apply team bar widths from data attributes. Keeping dynamic values out of
+// inline CSS avoids VS Code CSS parser errors on Jinja template expressions.
+document.querySelectorAll('.team-deployment-fill[data-percent]').forEach(bar => {
+    const percent = Number.parseFloat(bar.dataset.percent);
+    bar.style.width = `${Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0}%`;
+});
 
 window.addEventListener('resize', redraw);
 </script>

@@ -4,18 +4,21 @@ import ssl
 from email.message import EmailMessage
 from email.utils import formataddr
 import json
+import csv
+import io
 import os
 import secrets
 import hashlib
 import hmac
 from datetime import datetime, time, timedelta,date
 from pathlib import Path
+from urllib.parse import urlparse
 import re
 import psycopg2
 from psycopg2 import errors
 from dotenv import load_dotenv
-from flask import (Flask,flash,jsonify,redirect,render_template,request,url_for,session)
-
+from flask import (Flask,flash,jsonify,redirect,render_template,request,url_for,session,send_file)
+import requests
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -30,7 +33,7 @@ if not app.secret_key:
     )
 
 AUDIT_PASSCODE_PEPPER = os.getenv("AUDIT_PASSCODE_PEPPER") or app.secret_key
-LOG_DIR = BLOG_DIR = BASE_DIR / "logs"
+LOG_DIR = BASE_DIR / "logs"
 
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
@@ -117,6 +120,33 @@ def normalize_audit_email(value):
         raise ValueError("Enter a valid email address for Modified By.")
     return email
 
+def validate_git_link(url):
+    """Accept only HTTPS clone URLs from approved Git hosts ending in .git."""
+    url = (url or "").strip()
+    if not url:
+        return False
+
+    try:
+        parsed = urlparse(url)
+        allowed_hosts = {
+            "github.com",
+            "gitlab.com",
+            "bitbucket.org",
+            "apnagit.rblbank.com",
+        }
+        return (
+            parsed.scheme.lower() == "https"
+            and parsed.hostname is not None
+            and parsed.hostname.lower() in allowed_hosts
+            and bool(parsed.path.strip("/"))
+            and parsed.path.rstrip("/").lower().endswith(".git")
+            and parsed.username is None
+            and parsed.password is None
+            and not parsed.query
+            and not parsed.fragment
+        )
+    except (ValueError, AttributeError):
+        return False
 
 def audit_passcode_digest(passcode):
     """Return a deterministic keyed digest so passcodes are not stored as text."""
@@ -231,6 +261,50 @@ def verify_audit_user_credentials(email_value, passcode):
         if conn is not None:
             conn.close()
 
+@app.route("/api/validate-cr", methods=["GET"])
+def validate_cr():
+
+    cr_number = (request.args.get("cr_number") or "").strip()
+
+    if not cr_number:
+        return jsonify({
+            "success": False,
+            "message": "CR Number is required."
+        }), 400
+
+    try:
+        # Validate CR from ITSM
+        cr_details = validate_cr_number(cr_number)
+
+        # Check RFID in database
+        conn = get_connection()
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT rfid
+                FROM public.deployment_tracker
+                WHERE LOWER(TRIM(cr_number)) = LOWER(TRIM(%s))
+                LIMIT 1
+            """, (cr_number,))
+
+            row = cur.fetchone()
+
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "approved": True,
+            "cab_date": cr_details.get("cab_date"),
+            "change_type": cr_details.get("change_type"),
+            "exists": bool(row),
+            "rfid": row[0] if row else None
+        })
+
+    except Exception as exc:
+        return jsonify({
+            "success": False,
+            "message": str(exc)
+        }), 400
 
 @app.route("/api/audit-users/register", methods=["POST"])
 def register_audit_user():
@@ -348,23 +422,9 @@ def validate_deployment_date(
             "Past deployment dates are not allowed."
         )
 
-    change_type = (change_type or "").strip().casefold()
-    weekday = deployment_date.weekday()  # Monday=0, Sunday=6
-
-    if change_type == "emergency cr":
-        return
-
-    if change_type == "normal cr":
-        if weekday not in (1, 4):  # Tuesday or Friday
-            raise ValueError(
-                "Normal CR deployments are allowed only "
-                "on Tuesdays and Fridays."
-            )
-    elif weekday in (5, 6):
-        raise ValueError(
-            "Only Emergency CR deployments are allowed "
-            "on Saturday and Sunday."
-        )
+    # All change types may now be scheduled on weekdays and weekends.
+    # Existing slot-time and slot-capacity validation remains unchanged.
+    return
 
 def write_audit_log(level, message,cr_number=None,rfid=None):
     """Write to the application log and, when available, the DB log."""
@@ -449,17 +509,130 @@ def get_existing_rfid(cur, cr_number):
     )
     row = cur.fetchone()
     return row[0] if row else None
+def validate_cr_number(cr_number):
 
+    change_id = re.sub(
+        r"^CR-",
+        "",
+        str(cr_number).strip(),
+        flags=re.IGNORECASE
+    )
+
+    url = f"https://itsupportuat.rblbank.com/api/v3/changes/{change_id}"
+
+
+    headers = {
+        "TECHNICIAN_KEY": "1A112622-14BF",
+        "Accept": "application/json"
+    }
+
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=30
+        )
+
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        if data.get("response_status", {}).get("status") != "success":
+            raise ValueError(
+                f"CR-{change_id} not found."
+            )
+
+        change = data.get("change", {})
+
+        cr_status = (
+            (change.get("status") or {})
+            .get("name", "")
+            .strip()
+        )
+
+        approval_status = (
+            (change.get("approval_status") or {})
+            .get("name", "")
+            .strip()
+            )
+
+        stage_name = (
+            (change.get("stage") or {})
+            .get("name", "")
+            .strip()
+        )
+
+        if cr_status in ["Rejected","Completed", "Closed", "Cancelled"]:
+            raise ValueError(
+                f"CR-{change_id} cannot be used. Current status: {cr_status}"
+            )
+
+        if "review" in stage_name.lower():
+            raise ValueError(
+                f"CR-{change_id} is in Review stage and cannot be used."
+            )
+
+        if approval_status != "Approved":
+            raise ValueError(
+                f"CR-{change_id} is not approved. Current status: {approval_status}"
+            )
+                   
+        udf = change.get("udf_fields") or {}
+
+        return {
+            "change_id": str(change.get("id")),
+            "approval_status": approval_status,
+            "cr_status": cr_status,
+            "change_type": change.get("template", {}).get("name"),
+            "cab_date": (udf.get("udf_date_33001") or {}).get("display_value")
+        }
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 404:
+            raise ValueError(f"CR-{change_id} not found.")
+
+        raise ValueError(f"Unable to validate CR-{change_id}.")
+
+    except requests.RequestException:
+        raise ValueError(
+            "Unable to connect to ITSM service."
+        )
 def save_deployment(data):
+
     cr_number = (data.get("cr_number") or "").strip()
+
     cr_number = re.sub(
-        r"^CR-", "", cr_number, flags=re.IGNORECASE
+        r"^CR-",
+        "",
+        cr_number,
+        flags=re.IGNORECASE
     ).strip()
+
     if not cr_number.isdigit():
         raise ValueError(
-            "CR Number must contain digits after the CR- prefix."
+            "CR Number must contain digits after CR-"
         )
+
     cr_number = f"CR-{cr_number}"
+
+    cr_details = validate_cr_number(cr_number)
+
+    app.logger.info(
+        "CR Validated | CR=%s | CAB Date=%s",
+        cr_number,
+        cr_details["cab_date"]
+    )    
+    
+    git_links = request.form.getlist("git_links[]")
+    if not git_links:
+        raise ValueError("At least one Git link is required.")
+
+    for link in git_links:
+
+        if not validate_git_link(link):
+            raise ValueError(
+                f"Invalid Git link: {link}"
+            )
     application_name = (
         data.get("application_name") or ""
     ).strip()
@@ -518,6 +691,19 @@ def save_deployment(data):
         start_time,
     )
     slot_end = slot_start + timedelta(minutes=30)
+    try:
+        deployment_count = int(data.get("deployment_count", "1"))
+        if deployment_count < 1 or deployment_count > 5:
+            raise ValueError(
+                "Deployment Count must be between 1 and 5."
+            )
+    except ValueError:
+        raise ValueError("Deployment Count must be numeric.")
+
+    if deployment_count < 1 or deployment_count > 5:
+        raise ValueError(
+            "Deployment Count must be between 1 and 5."
+        )
     conn = None
     try:
         conn = get_connection()
@@ -591,12 +777,13 @@ def save_deployment(data):
                         slot_start,
                         slot_end,
                         application_name,
+                        deployment_count,
                         deployment_type,
                         change_type,
                         released_by,
                         verified_and_deployed_by,
                         change_requestor,
-                        release_notes,
+                        git_links,
                         incident_number,
                         roll_back,
                         status
@@ -605,7 +792,7 @@ def save_deployment(data):
                         %s, %s, %s, %s,
                         %s, %s, %s, %s,
                         %s, %s, %s, %s,
-                        %s, %s, %s, %s
+                        %s, %s, %s, %s,%s
                     )
                     RETURNING id
                     """,
@@ -620,17 +807,14 @@ def save_deployment(data):
                         slot_start,
                         slot_end,
                         application_name,
+                        deployment_count, 
                         data["deployment_type"],
                         data["change_type"],
                         released_by,
                         verified_and_deployed_by,
                         change_requestor,
-                        (
-                            data.get("release_notes") or ""
-                        ).strip() or None,
-                        (
-                            data.get("incident_number") or ""
-                        ).strip() or None,
+                        json.dumps(git_links),
+                        data.get("incident_number"),
                         data["roll_back"],
                         data["status"],
                     ),
@@ -769,9 +953,9 @@ def get_deployment_by_cr():
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id, cr_number, rfid, deployment_date, slot_start, slot_end,
-                       slots, application_name, deployment_type, change_type,
+                       slots, application_name, deployment_count, deployment_type, change_type,
                        released_by, verified_and_deployed_by, change_requestor,
-                       release_notes, comments, incident_number, roll_back, status
+                       git_links, comments, incident_number, roll_back, status, team_allocations
                 FROM public.deployment_tracker
                 WHERE UPPER(REGEXP_REPLACE(TRIM(cr_number), '^CR-', '', 'i')) = %s
                 ORDER BY id DESC
@@ -815,6 +999,25 @@ def get_deployment_by_cr():
 def update_devops_deployment(deployment_id):
     """Update an existing deployment row from the DevOps page."""
     data = request.get_json(silent=True) or {}
+    git_links = data.get("git_links", [])
+
+    if isinstance(git_links, str):
+        git_links = [git_links]
+
+    if not isinstance(git_links, list) or not git_links:
+        return jsonify({
+            "success": False,
+            "message": "At least one Git link is required."
+        }), 400
+
+    git_links = [str(link).strip() for link in git_links]
+    for link in git_links:
+        if not validate_git_link(link):
+            return jsonify({
+                "success": False,
+                "message": f"Invalid Git repository URL: {link}"
+            }), 400
+    
     try:
         modified_by = normalize_audit_email(data.get("modified_by"))
     except ValueError as exc:
@@ -824,7 +1027,7 @@ def update_devops_deployment(deployment_id):
         return jsonify({"success": False, "message": "Enter the 4-digit passcode for the selected email."}), 400
 
     required_fields = [
-        "deployment_date", "slot_start", "application_name",
+        "deployment_date", "slot_start", "application_name", "deployment_count",
         "deployment_type", "change_type", "roll_back", "status",
         "released_by", "verified_and_deployed_by", "change_requestor",
     ]
@@ -834,6 +1037,44 @@ def update_devops_deployment(deployment_id):
                 "success": False,
                 "message": f"{field.replace('_', ' ').title()} is required.",
             }), 400
+    try:
+        deployment_count = int(data.get("deployment_count"))
+        if deployment_count < 1 or deployment_count > 5:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({
+            "success": False,
+            "message": "Deployment Count must be a whole number between 1 and 5."
+        }), 400
+
+    team_allocations = data.get("team_allocations")
+    if not isinstance(team_allocations, list) or not team_allocations:
+        return jsonify({"success": False, "message": "Add at least one team allocation."}), 400
+    normalized_allocations = []
+    seen_teams = set()
+    allocation_sum = 0
+    for item in team_allocations:
+        if not isinstance(item, dict):
+            return jsonify({"success": False, "message": "Invalid team allocation row."}), 400
+        team_name = str(item.get("team") or "").strip()
+        try:
+            team_count = int(item.get("count"))
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Each team must have a whole-number deployment count."}), 400
+        team_key = team_name.casefold()
+        if not team_name or len(team_name) > 100 or team_count < 1:
+            return jsonify({"success": False, "message": "Enter a valid team name and a deployment count greater than zero."}), 400
+        if team_key in seen_teams:
+            return jsonify({"success": False, "message": f"Team '{team_name}' is listed more than once. Combine its count into one row."}), 400
+        seen_teams.add(team_key)
+        allocation_sum += team_count
+        normalized_allocations.append({"team": team_name, "count": team_count})
+    if allocation_sum != deployment_count:
+        return jsonify({
+            "success": False,
+            "message": f"Team allocation total ({allocation_sum}) must equal Deployment Count ({deployment_count})."
+        }), 400
+
     if data["deployment_type"] not in DEPLOYMENT_TYPES:
         return jsonify({"success": False, "message": "Invalid deployment type."}), 400
     if data["change_type"] not in CHANGE_TYPES:
@@ -904,9 +1145,9 @@ def update_devops_deployment(deployment_id):
         cursor.execute(
             """
             SELECT id, cr_number, rfid, deployment_date, slot_start, slot_end,
-                   application_name, deployment_type, change_type, released_by,
-                   verified_and_deployed_by, change_requestor, release_notes,
-                   comments, incident_number, roll_back, status
+                   application_name, deployment_count, deployment_type, change_type, released_by,
+                   verified_and_deployed_by, change_requestor, git_links,
+                   comments, incident_number, roll_back, status, team_allocations
             FROM public.deployment_tracker
             WHERE id = %s
             FOR UPDATE
@@ -955,16 +1196,18 @@ def update_devops_deployment(deployment_id):
                 slot_start = %s,
                 slot_end = %s,
                 application_name = %s,
+                deployment_count = %s,
                 deployment_type = %s,
                 change_type = %s,
                 released_by = %s,
                 verified_and_deployed_by = %s,
                 change_requestor = %s,
-                release_notes = %s,
+                git_links = %s,
                 comments = %s,
                 incident_number = %s,
                 roll_back = %s,
-                status = %s
+                status = %s,
+                team_allocations = %s::jsonb
             WHERE id = %s
             """,
             (
@@ -973,16 +1216,18 @@ def update_devops_deployment(deployment_id):
                 slot_start,
                 slot_end,
                 data["application_name"].strip(),
+                deployment_count,
                 data["deployment_type"],
                 data["change_type"],
                 released_by,
                 verified_and_deployed_by,
                 change_requestor,
-                (data.get("release_notes") or "").strip() or None,
+                json.dumps(git_links),
                 (data.get("comments") or "").strip() or None,
                 (data.get("incident_number") or "").strip() or None,
                 data["roll_back"],
                 data["status"],
+                json.dumps(normalized_allocations),
                 deployment_id,
             ),
         )
@@ -991,12 +1236,14 @@ def update_devops_deployment(deployment_id):
             "slot_start": slot_start,
             "slot_end": slot_end,
             "application_name": data["application_name"].strip(),
+            "deployment_count": deployment_count,
             "deployment_type": data["deployment_type"],
             "change_type": data["change_type"],
             "released_by": released_by,
             "verified_and_deployed_by": verified_and_deployed_by,
             "change_requestor": change_requestor,
-            "release_notes": (data.get("release_notes") or "").strip() or None,
+            "git_links": json.dumps(git_links),
+            "team_allocations": json.dumps(normalized_allocations),
             "comments": (data.get("comments") or "").strip() or None,
             "incident_number": (data.get("incident_number") or "").strip() or None,
             "roll_back": data["roll_back"],
@@ -1090,11 +1337,11 @@ def pending_deployments():
                 released_by,
                 verified_and_deployed_by,
                 change_requestor,
-                release_notes,
+                git_links,
                 comments,
                 incident_number,
                 roll_back,
-                status
+                status, team_allocations
             FROM public.deployment_tracker
             WHERE LOWER(TRIM(COALESCE(status, 'Pending'))) = 'pending'
             ORDER BY id DESC
@@ -1161,7 +1408,7 @@ def deployments_by_date():
                 released_by,
                 verified_and_deployed_by,
                 change_requestor,
-                release_notes,
+                git_links,
                 comments,
                 incident_number,
                 roll_back,
@@ -1200,10 +1447,7 @@ def deployments_by_date():
         if conn:
             conn.close()
 
-@app.route(
-    "/api/deployment-approval/<int:deployment_id>",
-    methods=["POST"]
-)
+@app.route("/api/deployment-approval/<int:deployment_id>", methods=["POST"])
 
 def decide_deployment_request(deployment_id):
     payload = request.get_json(silent=True) or {}
@@ -1241,7 +1485,7 @@ def decide_deployment_request(deployment_id):
             SELECT
                 id, cr_number, rfid, deployment_date, slot_start, slot_end,
                 application_name, deployment_type, change_type, released_by,
-                verified_and_deployed_by, change_requestor, release_notes,
+                verified_and_deployed_by, change_requestor, git_links,
                 comments, incident_number, roll_back, status
             FROM public.deployment_tracker
             WHERE id = %s
@@ -1509,6 +1753,13 @@ def send_deployment_notification(data, rfid):
     Returns (sent, reason). Mail failure never rolls back a saved deployment.
     Configure recipients and SMTP credentials in .env, never in source code.
     """
+    git_links = data.get("git_links", [])
+    # Read application_name from the submitted deployment data before building
+    # the email subject. This keeps it defined throughout this function.
+    application_name = (data.get("application_name") or "").strip()
+    if not application_name:
+        application_name = "Not provided"
+
     recipients_raw = os.getenv("DEPLOYMENT_EMAIL_RECIPIENTS", "")
     recipients = [
         address.strip()
@@ -1550,7 +1801,7 @@ def send_deployment_notification(data, rfid):
             value = (value or "").strip()
             return value if value else "Not provided"
 
-        subject = f"{requestor} scheduled the deployment - {cr_number}"
+        subject = f"{application_name}-{requestor} scheduled the deployment - {cr_number}"
         body = "\n".join([
             f"{requestor} scheduled the deployment.",
             "",
@@ -1566,7 +1817,7 @@ def send_deployment_notification(data, rfid):
             f"Change Type: {display(data.get('change_type'))}",
             f"Change Requestor: {requestor}",
             f"Incident Number: {display(data.get('incident_number'))}",
-            f"Release Notes: {display(data.get('release_notes'))}",
+            f"Git Links: {', '.join(git_links)}",
             "Status: Pending",
             "",
             "This is an automated notification from the Deployment Tracker.",
@@ -1684,7 +1935,24 @@ def send_status_change_notification(record, old_status, new_status):
 
         changed_at = datetime.now().astimezone().strftime("%d-%m-%Y %I:%M:%S %p %Z")
         slot_text = f"{format_clock(slot_start)} - {format_clock(slot_end)}"
-        subject = f"Deployment Status Update: {cr_number} - {new_status}"
+        application_name = display(record.get("application_name"))
+        subject = f"Deployment Status Update: {application_name} - {cr_number} - {new_status}"
+
+        # git_links is stored as JSON in PostgreSQL; normalize it for email display.
+        raw_git_links = record.get("git_links")
+        if isinstance(raw_git_links, str):
+            try:
+                parsed_git_links = json.loads(raw_git_links)
+                git_links = parsed_git_links if isinstance(parsed_git_links, list) else [raw_git_links]
+            except (TypeError, ValueError):
+                git_links = [raw_git_links]
+        elif isinstance(raw_git_links, (list, tuple)):
+            git_links = list(raw_git_links)
+        else:
+            git_links = []
+        git_links = [str(link).strip() for link in git_links if str(link).strip()]
+        git_links_text = "\n".join(git_links) if git_links else "Not provided"
+
         details = [
             f"Status changed from {old_status} to {new_status}.",
             f"Status change timestamp: {changed_at}",
@@ -1704,7 +1972,8 @@ def send_status_change_notification(record, old_status, new_status):
             f"Incident Number: {display(record.get('incident_number'))}",
             f"Roll Back: {display(record.get('roll_back'))}",
             f"Status: {new_status}",
-            f"Release Notes: {display(record.get('release_notes'))}",
+            "Git Repository Links:",
+            *(git_links if git_links else ["Not provided"]),
             f"Comments: {display(record.get('comments'))}",
             "",
             "This is an automated notification from the Deployment Tracker.",
@@ -1714,6 +1983,39 @@ def send_status_change_notification(record, old_status, new_status):
         message["From"] = formataddr((from_name, from_email))
         message["To"] = "Undisclosed recipients:;"
         message.set_content("\n".join(details))
+
+        # Add an HTML alternative so repository URLs are explicitly clickable.
+        import html
+        git_links_html = (
+            "<br>".join(
+                f'<a href="{html.escape(link, quote=True)}">{html.escape(link)}</a>'
+                for link in git_links
+            )
+            if git_links else "Not provided"
+        )
+        html_details = [
+            f"<p>Status changed from <strong>{html.escape(str(old_status))}</strong> "
+            f"to <strong>{html.escape(str(new_status))}</strong>.</p>",
+            "<h3>DEPLOYMENT DETAILS</h3><ul>",
+            f"<li><strong>CR Number:</strong> {html.escape(cr_number)}</li>",
+            f"<li><strong>RFID:</strong> {html.escape(rfid)}</li>",
+            f"<li><strong>Deployment Date:</strong> {html.escape(date_text)}</li>",
+            f"<li><strong>Slot Timing:</strong> {html.escape(slot_text)}</li>",
+            f"<li><strong>Application Name:</strong> {html.escape(display(record.get('application_name')))}</li>",
+            f"<li><strong>Deployment Type:</strong> {html.escape(display(record.get('deployment_type')))}</li>",
+            f"<li><strong>Change Type:</strong> {html.escape(display(record.get('change_type')))}</li>",
+            f"<li><strong>Released By:</strong> {html.escape(display(record.get('released_by')))}</li>",
+            f"<li><strong>Verified and Deployed By:</strong> {html.escape(display(record.get('verified_and_deployed_by')))}</li>",
+            f"<li><strong>Change Requestor:</strong> {html.escape(display(record.get('change_requestor')))}</li>",
+            f"<li><strong>Incident Number:</strong> {html.escape(display(record.get('incident_number')))}</li>",
+            f"<li><strong>Roll Back:</strong> {html.escape(display(record.get('roll_back')))}</li>",
+            f"<li><strong>Status:</strong> {html.escape(str(new_status))}</li>",
+            f"<li><strong>Git Repository Links:</strong><br>{git_links_html}</li>",
+            f"<li><strong>Comments:</strong> {html.escape(display(record.get('comments')))}</li>",
+            "</ul>",
+            "<p>This is an automated notification from the Deployment Tracker.</p>",
+        ]
+        message.add_alternative("\n".join(html_details), subtype="html")
 
         port = int(os.getenv("MAIL_PORT", "587"))
         use_ssl = os.getenv("MAIL_USE_SSL", "false").strip().lower() in ("1", "true", "yes", "on")
@@ -1756,6 +2058,21 @@ def Release_Calender():
             **form_context(),
         )
     data = request.form.to_dict()
+
+    # request.form.to_dict() keeps only one value for repeated field names.
+    # Git links are dynamically added inputs with the same name, so collect
+    # every submitted value separately and pass them to the email function.
+    data["git_links"] = [
+        link.strip()
+        for link in request.form.getlist("git_links[]")
+        if link and link.strip()
+    ]
+
+    app.logger.info(
+        "Git links received from deployment form: %s",
+        data["git_links"],
+    )
+
     required_fields = [
         "cr_number",
         "deployment_date",
@@ -1792,6 +2109,7 @@ def Release_Calender():
         return redirect(url_for("Release_Calender"))
     except ValueError as exc:
         flash(str(exc), "error")
+        data["git_links"] = request.form.getlist("git_links[]")
         return render_template(
             "Release_Calender.html",
             **form_context(data),
@@ -1799,6 +2117,7 @@ def Release_Calender():
     except (RuntimeError, KeyError) as exc:
         app.logger.exception("Request submission failed")
         flash(str(exc), "error")
+        data["git_links"] = request.form.getlist("git_links[]")
         return render_template(
             "Release_Calender.html",
             **form_context(data),
@@ -1811,10 +2130,30 @@ def manager_dashboard():
     cursor = None
     try:
         week_start_text = (request.args.get("week_start") or "").strip()
+        team_from_date_text = (request.args.get("from_date") or "").strip()
+        team_to_date_text = (request.args.get("to_date") or "").strip()
+        team_filter_error = ""
+        team_from_date = None
+        team_to_date = None
         try:
             selected_day = date.fromisoformat(week_start_text) if week_start_text else date.today()
         except ValueError:
             selected_day = date.today()
+
+        # Team summary is date-filtered independently of the dashboard's
+        # all-time record table and headline metrics.
+        if team_from_date_text or team_to_date_text:
+            try:
+                if not team_from_date_text or not team_to_date_text:
+                    raise ValueError("Select both From Date and To Date to view a date range.")
+                team_from_date = date.fromisoformat(team_from_date_text)
+                team_to_date = date.fromisoformat(team_to_date_text)
+                if team_to_date < team_from_date:
+                    raise ValueError("To Date must be on or after From Date.")
+            except ValueError as exc:
+                team_filter_error = str(exc)
+                team_from_date = None
+                team_to_date = None
 
         activity_week_start = selected_day - timedelta(days=selected_day.weekday())
         activity_week_end = activity_week_start + timedelta(days=6)
@@ -1828,17 +2167,45 @@ def manager_dashboard():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT
-                COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE deployment_date = CURRENT_DATE) AS daily,
-                COUNT(*) FILTER (
-                    WHERE deployment_date >= date_trunc('week', CURRENT_DATE)::date
-                      AND deployment_date < (date_trunc('week', CURRENT_DATE) + INTERVAL '1 week')::date
-                ) AS weekly,
-                COUNT(*) FILTER (
-                    WHERE deployment_date >= date_trunc('month', CURRENT_DATE)::date
-                      AND deployment_date < (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month')::date
-                ) AS monthly,
-                COUNT(*) FILTER (WHERE LOWER(TRIM(COALESCE(roll_back, ''))) = 'yes') AS rollbacks
+                COALESCE(SUM(deployment_count),0) AS total,
+
+                COALESCE(SUM(
+                    CASE
+                        WHEN deployment_date = CURRENT_DATE
+                        THEN deployment_count
+                        ELSE 0
+                    END
+                ),0) AS daily,
+
+                COALESCE(SUM(
+                    CASE
+                        WHEN deployment_date >= date_trunc('week', CURRENT_DATE)::date
+                        AND deployment_date <
+                            (date_trunc('week', CURRENT_DATE)
+                            + INTERVAL '1 week')::date
+                        THEN deployment_count
+                        ELSE 0
+                    END
+                ),0) AS weekly,
+
+                COALESCE(SUM(
+                    CASE
+                        WHEN deployment_date >= date_trunc('month', CURRENT_DATE)::date
+                        AND deployment_date <
+                            (date_trunc('month', CURRENT_DATE)
+                            + INTERVAL '1 month')::date
+                        THEN deployment_count
+                        ELSE 0
+                    END
+                ),0) AS monthly,
+
+                COALESCE(SUM(
+                    CASE
+                        WHEN LOWER(TRIM(roll_back)) = 'yes'
+                        THEN deployment_count
+                        ELSE 0
+                    END
+                ),0) AS rollbacks
             FROM public.deployment_tracker
         """)
         metric_row = cursor.fetchone()
@@ -1851,10 +2218,12 @@ def manager_dashboard():
         }
 
         cursor.execute("""
-            SELECT deployment_date, COUNT(*)
+            SELECT
+                deployment_date,
+                COALESCE(SUM(deployment_count),0) AS deployment_total
             FROM public.deployment_tracker
             WHERE deployment_date >= %s
-              AND deployment_date < %s
+                AND deployment_date < %s
             GROUP BY deployment_date
             ORDER BY deployment_date
         """, (activity_week_start, activity_week_end_exclusive))
@@ -1881,7 +2250,8 @@ def manager_dashboard():
 
         cursor.execute("""
             SELECT id, cr_number, rfid, deployment_date, slot_start, slot_end,
-                   application_name, deployment_type, change_type, released_by,
+                   application_name, deployment_count, team_allocations,
+                   deployment_type, change_type, released_by,
                    verified_and_deployed_by, change_requestor, incident_number,
                    roll_back, status
             FROM public.deployment_tracker
@@ -1890,6 +2260,64 @@ def manager_dashboard():
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
         records = [dict(zip(columns, row)) for row in rows]
+
+        # Prepare readable per-record team allocations for the All Deployment Records table.
+        # JSONB may be returned by psycopg2 as a Python list or as serialized JSON text.
+        for record in records:
+            allocations = record.get("team_allocations") or []
+            if isinstance(allocations, str):
+                try:
+                    allocations = json.loads(allocations)
+                except (TypeError, ValueError):
+                    allocations = []
+            display_allocations = []
+            if isinstance(allocations, list):
+                for allocation in allocations:
+                    if not isinstance(allocation, dict):
+                        continue
+                    team_name = str(allocation.get("team") or "").strip()
+                    try:
+                        team_count = int(allocation.get("count") or 0)
+                    except (TypeError, ValueError):
+                        continue
+                    if team_name and team_count > 0:
+                        display_allocations.append({"team": team_name, "count": team_count})
+            record["team_allocations_display"] = display_allocations
+
+        team_totals = {}
+        team_records = records
+        if team_from_date and team_to_date:
+            team_records = [
+                record for record in records
+                if record.get("deployment_date")
+                and team_from_date <= record["deployment_date"] <= team_to_date
+            ]
+        for record in team_records:
+            allocations = record.get("team_allocations") or []
+            if isinstance(allocations, str):
+                try:
+                    allocations = json.loads(allocations)
+                except (TypeError, ValueError):
+                    allocations = []
+            if not isinstance(allocations, list):
+                continue
+            for allocation in allocations:
+                if not isinstance(allocation, dict):
+                    continue
+                team_name = str(allocation.get("team") or "").strip()
+                try:
+                    team_count = int(allocation.get("count") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if team_name and team_count > 0:
+                    team_totals[team_name] = team_totals.get(team_name, 0) + team_count
+
+        team_deployment_counts = [
+            {"team": team, "count": count}
+            for team, count in sorted(team_totals.items(), key=lambda item: (-item[1], item[0].casefold()))
+        ]
+        team_deployment_total = sum(item["count"] for item in team_deployment_counts)
+        team_chart_max = max((item["count"] for item in team_deployment_counts), default=1)
 
         cursor.execute("""
             SELECT id, deployment_id, cr_number, rfid, modified_at,
@@ -1906,6 +2334,13 @@ def manager_dashboard():
             "manager.html",
             metrics=metrics,
             records=records,
+            team_deployment_counts=team_deployment_counts,
+            team_deployment_total=team_deployment_total,
+            team_chart_max=team_chart_max,
+            team_from_date=team_from_date_text,
+            team_to_date=team_to_date_text,
+            team_filter_error=team_filter_error,
+            team_date_filtered=bool(team_from_date and team_to_date),
             activity_chart=activity_chart,
             chart_y_ticks=chart_y_ticks,
             chart_scale_max=chart_scale_max,
@@ -1923,6 +2358,179 @@ def manager_dashboard():
             cursor.close()
         if conn:
             conn.close()
+
+@app.route("/manager/export-team-deployments", methods=["GET"])
+def export_manager_team_deployments():
+    """Export team-wise allocated deployment counts for an inclusive date range."""
+    start_text = (request.args.get("from_date") or "").strip()
+    end_text = (request.args.get("to_date") or "").strip()
+    export_format = (request.args.get("format") or "csv").strip().lower()
+
+    try:
+        start_date = date.fromisoformat(start_text)
+        end_date = date.fromisoformat(end_text)
+    except ValueError:
+        return "Please provide valid From and To dates.", 400
+
+    if end_date < start_date:
+        return "The To date must be on or after the From date.", 400
+    if export_format not in {"csv", "xlsx", "excel"}:
+        return "Unsupported export format. Choose CSV or Excel.", 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT deployment_date, cr_number, rfid, application_name,
+                   deployment_count, team_allocations
+            FROM public.deployment_tracker
+            WHERE deployment_date >= %s AND deployment_date <= %s
+            ORDER BY deployment_date, cr_number, id
+        """, (start_date, end_date))
+
+        detail_rows = []
+        team_totals = {}
+        for deployment_date, cr_number, rfid, application_name, deployment_count, allocations in cursor.fetchall():
+            if isinstance(allocations, str):
+                try:
+                    allocations = json.loads(allocations)
+                except (TypeError, ValueError):
+                    allocations = []
+            if not isinstance(allocations, list):
+                allocations = []
+            for allocation in allocations:
+                if not isinstance(allocation, dict):
+                    continue
+                team_name = str(allocation.get("team") or "").strip()
+                try:
+                    team_count = int(allocation.get("count") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if not team_name or team_count <= 0:
+                    continue
+                team_totals[team_name] = team_totals.get(team_name, 0) + team_count
+                detail_rows.append([
+                    deployment_date.isoformat() if deployment_date else "",
+                    team_name,
+                    team_count,
+                    cr_number or "",
+                    rfid or "",
+                    application_name or "",
+                ])
+
+        team_summary = sorted(team_totals.items(), key=lambda item: (-item[1], item[0].casefold()))
+        filename_range = f"{start_date.isoformat()}_to_{end_date.isoformat()}"
+
+        if export_format == "csv":
+            output = io.StringIO(newline="")
+            writer = csv.writer(output)
+            writer.writerow(["Deployment Date", "Team", "Allocated Deployments", "CR Number", "RFID", "Application"])
+            writer.writerows(detail_rows)
+            payload = io.BytesIO(output.getvalue().encode("utf-8-sig"))
+            return send_file(payload, mimetype="text/csv", as_attachment=True,
+                             download_name=f"team_deployment_report_{filename_range}.csv")
+
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        workbook = Workbook()
+        summary_sheet = workbook.active
+        summary_sheet.title = "Team Summary"
+        summary_sheet.append(["Team", "Total Deployments"])
+        for team_name, total in team_summary:
+            summary_sheet.append([team_name, total])
+        summary_sheet.append(["Grand Total", sum(team_totals.values())])
+
+        details_sheet = workbook.create_sheet("Deployment Details")
+        details_sheet.append(["Deployment Date", "Team", "Allocated Deployments", "CR Number", "RFID", "Application"])
+        for row in detail_rows:
+            details_sheet.append(row)
+
+        for sheet in workbook.worksheets:
+            sheet.freeze_panes = "A2"
+            sheet.auto_filter.ref = sheet.dimensions
+            for cell in sheet[1]:
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill("solid", fgColor="263B73")
+                cell.alignment = Alignment(horizontal="center")
+            for column_cells in sheet.columns:
+                max_length = max((len(str(cell.value or "")) for cell in column_cells), default=10)
+                sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 3, 14), 42)
+
+        payload = io.BytesIO()
+        workbook.save(payload)
+        payload.seek(0)
+        return send_file(payload,
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                         as_attachment=True,
+                         download_name=f"team_deployment_report_{filename_range}.xlsx")
+    except Exception:
+        app.logger.exception("Unable to export team deployment report")
+        return "Unable to export the team deployment report. Check the Flask logs.", 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route("/manager/export-deployment-records.xlsx", methods=["POST"])
+def export_manager_deployment_records_excel():
+    """Create an Excel export from the manager table's currently filtered rows."""
+    payload = request.get_json(silent=True) or {}
+    headers = payload.get("headers") or []
+    rows = payload.get("rows") or []
+    from_text = (payload.get("from_date") or "").strip()
+    to_text = (payload.get("to_date") or "").strip()
+
+    if not isinstance(headers, list) or not isinstance(rows, list):
+        return "Invalid export data.", 400
+    if len(headers) > 40 or len(rows) > 10000:
+        return "Export is too large. Apply filters and try again.", 413
+    if any(not isinstance(row, list) or len(row) != len(headers) for row in rows):
+        return "Invalid deployment record data.", 400
+    try:
+        from_date = date.fromisoformat(from_text) if from_text else None
+        to_date = date.fromisoformat(to_text) if to_text else None
+    except ValueError:
+        return "Please provide valid dates.", 400
+    if from_date and to_date and to_date < from_date:
+        return "To Date must be on or after From Date.", 400
+
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "Deployment Records"
+        sheet.append(headers)
+        for row in rows:
+            sheet.append([str(value) if value is not None else "" for value in row])
+        sheet.freeze_panes = "A2"
+        sheet.auto_filter.ref = sheet.dimensions
+        for cell in sheet[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="263B73")
+            cell.alignment = Alignment(horizontal="center")
+        for column_cells in sheet.columns:
+            max_length = max((len(str(cell.value or "")) for cell in column_cells), default=10)
+            sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 3, 14), 42)
+
+        output = io.BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        range_label = f"{from_text or 'all'}_to_{to_text or 'dates'}"
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"deployment_records_{range_label}.xlsx",
+        )
+    except Exception:
+        app.logger.exception("Unable to export manager deployment records to Excel")
+        return "Unable to create Excel report. Check the Flask logs.", 500
+
 #super  manager
 @app.route("/super-manager", methods=["GET"])
 def super_manager_page():
@@ -2006,38 +2614,64 @@ def super_manager_block_date():
     denied = require_super_manager()
     if denied:
         return denied
-    date_text = (request.form.get("blocked_date") or "").strip()
+
+    # Supports both the existing single-date controls and the new multi-weekend picker.
+    bulk_weekend_selection = bool(request.form.getlist("blocked_dates"))
+    date_texts = [value.strip() for value in request.form.getlist("blocked_dates") if value.strip()]
+    if not date_texts:
+        single_date = (request.form.get("blocked_date") or "").strip()
+        if single_date:
+            date_texts = [single_date]
+
     message = (request.form.get("message") or "").strip()
     action = (request.form.get("action") or "block").strip().lower()
+
     try:
-        blocked_date = date.fromisoformat(date_text)
+        if action not in ("block", "unblock"):
+            raise ValueError("Invalid date action.")
+        if not date_texts:
+            raise ValueError("Select at least one date.")
         if action == "block" and not message:
             raise ValueError("Enter a message to display to users.")
         if len(message) > 1000:
             raise ValueError("The message cannot exceed 1000 characters.")
+
+        selected_dates = sorted({date.fromisoformat(value) for value in date_texts})
+        # The weekend picker accepts Saturdays and Sundays only, even for one selected date.
+        if bulk_weekend_selection and any(day.weekday() not in (5, 6) for day in selected_dates):
+            raise ValueError("The weekend picker can contain Saturdays and Sundays only.")
+        if len(selected_dates) > 200:
+            raise ValueError("You can update a maximum of 200 dates at one time.")
     except ValueError as exc:
-        flash(str(exc) or "Choose a valid date.", "error")
+        flash(str(exc) or "Choose valid dates.", "error")
         return redirect(url_for("super_manager_page"))
+
     conn = None
     try:
         conn = get_connection()
         with conn:
             with conn.cursor() as cur:
-                if action == "unblock":
-                    cur.execute("DELETE FROM public.release_calendar_blocks WHERE blocked_date = %s", (blocked_date,))
-                    flash(f"{blocked_date} is now open for booking.", "success")
-                else:
-                    cur.execute("""
-                        INSERT INTO public.release_calendar_blocks
-                            (blocked_date, message, updated_at)
-                        VALUES (%s, %s, CURRENT_TIMESTAMP)
-                        ON CONFLICT (blocked_date) DO UPDATE
-                        SET message = EXCLUDED.message, updated_at = CURRENT_TIMESTAMP
-                    """, (blocked_date, message))
-                    flash(f"{blocked_date} is blocked. New bookings are disabled for that day.", "success")
+                for selected_date in selected_dates:
+                    if action == "unblock":
+                        cur.execute(
+                            "DELETE FROM public.release_calendar_blocks WHERE blocked_date = %s",
+                            (selected_date,),
+                        )
+                    else:
+                        cur.execute("""
+                            INSERT INTO public.release_calendar_blocks
+                                (blocked_date, message, updated_at)
+                            VALUES (%s, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (blocked_date) DO UPDATE
+                            SET message = EXCLUDED.message, updated_at = CURRENT_TIMESTAMP
+                        """, (selected_date, message))
+        if action == "unblock":
+            flash(f"{len(selected_dates)} selected date(s) reopened for booking.", "success")
+        else:
+            flash(f"{len(selected_dates)} selected date(s) blocked. New bookings are disabled on those dates.", "success")
     except Exception:
-        app.logger.exception("Could not change blocked date")
-        flash("Could not update blocked date. Check server logs.", "error")
+        app.logger.exception("Could not change blocked date(s)")
+        flash("Could not update blocked dates. Check server logs.", "error")
     finally:
         if conn is not None:
             conn.close()

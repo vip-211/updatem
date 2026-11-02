@@ -15,7 +15,7 @@ button,.link{display:inline-block;border:0;border-radius:8px;padding:11px 14px;b
 button.red{background:#b91c1c}button.green{background:#047857}button.gray{background:#475569}.row{display:flex;gap:12px;align-items:end}.row>*{flex:1;min-width:0}
 .flash{padding:12px;border-radius:8px;margin-bottom:12px;background:#e0f2fe;color:#075985}.flash.error{background:#fee2e2;color:#991b1b}.flash.success{background:#dcfce7;color:#166534}
 .table-wrap{overflow:auto;margin-top:12px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left}th{background:#f8fafc;position:sticky;top:0}
-.full{grid-column:1/-1}.block-list{display:grid;gap:8px}.block-item{padding:10px;border:1px solid #fecaca;background:#fff7f7;border-radius:8px;font-size:13px}
+.full{grid-column:1/-1}.weekend-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.weekend-choice{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}.weekend-choice input{width:auto;margin:0}.block-list{display:grid;gap:8px}.block-item{padding:10px;border:1px solid #fecaca;background:#fff7f7;border-radius:8px;font-size:13px}
 @media(max-width:850px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.row{flex-direction:column;align-items:stretch;gap:0}}
 </style>
 </head>
@@ -35,11 +35,18 @@ button.red{background:#b91c1c}button.green{background:#047857}button.gray{backgr
 </form></section>
 <section class="card">
 <h2>Block or Reopen a Whole Day</h2><p class="muted">A blocked day prevents new bookings. The message is shown to people viewing that date in the Release Calendar. Existing requests remain visible.</p>
-<form method="post" action="{{ url_for('super_manager_block_date') }}">
-<label for="blocked_date">Deployment date</label><input id="blocked_date" name="blocked_date" type="date" required>
-<label for="message">Message to display</label><textarea id="message" name="message" maxlength="1000" placeholder="Example: Release freeze — no deployments are allowed today." required></textarea>
-<button class="red" name="action" value="block">Block Whole Day</button>
-<button class="green" name="action" value="unblock" formnovalidate>Reopen Selected Date</button>
+<form method="post" action="{{ url_for('super_manager_block_date') }}" id="weekendBlockForm">
+<label for="weekend_from">Select weekend date range</label>
+<div class="row">
+  <div><input id="weekend_from" type="date" required></div>
+  <div><input id="weekend_to" type="date" required></div>
+</div>
+<button type="button" class="gray" id="showWeekends">Show Saturdays and Sundays</button>
+<div id="weekendChoices" class="weekend-choices" aria-live="polite"><p class="muted">Choose a date range and click “Show Saturdays and Sundays”.</p></div>
+<label for="message">Message to display</label>
+<textarea id="message" name="message" maxlength="1000" placeholder="Example: Weekend release freeze — no deployments are allowed on the selected dates." required></textarea>
+<button class="red" name="action" value="block">Block Selected Weekend Dates</button>
+<button class="green" name="action" value="unblock" formnovalidate>Reopen Selected Weekend Dates</button>
 </form>
 </section>
 <section class="card">
@@ -72,5 +79,33 @@ const search=document.getElementById('recordSearch');
 search.addEventListener('input',()=>{const q=search.value.toLowerCase();document.querySelectorAll('#recordsTable tbody tr').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));});
 document.getElementById('selectVisible').addEventListener('click',()=>document.querySelectorAll('#recordsTable tbody tr:not([hidden]) input[type=checkbox]').forEach(c=>c.checked=true));
 document.getElementById('clearSelected').addEventListener('click',()=>document.querySelectorAll('#recordsTable input[type=checkbox]').forEach(c=>c.checked=false));
+
+// Generate only Saturdays and Sundays in the selected range. Each date is independently selectable.
+const weekendFrom=document.getElementById('weekend_from');
+const weekendTo=document.getElementById('weekend_to');
+const weekendChoices=document.getElementById('weekendChoices');
+document.getElementById('showWeekends').addEventListener('click',()=>{
+  weekendChoices.innerHTML='';
+  if(!weekendFrom.value || !weekendTo.value){weekendChoices.innerHTML='<p class="muted">Please select both range dates.</p>';return;}
+  const start=new Date(weekendFrom.value+'T00:00:00');
+  const end=new Date(weekendTo.value+'T00:00:00');
+  if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end<start){weekendChoices.innerHTML='<p class="muted">End date must be on or after start date.</p>';return;}
+  const dates=[];
+  const cursor=new Date(start);
+  while(cursor<=end){
+    if(cursor.getDay()===0 || cursor.getDay()===6){
+      const iso=cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0')+'-'+String(cursor.getDate()).padStart(2,'0');
+      dates.push({iso,label:cursor.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'short',day:'numeric'})});
+    }
+    cursor.setDate(cursor.getDate()+1);
+    if(dates.length>200){weekendChoices.innerHTML='<p class="muted">Please choose a range containing no more than 200 weekend dates.</p>';return;}
+  }
+  if(!dates.length){weekendChoices.innerHTML='<p class="muted">No Saturdays or Sundays found in this range.</p>';return;}
+  dates.forEach((item,index)=>{
+    const label=document.createElement('label');label.className='weekend-choice';
+    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.name='blocked_dates';checkbox.value=item.iso;checkbox.checked=true;
+    label.appendChild(checkbox);label.appendChild(document.createTextNode(item.label));weekendChoices.appendChild(label);
+  });
+});
 </script>
 </body></html>
