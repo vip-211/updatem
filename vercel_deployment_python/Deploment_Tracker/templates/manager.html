@@ -1,0 +1,2025 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manager Dashboard | Deployment Tracker</title>
+
+<style>
+:root {
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    color: #172033;
+    background: #f5f7fc;
+    --navy: #172554;
+    --blue: #4f67f6;
+    --muted: #7b879c;
+    --line: #e7ecf4;
+    --green: #059669;
+    --orange: #d97706;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --cyan: #0891b2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: #f5f7fc;
+}
+
+button, input, select { font: inherit; }
+
+.top {
+    background:
+        radial-gradient(circle at 85% 0%, #394fa7 0, transparent 34%),
+        linear-gradient(120deg, #111a3d, #202f69);
+    color: white;
+    padding: 25px max(22px, calc((100% - 1500px) / 2));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.logo {
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #ffffff30;
+    border-radius: 15px;
+    background: #ffffff15;
+    font-size: 26px;
+}
+
+.top h1 {
+    margin: 0;
+    font-size: 25px;
+    letter-spacing: -.6px;
+}
+
+.top p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #cbd5ff;
+}
+
+.actions, .filters {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 14px;
+    background: #4f67f6;
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px #17255420;
+}
+
+.btn.ghost {
+    color: white;
+    background: #ffffff12;
+    border: 1px solid #ffffff35;
+}
+
+.btn.light {
+    color: #354fd2;
+    background: #edf1ff;
+}
+
+.wrap {
+    max-width: 1540px;
+    margin: 27px auto;
+    padding: 0 24px;
+}
+
+.intro {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.intro h2 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: -.5px;
+}
+
+.intro p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid #bcebd2;
+    border-radius: 30px;
+    color: #087f5b;
+    background: #e4fbef;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .35px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 4px #10b98120;
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.metric {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 150px;
+    padding: 20px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    box-shadow: 0 4px 18px #1b2d5907;
+    transition: transform .18s, box-shadow .18s;
+}
+
+.metric:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px #1b2d5910;
+}
+
+.metric::after {
+    content: "";
+    position: absolute;
+    width: 105px;
+    height: 105px;
+    right: -37px;
+    top: -42px;
+    border-radius: 50%;
+    background: var(--tint, #edf1ff);
+    opacity: .85;
+}
+
+.metric-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.metric .label {
+    color: #738099;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .65px;
+}
+
+.metric .icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: var(--tint, #edf1ff);
+    color: var(--accent, #4f67f6);
+    font-size: 19px;
+}
+
+.metric .number {
+    position: relative;
+    z-index: 1;
+    margin-top: 15px;
+    font-size: 33px;
+    font-weight: 850;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+
+.metric small {
+    display: block;
+    margin-top: 9px;
+    color: #8994a8;
+    font-size: 11px;
+}
+
+.gridcharts {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr 1fr;
+    gap: 17px;
+    margin-bottom: 20px;
+}
+
+.panel {
+    min-width: 0;
+    padding: 21px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    box-shadow: 0 4px 18px #1b2d5907;
+}
+
+.panelhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.panel h3 {
+    margin: 0;
+    color: #202b43;
+    font-size: 15px;
+    letter-spacing: -.2px;
+}
+
+.sub {
+    margin-top: 6px;
+    color: #8a96aa;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 20px;
+    padding: 5px 9px;
+    background: #edf1f7;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.pill.status {
+    background: #e8edff;
+    color: #3656c8;
+}
+
+.pill.successful,
+.pill.completed,
+.pill.deployed {
+    background: #dcfce7;
+    color: #087443;
+}
+
+.pill.pending,
+.pill.scheduled {
+    background: #fff1d6;
+    color: #a16207;
+}
+
+.pill.failed,
+.pill.cancelled {
+    background: #fee2e2;
+    color: #a51d2d;
+}
+
+.pill.rolled-back {
+    background: #f0e7ff;
+    color: #6d28d9;
+}
+
+.pill.in-progress {
+    background: #dff7fc;
+    color: #087c96;
+}
+
+.chart {
+    position: relative;
+    width: 100%;
+    height: 210px;
+}
+
+.chart canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.activity-panelhead {
+    align-items: flex-start;
+}
+
+.week-range {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.week-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.week-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    min-width: 32px;
+    padding: 6px 9px;
+    border: 1px solid #e0e7ff;
+    border-radius: 8px;
+    background: #f3f5ff;
+    color: #354fd2;
+    font-size: 11px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.week-nav:hover {
+    background: #e7ebff;
+}
+
+.week-nav:focus-visible {
+    outline: 2px solid #4f67f6;
+    outline-offset: 2px;
+}
+
+.donutwrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    min-height: 210px;
+}
+
+.donut {
+    position: relative;
+    flex: 0 0 auto;
+    width: 148px;
+    height: 148px;
+    border-radius: 50%;
+    background: #edf1f7;
+}
+
+.donut::after {
+    content: "";
+    position: absolute;
+    inset: 25px;
+    border-radius: 50%;
+    background: white;
+}
+
+.donutcenter {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.donutcenter strong {
+    font-size: 25px;
+    letter-spacing: -1px;
+}
+
+.donutcenter span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.donutlegend {
+    display: grid;
+    gap: 14px;
+    min-width: 100px;
+}
+
+.donutlegend .item {
+    display: grid;
+    grid-template-columns: 9px 1fr auto;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.donutlegend b {
+    color: #1f2a44;
+    font-size: 12px;
+}
+
+.swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+}
+
+.barlist {
+    display: grid;
+    gap: 16px;
+}
+
+.barrow {
+    display: grid;
+    grid-template-columns: 90px minmax(35px, 1fr) 25px;
+    align-items: center;
+    gap: 9px;
+    color: #64748b;
+    font-size: 10px;
+}
+
+.track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #edf1f7;
+}
+
+.fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width .3s;
+}
+
+.barrow strong {
+    text-align: right;
+    color: #27344d;
+    font-size: 11px;
+}
+
+.barrow.status-option {
+    cursor: pointer;
+    padding: 7px 8px;
+    margin: -7px -8px;
+    border-radius: 9px;
+    outline: none;
+    transition: background .15s, box-shadow .15s;
+}
+
+.barrow.status-option:hover,
+.barrow.status-option:focus-visible {
+    background: #f5f8ff;
+}
+
+.barrow.status-option.is-selected {
+    background: #edf1ff;
+    box-shadow: inset 0 0 0 1px #c8d3ff;
+}
+
+.barrow.status-option .status-name {
+    font-weight: 650;
+    color: #475569;
+}
+
+.records {
+    padding: 0;
+    overflow: hidden;
+}
+
+.records .panelhead {
+    padding: 21px 21px 15px;
+    margin-bottom: 0;
+}
+
+.filters {
+    width: 100%;
+}
+
+.filters input,
+.filters select {
+    min-width: 140px;
+    max-width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dce4ef;
+    border-radius: 10px;
+    outline: none;
+    background: white;
+    color: #334155;
+    font-size: 12px;
+}
+
+.filters input {
+    flex: 1 1 210px;
+}
+
+.filters select {
+    flex: 0 1 165px;
+}
+
+.filters input:focus,
+.filters select:focus {
+    border-color: #7188ff;
+    box-shadow: 0 0 0 3px #4568f51a;
+}
+
+.tablewrap {
+    max-width: 100%;
+    overflow: auto;
+    border-top: 1px solid var(--line);
+}
+
+table {
+    width: 100%;
+    min-width: 1250px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+}
+
+th, td {
+    padding: 14px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid #edf1f6;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f7f9fe;
+    color: #758198;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .45px;
+    text-transform: uppercase;
+}
+
+td {
+    color: #44516a;
+}
+
+td:first-child {
+    color: #8a96a9;
+}
+
+tbody tr {
+    transition: background .12s;
+}
+
+tbody tr:hover td {
+    background: #f5f8ff;
+}
+
+.foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 15px 21px;
+    color: #8792a6;
+    font-size: 11px;
+}
+
+.empty {
+    padding: 28px;
+    text-align: center;
+    color: #94a3b8;
+}
+
+@media (max-width: 1250px) {
+    .metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .gridcharts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gridcharts .panel:first-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 760px) {
+    .top {
+        padding: 22px 16px;
+    }
+
+    .top h1 {
+        font-size: 21px;
+    }
+
+    .wrap {
+        margin: 20px auto;
+        padding: 0 12px;
+    }
+
+    .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .metric {
+        min-height: 130px;
+        padding: 14px;
+    }
+
+    .metric .number {
+        font-size: 28px;
+    }
+
+    .metric .label {
+        font-size: 9px;
+    }
+
+    .metric .icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .gridcharts {
+        grid-template-columns: 1fr;
+    }
+
+    .gridcharts .panel:first-child {
+        grid-column: auto;
+    }
+
+    .panel {
+        padding: 15px;
+    }
+
+    .records .panelhead {
+        padding: 16px 14px;
+    }
+
+    .filters {
+        align-items: stretch;
+    }
+
+    .filters input,
+    .filters select {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .donutwrap {
+        gap: 15px;
+    }
+
+    .donut {
+        width: 125px;
+        height: 125px;
+    }
+
+    .donut::after {
+        inset: 22px;
+    }
+
+    .foot {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 380px) {
+    .donutwrap {
+        flex-wrap: wrap;
+    }
+
+    .donutlegend {
+        width: 100%;
+    }
+}
+
+.audit-history-panel { margin-top: 20px; }
+.audit-value { max-width: 260px; white-space: normal; overflow-wrap: anywhere; }
+#changeHistoryTable td { vertical-align: top; }
+.history-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 21px;
+    border-top: 1px solid var(--line);
+}
+.history-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 320px;
+    max-width: 560px;
+}
+.history-search-wrap input {
+    width: 100%;
+    min-width: 180px;
+    padding: 10px 12px;
+    border: 1px solid #dce4ef;
+    border-radius: 10px;
+    outline: none;
+    color: #334155;
+    background: #fff;
+    font-size: 12px;
+}
+.history-search-wrap input:focus {
+    border-color: #7188ff;
+    box-shadow: 0 0 0 3px #4568f51a;
+}
+.history-count { color: var(--muted); font-size: 11px; }
+.history-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+}
+.history-pagination .btn {
+    padding: 8px 11px;
+    min-width: 36px;
+    font-size: 11px;
+}
+.history-pagination .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.history-page-label { min-width: 74px; text-align: center; color: #64748b; font-size: 11px; }
+.history-no-results td { padding: 22px; text-align: center; color: #8290a5; }
+.sort-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.sort-heading:hover, .sort-heading:focus-visible { color: #3656c8; outline: none; }
+.sort-indicator { font-size: 12px; color: #9aa6b9; }
+.sort-heading[aria-sort="ascending"] .sort-indicator,
+.sort-heading[aria-sort="descending"] .sort-indicator { color: #3656c8; }
+.records-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 21px;
+    border-top: 1px solid var(--line);
+}
+.records-pagination .btn { padding: 8px 11px; min-width: 36px; font-size: 11px; }
+.records-pagination .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.records-page-label { min-width: 74px; text-align: center; color: #64748b; font-size: 11px; }
+@media (max-width: 760px) {
+    .records-pagination { padding: 14px; align-items: stretch; }
+    .records-pagination nav { justify-content: space-between; }
+}
+
+@media (max-width: 760px) {
+    .history-tools { padding: 14px; align-items: stretch; }
+    .history-search-wrap { max-width: none; flex-basis: 100%; }
+    .history-pagination { justify-content: space-between; }
+}
+
+
+
+.team-export-tools {
+    display: flex; align-items: end; gap: 10px; flex-wrap: wrap;
+    padding: 0 21px 18px;
+}
+.team-export-field { display: grid; gap: 5px; min-width: 150px; }
+.team-export-field label { color: #758198; font-size: 10px; font-weight: 800; letter-spacing: .4px; }
+.team-export-field input, .team-export-field select {
+    min-width: 150px; padding: 9px 11px; border: 1px solid #dce4ef;
+    border-radius: 9px; background: #fff; color: #334155; font-size: 12px;
+}
+.team-export-tools .btn { min-height: 36px; padding: 9px 13px; }
+@media (max-width: 760px) {
+    .team-export-tools { padding: 0 14px 15px; align-items: stretch; }
+    .team-export-field, .team-export-field input, .team-export-field select { width: 100%; }
+    .team-export-tools .btn { width: 100%; }
+}
+
+/* Team-wise deployment breakdown */
+.team-deployment-panel { min-width: 0; }
+.team-record-cell { min-width: 190px; max-width: 300px; white-space: normal; line-height: 1.6; }
+.team-record-item { display: inline; color: #475569; font-size: 11px; }
+.team-record-item strong { color: #1e293b; font-weight: 850; }
+.team-record-separator { color: #a0aabd; }
+.team-record-empty { color: #94a3b8; font-size: 11px; font-style: italic; }
+.team-deployment-list { display: grid; gap: 15px; }
+.team-deployment-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 145px) minmax(50px, 1fr) 34px;
+    align-items: center;
+    gap: 10px;
+}
+.team-deployment-name {
+    min-width: 0; color: #526078; font-size: 11px;
+    font-weight: 750; overflow-wrap: anywhere;
+}
+.team-deployment-track {
+    height: 9px; overflow: hidden; border-radius: 20px; background: #edf1f7;
+}
+.team-deployment-fill {
+    height: 100%; border-radius: 20px;
+    background: linear-gradient(90deg, #526bf6, #9baaff);
+}
+.team-deployment-count {
+    color: #202b43; font-size: 12px; font-weight: 850;
+    text-align: right; font-variant-numeric: tabular-nums;
+}
+.team-deployment-total {
+    display: inline-flex; align-items: center; padding: 5px 9px;
+    border-radius: 20px; background: #edf1ff; color: #3656c8;
+    font-size: 10px; font-weight: 800;
+}
+.team-deployment-empty {
+    padding: 22px 10px; border: 1px dashed #dce4ef;
+    border-radius: 12px; color: #8792a6; font-size: 12px;
+    text-align: center; line-height: 1.6;
+}
+@media (max-width: 760px) {
+    .team-deployment-row {
+        grid-template-columns: minmax(75px, 110px) minmax(35px, 1fr) 28px;
+        gap: 7px;
+    }
+}
+
+
+
+/* Visual refresh: richer color, depth and responsive chart styling */
+:root {
+    --navy:#172554; --blue:#4f67f6; --muted:#71809a; --line:#e6ebf5;
+    --green:#059669; --orange:#d97706; --red:#dc2626; --purple:#7c3aed; --cyan:#0891b2;
+}
+body { background:linear-gradient(135deg,#f4f7ff 0%,#f8faff 48%,#f2f6ff 100%); }
+.top {
+    background:radial-gradient(circle at 12% 0%,#536df7 0,transparent 32%),
+      radial-gradient(circle at 88% 10%,#8b5cf6 0,transparent 30%),
+      linear-gradient(120deg,#111a3d 0%,#243b82 58%,#3449a5 100%);
+    box-shadow:0 12px 35px #1c2d681c;
+}
+.logo { background:linear-gradient(145deg,#ffffff25,#ffffff0b); box-shadow:inset 0 1px #ffffff30; }
+.wrap { max-width:1580px; }
+.metric {
+    border:1px solid #e4e9f6; box-shadow:0 8px 24px #20356b0b;
+    background:linear-gradient(145deg,#fff 0%,#fbfcff 100%);
+}
+.metric::after { width:125px;height:125px;right:-38px;top:-50px;opacity:.95; }
+.metric .number { letter-spacing:-1.4px; }
+.metric:hover { box-shadow:0 14px 30px #20356b18; }
+.panel {
+    border:1px solid #e4e9f6; border-radius:19px;
+    box-shadow:0 9px 26px #20356b0c;
+    background:linear-gradient(160deg,#fff 0%,#fdfdff 100%);
+}
+.panelhead { margin-bottom:18px; }
+.panel h3 { font-size:15px; font-weight:850; color:#192849; }
+.sub { color:#8491a8; }
+.gridcharts { gap:18px; }
+.chart { height:235px; }
+.donut {
+    width:158px;height:158px;
+    box-shadow:0 9px 24px #243b8214,inset 0 0 0 1px #ffffff80;
+}
+.donut::after { inset:27px; box-shadow:inset 0 0 0 1px #edf1f8; }
+.donutcenter strong { color:#182647;font-size:29px; }
+.donutlegend { gap:15px; }
+.donutlegend .item { font-size:11px; }
+.donutlegend b { font-size:13px; }
+.track { height:10px; background:#edf1fa; box-shadow:inset 0 1px 2px #1d2f5b0b; }
+.fill { border-radius:20px; box-shadow:0 2px 7px #263a751f; }
+.barrow.status-option { border-radius:11px; padding:8px; margin:-8px; }
+.barrow.status-option:hover,.barrow.status-option:focus-visible { background:#f2f5ff; }
+.team-deployment-panel { background:linear-gradient(145deg,#fff 0%,#f7f8ff 100%); }
+.team-deployment-total { background:linear-gradient(120deg,#e9edff,#f2eaff); color:#4b46b5; padding:7px 11px; }
+.team-deployment-list { gap:17px; }
+.team-deployment-row { grid-template-columns:minmax(90px,150px) minmax(50px,1fr) 38px; }
+.team-deployment-track { height:11px; background:#e9eef8; box-shadow:inset 0 1px 2px #263a7510; }
+.team-deployment-fill { box-shadow:0 3px 8px #263a7520; }
+.team-deployment-row:nth-child(6n+1) .team-deployment-fill { background:linear-gradient(90deg,#4f67f6,#8b9bff); }
+.team-deployment-row:nth-child(6n+2) .team-deployment-fill { background:linear-gradient(90deg,#0891b2,#55c7df); }
+.team-deployment-row:nth-child(6n+3) .team-deployment-fill { background:linear-gradient(90deg,#7c3aed,#b49af8); }
+.team-deployment-row:nth-child(6n+4) .team-deployment-fill { background:linear-gradient(90deg,#059669,#55d6a8); }
+.team-deployment-row:nth-child(6n+5) .team-deployment-fill { background:linear-gradient(90deg,#d97706,#f6bd60); }
+.team-deployment-row:nth-child(6n) .team-deployment-fill { background:linear-gradient(90deg,#e04455,#f49aa5); }
+.team-deployment-name { color:#4b5872;font-size:12px; }
+.team-deployment-count { color:#1c2b4b;font-size:13px; }
+.records { border-radius:19px; }
+.records .panelhead { background:linear-gradient(90deg,#fbfcff,#f5f7ff); }
+.filters input,.filters select,.team-export-field input,.team-export-field select {
+    border-color:#dce4f2; box-shadow:0 2px 5px #20356b05;
+}
+.btn { background:linear-gradient(120deg,#526bf6,#4057dc); box-shadow:0 4px 12px #4f67f629; }
+.btn.light { background:#edf1ff;color:#4057c8;box-shadow:none; }
+.btn.ghost { box-shadow:none; }
+.pill { border-radius:7px; }
+th { background:#f4f6fc; }
+tbody tr:hover td { background:#f4f7ff; }
+@media(max-width:760px) {
+    .chart { height:220px; }
+    .donut { width:140px;height:140px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<header class="top">
+    <div class="brand">
+        <div class="logo">▦</div>
+        <div>
+            <h1>Leads View</h1>
+            <p>Manager Overview · Deployment Tracker</p>
+        </div>
+    </div>
+
+    <nav class="actions">
+        <a class="btn ghost" href="/">＋ New Deployment</a>
+        <a class="btn ghost" href="/governance_tracker">DevOps Workspace ↗</a>
+        <button class="btn" type="button"
+                onclick="window.location.reload()">↻ Refresh</button>
+    </nav>
+</header>
+
+<main class="wrap">
+
+    <section class="intro">
+        <div>
+            <h2>Deployment Overview</h2>
+            <p>Monitor releases, deployment activity, automation and rollback requests.</p>
+        </div>
+
+        <div class="live">
+            <span class="dot"></span>
+            LIVE DATABASE SNAPSHOT
+        </div>
+    </section>
+
+    <section class="metrics">
+
+        <div class="metric" style="--accent:#4568f5;--tint:#e9edff">
+            <div class="metric-head">
+                <span class="label">TOTAL DEPLOYMENTS</span>
+                <span class="icon">▦</span>
+            </div>
+            <div class="number">{{ metrics.total }}</div>
+            <small>All deployment records</small>
+        </div>
+
+        <div class="metric" style="--accent:#0891b2;--tint:#dff8fc">
+            <div class="metric-head">
+                <span class="label">TODAY</span>
+                <span class="icon">◷</span>
+            </div>
+            <div class="number">{{ metrics.daily }}</div>
+            <small>Deployments scheduled for today</small>
+        </div>
+
+        <div class="metric" style="--accent:#8b5cf6;--tint:#f0e9ff">
+            <div class="metric-head">
+                <span class="label">THIS WEEK</span>
+                <span class="icon">▤</span>
+            </div>
+            <div class="number">{{ metrics.weekly }}</div>
+            <small>Monday – Sunday</small>
+        </div>
+
+        <div class="metric" style="--accent:#059669;--tint:#dcfce9">
+            <div class="metric-head">
+                <span class="label">THIS MONTH</span>
+                <span class="icon">▣</span>
+            </div>
+            <div class="number">{{ metrics.monthly }}</div>
+            <small>Current calendar month</small>
+        </div>
+
+        <div class="metric" style="--accent:#e04455;--tint:#ffe7ea">
+            <div class="metric-head">
+                <span class="label">ROLLBACK REQUESTS</span>
+                <span class="icon">↶</span>
+            </div>
+            <div class="number">{{ metrics.rollbacks }}</div>
+            <small>Records with Roll Back = Yes</small>
+        </div>
+
+    </section>
+
+    <section class="gridcharts">
+
+        <div class="panel">
+            <div class="panelhead activity-panelhead">
+                <div>
+                    <h3>Deployment Activity</h3>
+                    <div class="sub" id="activitySubtitle">Deployments for the selected calendar week</div>
+                    <div class="week-range" id="activityWeekRange" aria-live="polite">Loading week…</div>
+                </div>
+                <div class="week-controls" aria-label="Deployment activity week navigation">
+                    <button type="button" class="week-nav" id="previousWeekButton"
+                            aria-label="Previous week" title="Previous week">‹</button>
+                    <button type="button" class="week-nav" id="currentWeekButton"
+                            title="Go to current week">This week</button>
+                    <button type="button" class="week-nav" id="nextWeekButton"
+                            aria-label="Next week" title="Next week">›</button>
+                </div>
+            </div>
+            <div class="chart">
+                <canvas id="activityChart"
+                    aria-label="Deployments by day for the selected calendar week"></canvas>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Deployment Type</h3>
+                    <div class="sub">Automation versus manual deployment</div>
+                </div>
+            </div>
+            <div class="donutwrap">
+                <div class="donut" id="typeDonut">
+                    <div class="donutcenter">
+                        <strong id="typeTotal">0</strong>
+                        <span>deployments</span>
+                    </div>
+                </div>
+                <div class="donutlegend" id="typeLegend"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Status Breakdown</h3>
+                    <div class="sub">Select a status to filter the deployment records</div>
+                </div>
+                <button class="btn light" type="button" id="clearStatusChoice">All statuses</button>
+            </div>
+            <div class="barlist" id="statusBars" aria-label="Choose a deployment status"></div>
+        </div>
+
+        <div class="panel team-deployment-panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Team-wise Deployment Breakdown</h3>
+                    <div class="sub">Deployment count allocated to each team in Governance Tracker</div>
+                </div>
+                <span class="team-deployment-total">{{ team_deployment_total }} total</span>
+            </div>
+            {% if team_deployment_counts %}
+                <div class="team-deployment-list">
+                    {% for item in team_deployment_counts %}
+                        <div class="team-deployment-row">
+                            <span class="team-deployment-name" title="{{ item.team }}">{{ item.team }}</span>
+                            <div class="team-deployment-track" role="img"
+                                 aria-label="{{ item.team }}: {{ item.count }} deployments">
+                                <div class="team-deployment-fill"
+                                     data-percent="{{ ((item.count / team_chart_max * 100) if team_chart_max else 0)|round(2) }}"></div>
+                            </div>
+                            <strong class="team-deployment-count">{{ item.count }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="team-deployment-empty">
+                    No team allocations found yet.<br>
+                    Add team names and deployment counts in Governance Tracker.
+                </div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <section class="panel records">
+
+        <div class="panelhead">
+            <div>
+                <h3>All Deployment Records</h3>
+                <div class="sub">Search, filter and export deployment details</div>
+            </div>
+
+            <div class="filters">
+                <input id="search" type="search"
+                    placeholder="Search CR, RFID, application, owner..."
+                    aria-label="Search deployment records">
+
+                <select id="rollbackFilter" aria-label="Filter by rollback">
+                    <option value="">All rollback values</option>
+                    <option value="yes">Roll Back: Yes</option>
+                    <option value="no">Roll Back: No</option>
+                </select>
+
+                <input id="recordsFromDate" type="date" aria-label="From date" title="From date">
+                <input id="recordsToDate" type="date" aria-label="To date" title="To date">
+
+                <select id="statusFilter" aria-label="Filter by status">
+                    <option value="">All statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="in progress">In Progress</option>
+                    <option value="successful">Successful</option>
+                    <option value="failed">Failed</option>
+                    <option value="rolled back">Rolled Back</option>
+                    <option value="cancelled">Cancelled</option>
+                    {% for record_status in records|map(attribute='status')|select|unique|sort %}
+                        {% if record_status|lower not in ['pending', 'approved', 'rejected', 'scheduled', 'in progress', 'successful', 'failed', 'rolled back', 'cancelled'] %}
+                    <option value="{{ record_status|lower }}">{{ record_status }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+
+                <select id="recordsExportFormat" aria-label="Export format">
+                    <option value="csv">CSV</option>
+                    <option value="xlsx">Excel (.xlsx)</option>
+                </select>
+                <button class="btn light" type="button" id="applyRecordDateFilter">View Date-wise Report</button>
+                <button class="btn" type="button" id="exportRecordsButton">↓ Export Report</button>
+            </div>
+        </div>
+
+        <div class="tablewrap">
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>SR.NO</th>
+                        <th>CR Number</th>
+                        <th>RFID</th>
+                        <th><button class="sort-heading" type="button" data-record-sort="date" aria-sort="none">Deployment Date <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th><button class="sort-heading" type="button" data-record-sort="slotStart" aria-sort="none">Slot Start <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th>Slot End</th>
+                        <th>Application</th>
+                        <th>Team-wise Deployment Breakdown</th>
+                        <th>Type</th>
+                        <th>Change Type</th>
+                        <th>Released By</th>
+                        <th>Verified / Deployed By</th>
+                        <th>Requestor</th>
+                        <th>Incident</th>
+                        <th>Roll Back</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for r in records %}
+                    <tr
+                        data-date="{{ r.deployment_date.strftime('%Y-%m-%d') if r.deployment_date else '' }}"
+                        data-slot-start="{{ r.slot_start.strftime('%H:%M:%S') if r.slot_start else '' }}"
+                        data-type="{{ (r.deployment_type or 'Unknown')|lower }}"
+                        data-rollback="{{ (r.roll_back or 'No')|lower }}"
+                        data-status="{{ (r.status or '')|lower }}">
+
+                        <td>{{ loop.index }}</td>
+                        <td>{{ r.cr_number or '' }}</td>
+                        <td>{{ r.rfid or '' }}</td>
+
+                        <td>{{ r.deployment_date.strftime('%Y-%m-%d') if r.deployment_date else '' }}</td>
+                        <td>{{ r.slot_start.strftime('%H:%M') if r.slot_start else '' }}</td>
+                        <td>{{ r.slot_end.strftime('%H:%M') if r.slot_end else '' }}</td>
+
+                        <td>{{ r.application_name or '' }}</td>
+                        <td class="team-record-cell">
+                            {% if r.team_allocations_display %}
+                                {% for allocation in r.team_allocations_display %}
+                                    <span class="team-record-item">{{ allocation.team }}: <strong>{{ allocation.count }}</strong></span>{% if not loop.last %}<span class="team-record-separator"> | </span>{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="team-record-empty">Not allocated</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.deployment_type or '' }}</td>
+                        <td>{{ r.change_type or '' }}</td>
+                        <td>{{ r.released_by or '' }}</td>
+                        <td>{{ r.verified_and_deployed_by or '' }}</td>
+                        <td>{{ r.change_requestor or '' }}</td>
+                        <td>{{ r.incident_number if r.incident_number is not none else '' }}</td>
+
+                        <td>
+                            <span class="pill {{ 'yes' if (r.roll_back or '')|lower == 'yes' else 'no' }}">
+                                {{ r.roll_back or 'No' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% set status_class = (r.status or '')|lower|replace(' ', '-') %}
+                            <span class="pill {{ status_class }}">
+                                {{ r.status or 'Unknown' }}
+                            </span>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="16" class="empty">
+                            No deployment records found.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="records-pagination">
+            <span class="history-count" id="recordPageSummary" aria-live="polite">Showing {{ records|length }} records</span>
+            <nav class="history-pagination" aria-label="All deployment records pagination">
+                <button class="btn light" type="button" id="recordsPrev" disabled>← Previous</button>
+                <span class="records-page-label" id="recordsPageLabel">Page 1 of 1</span>
+                <button class="btn light" type="button" id="recordsNext" disabled>Next →</button>
+            </nav>
+        </div>
+        <div class="foot">
+            <span id="visibleCount">Showing {{ records|length }} records</span>
+            <span>Metrics use deployment date. Rollbacks count records where Roll Back = Yes.</span>
+        </div>
+
+    </section>
+
+    <section class="panel records audit-history-panel">
+        <div class="panelhead">
+            <div>
+                <h3>Change History</h3>
+                <div class="sub">Search by the person's name/email or CR number. Date and slot show the linked deployment's current schedule. Latest 200 changes, 10 at a time.</div>
+            </div>
+        </div>
+        <div class="history-tools">
+            <div class="history-search-wrap">
+                <input id="historySearch" type="search"
+                       placeholder="Search Modified By or CR Number..."
+                       aria-label="Search change history by modified by or CR number"
+                       autocomplete="off">
+                <button class="btn light" id="clearHistorySearch" type="button">Clear</button>
+            </div>
+            <span class="history-count" id="historyCount" aria-live="polite">Loading history...</span>
+        </div>
+        <div class="tablewrap">
+            <table id="changeHistoryTable">
+                <thead>
+                    <tr>
+                        <th>SR No.</th>
+                        <th><button class="sort-heading" type="button" data-history-sort="modifiedAt" aria-sort="descending">Modified At <span class="sort-indicator" aria-hidden="true">↓</span></button></th>
+                        <th>Modified By</th>
+                        <th>Action</th>
+                        <th>CR Number</th>
+                        <th>RFID</th>
+                        <th><button class="sort-heading" type="button" data-history-sort="deploymentDate" aria-sort="none">Deployment Date <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th><button class="sort-heading" type="button" data-history-sort="slotStart" aria-sort="none">Slot Start <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th>Field</th>
+                        <th>Previous Value</th>
+                        <th>New Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% set history_ns = namespace(sr=0) %}
+                {% for event in change_history %}
+                    {% if event.changes %}
+                        {% for field, values in event.changes.items() %}
+                        {% set history_ns.sr = history_ns.sr + 1 %}
+                        {% set linked_record = (records | selectattr('id', 'equalto', event.deployment_id) | first) %}
+                        <tr data-history-row="true">
+                            <td>{{ history_ns.sr }}</td>
+                            <td data-sort-value="{{ event.modified_at.strftime('%Y-%m-%d %H:%M:%S') if event.modified_at else '' }}">{{ event.modified_at.strftime('%Y-%m-%d %H:%M:%S') if event.modified_at else '' }}</td>
+                            <td>{{ event.modified_by or 'Not provided' }}</td>
+                            <td>{{ event.action or '' }}</td>
+                            <td>{{ event.cr_number or '' }}</td>
+                            <td>{{ event.rfid or '' }}</td>
+                            <td data-sort-value="{{ linked_record.deployment_date.strftime('%Y-%m-%d') if linked_record and linked_record.deployment_date else '' }}">{{ linked_record.deployment_date.strftime('%Y-%m-%d') if linked_record and linked_record.deployment_date else '—' }}</td>
+                            <td data-sort-value="{{ linked_record.slot_start.strftime('%H:%M:%S') if linked_record and linked_record.slot_start else '' }}">{{ linked_record.slot_start.strftime('%H:%M') if linked_record and linked_record.slot_start else '—' }}</td>
+                            <td>{{ field.replace('_', ' ')|title }}</td>
+                            <td class="audit-value">{{ values.get('old') if values.get('old') is not none else '—' }}</td>
+                            <td class="audit-value">{{ values.get('new') if values.get('new') is not none else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% else %}
+                    <tr><td colspan="11" class="empty">No changes recorded yet.</td></tr>
+                {% endfor %}
+                <tr id="historyNoResults" class="history-no-results" hidden>
+                    <td colspan="11">No matching changes found. Try another name/email or CR number.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="history-tools">
+            <span class="history-count" id="historyPageSummary" aria-live="polite">Showing 0 changes</span>
+            <nav class="history-pagination" aria-label="Change history pagination">
+                <button class="btn light" type="button" id="historyPrev" disabled>← Previous</button>
+                <span class="history-page-label" id="historyPageLabel">Page 0 of 0</span>
+                <button class="btn light" type="button" id="historyNext" disabled>Next →</button>
+            </nav>
+        </div>
+    </section>
+
+</main>
+
+<script>
+
+const searchBox = document.getElementById('search');
+const rollbackFilter = document.getElementById('rollbackFilter');
+const statusFilter = document.getElementById('statusFilter');
+const recordsFromDate = document.getElementById('recordsFromDate');
+const recordsToDate = document.getElementById('recordsToDate');
+const recordsExportFormat = document.getElementById('recordsExportFormat');
+const tableBody = document.querySelector('#recordsTable tbody');
+let recordRows = [...tableBody.querySelectorAll('tr[data-status]')];
+const recordPageSize = 10;
+let recordPage = 1;
+let filteredRecordRows = recordRows.slice();
+let recordSort = { key: null, direction: 'asc' };
+
+const recordsPrev = document.getElementById('recordsPrev');
+const recordsNext = document.getElementById('recordsNext');
+const recordsPageLabel = document.getElementById('recordsPageLabel');
+const recordPageSummary = document.getElementById('recordPageSummary');
+
+function getRecordSortValue(row, key) {
+    if (key === 'date') return (row.dataset.date || '').trim();
+    if (key === 'slotStart') return (row.dataset.slotStart || '').trim();
+    return '';
+}
+
+function sortDeploymentRecords(key) {
+    if (recordSort.key === key) {
+        recordSort.direction = recordSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        recordSort = { key, direction: 'asc' };
+    }
+
+    const direction = recordSort.direction === 'asc' ? 1 : -1;
+    recordRows.sort((a, b) => {
+        const aValue = getRecordSortValue(a, key);
+        const bValue = getRecordSortValue(b, key);
+
+        if (!aValue && bValue) return 1;
+        if (aValue && !bValue) return -1;
+        return aValue.localeCompare(bValue, undefined, { numeric: true }) * direction;
+    });
+    recordRows.forEach(row => tableBody.appendChild(row));
+    updateRecordSortHeadings();
+    filterRows(true);
+}
+
+function updateRecordSortHeadings() {
+    document.querySelectorAll('[data-record-sort]').forEach(button => {
+        const active = button.dataset.recordSort === recordSort.key;
+        button.setAttribute('aria-sort', active
+            ? (recordSort.direction === 'asc' ? 'ascending' : 'descending')
+            : 'none');
+        const indicator = button.querySelector('.sort-indicator');
+        if (indicator) indicator.textContent = active
+            ? (recordSort.direction === 'asc' ? '↑' : '↓')
+            : '↕';
+    });
+}
+
+document.querySelectorAll('[data-record-sort]').forEach(button => {
+    button.addEventListener('click', () => sortDeploymentRecords(button.dataset.recordSort));
+});
+
+function renderRecordPage() {
+    const total = filteredRecordRows.length;
+    const pageCount = Math.ceil(total / recordPageSize);
+    recordPage = Math.max(1, Math.min(recordPage, pageCount || 1));
+    const start = total ? (recordPage - 1) * recordPageSize : 0;
+    const end = Math.min(start + recordPageSize, total);
+    const visibleRows = new Set(filteredRecordRows.slice(start, end));
+
+    recordRows.forEach(row => {
+        row.style.display = visibleRows.has(row) ? '' : 'none';
+    });
+    filteredRecordRows.forEach((row, index) => {
+        row.cells[0].textContent = String(index + 1);
+    });
+
+    recordPageSummary.textContent = total
+        ? `Showing ${start + 1}–${end} of ${total} matching record${total === 1 ? '' : 's'}`
+        : 'Showing 0 matching records';
+    recordsPageLabel.textContent = `Page ${total ? recordPage : 0} of ${pageCount}`;
+    recordsPrev.disabled = recordPage <= 1 || total === 0;
+    recordsNext.disabled = recordPage >= pageCount || total === 0;
+    document.getElementById('visibleCount').textContent =
+        `Showing ${total} of ${recordRows.length} records`;
+}
+
+function filterRows(resetPage = true) {
+    const query = searchBox.value.trim().toLocaleLowerCase();
+    filteredRecordRows = recordRows.filter(row => {
+        const matchText = row.innerText.toLocaleLowerCase().includes(query);
+        const matchRollback = !rollbackFilter.value || row.dataset.rollback === rollbackFilter.value;
+        const matchStatus = !statusFilter.value || row.dataset.status === statusFilter.value;
+        const rowDate = (row.dataset.date || '').trim();
+        const fromDate = recordsFromDate?.value || '';
+        const toDate = recordsToDate?.value || '';
+        const matchFromDate = !fromDate || (rowDate && rowDate >= fromDate);
+        const matchToDate = !toDate || (rowDate && rowDate <= toDate);
+        return matchText && matchRollback && matchStatus && matchFromDate && matchToDate;
+    });
+
+    if (resetPage) recordPage = 1;
+    renderRecordPage();
+    updateStatusBarSelection();
+}
+
+[searchBox, rollbackFilter, statusFilter].forEach(element => {
+    element.addEventListener('input', () => filterRows(true));
+    element.addEventListener('change', () => filterRows(true));
+});
+
+recordsPrev.addEventListener('click', () => {
+    if (recordPage > 1) { recordPage--; renderRecordPage(); }
+});
+recordsNext.addEventListener('click', () => {
+    const pageCount = Math.ceil(filteredRecordRows.length / recordPageSize);
+    if (recordPage < pageCount) { recordPage++; renderRecordPage(); }
+});
+
+function exportTableCSV() {
+    const headers = [
+        ...document.querySelectorAll('#recordsTable thead th')
+    ];
+
+    const rows = filteredRecordRows;
+
+    const escapeCSV = value =>
+        '"' + String(value ?? '').replace(/"/g, '""') + '"';
+
+    const csvRows = [
+        headers.map(th => escapeCSV(th.innerText.replace(/[↕↑↓]/g, '').trim())).join(','),
+        ...rows.map((tr, index) =>
+            [...tr.cells].map((td, cellIndex) =>
+                escapeCSV(cellIndex === 0 ? index + 1 : td.innerText.trim())
+            ).join(',')
+        )
+    ];
+
+    const blob = new Blob(
+        ['\ufeff' + csvRows.join('\r\n')],
+        { type: 'text/csv;charset=utf-8;' }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    const fromPart = recordsFromDate?.value || 'all';
+    const toPart = recordsToDate?.value || 'dates';
+    link.download = `deployment_records_${fromPart}_to_${toPart}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Apply the selected date range to the All Deployment Records table.
+document.getElementById('applyRecordDateFilter')?.addEventListener('click', () => {
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    filterRows(true);
+});
+
+[recordsFromDate, recordsToDate].forEach(input => {
+    input?.addEventListener('change', () => {
+        const fromDate = recordsFromDate.value;
+        const toDate = recordsToDate.value;
+        if (fromDate && toDate && toDate < fromDate) {
+            alert('To Date must be on or after From Date.');
+            input.value = '';
+        }
+    });
+});
+
+async function exportTableExcel() {
+    const headers = [...document.querySelectorAll('#recordsTable thead th')]
+        .map(th => th.innerText.replace(/[↕↑↓]/g, '').trim());
+    const rows = filteredRecordRows.map((tr, index) =>
+        [...tr.cells].map((td, cellIndex) =>
+            cellIndex === 0 ? String(index + 1) : td.innerText.trim()
+        )
+    );
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    const response = await fetch('/manager/export-deployment-records.xlsx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headers, rows, from_date: fromDate, to_date: toDate })
+    });
+    if (!response.ok) {
+        const message = await response.text();
+        alert(message || 'Unable to export Excel report.');
+        return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `deployment_records_${fromDate || 'all'}_to_${toDate || 'dates'}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.getElementById('exportRecordsButton')?.addEventListener('click', () => {
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    // Ensure the export uses the latest date range and all active table filters.
+    filterRows(true);
+    if (recordsExportFormat.value === 'xlsx') exportTableExcel();
+    else exportTableCSV();
+});
+
+function dateKey(date) {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-');
+}
+
+function parseDate(value) {
+    if (!value) return null;
+
+    const parts = value.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+let selectedWeekStart = getMonday(new Date());
+
+function getMonday(dateValue) {
+    const date = new Date(dateValue);
+    date.setHours(0, 0, 0, 0);
+    const daysSinceMonday = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - daysSinceMonday);
+    return date;
+}
+
+function addDays(dateValue, amount) {
+    const date = new Date(dateValue);
+    date.setDate(date.getDate() + amount);
+    return date;
+}
+
+function formatWeekDate(dateValue) {
+    return dateValue.toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+function updateWeekLabel() {
+    const weekEnd = addDays(selectedWeekStart, 6);
+    const range = `${formatWeekDate(selectedWeekStart)} – ${formatWeekDate(weekEnd)}`;
+    const rangeElement = document.getElementById('activityWeekRange');
+    const subtitle = document.getElementById('activitySubtitle');
+
+    if (rangeElement) rangeElement.textContent = range;
+    if (subtitle) subtitle.textContent = 'Deployment records for this Monday–Sunday week';
+}
+
+function drawActivity() {
+    const canvas = document.getElementById('activityChart');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const width = rect.width, height = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const pad = { left: 32, right: 16, top: 22, bottom: 48 };
+    const plotWidth = width - pad.left - pad.right;
+    const plotHeight = height - pad.top - pad.bottom;
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const date = addDays(selectedWeekStart, i);
+        days.push({
+            date,
+            label: date.toLocaleDateString(undefined, { weekday: 'short' }),
+            dateLabel: date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+            count: 0
+        });
+    }
+    recordRows.forEach(row => {
+        const date = parseDate(row.dataset.date);
+        if (!date) return;
+        const day = days.find(item => dateKey(item.date) === dateKey(date));
+        if (day) day.count++;
+    });
+
+    const maxCount = Math.max(4, ...days.map(day => day.count));
+    ctx.font = '10px Segoe UI, Arial';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        const value = Math.ceil(maxCount * i / 4);
+        const y = pad.top + plotHeight - (i / 4) * plotHeight;
+        ctx.strokeStyle = '#edf1f8'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#98a4b8'; ctx.fillText(String(value), pad.left - 9, y);
+    }
+
+    const step = plotWidth / Math.max(1, days.length - 1);
+    const points = days.map((day, i) => ({
+        x: pad.left + i * step,
+        y: pad.top + plotHeight - (day.count / maxCount) * (plotHeight - 8),
+        day
+    }));
+    // Soft area under the line.
+    const area = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotHeight);
+    area.addColorStop(0, 'rgba(79,103,246,.28)');
+    area.addColorStop(1, 'rgba(79,103,246,.015)');
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, pad.top + plotHeight);
+    points.forEach((point, i) => {
+        if (i === 0) ctx.lineTo(point.x, point.y);
+        else {
+            const prev = points[i - 1];
+            const midX = (prev.x + point.x) / 2;
+            ctx.bezierCurveTo(midX, prev.y, midX, point.y, point.x, point.y);
+        }
+    });
+    ctx.lineTo(points[points.length - 1].x, pad.top + plotHeight);
+    ctx.closePath(); ctx.fillStyle = area; ctx.fill();
+
+    // Smooth line with a subtle glow.
+    ctx.beginPath();
+    points.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else {
+            const prev = points[i - 1], midX = (prev.x + point.x) / 2;
+            ctx.bezierCurveTo(midX, prev.y, midX, point.y, point.x, point.y);
+        }
+    });
+    ctx.strokeStyle = 'rgba(79,103,246,.15)'; ctx.lineWidth = 9;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.strokeStyle = '#526bf6'; ctx.lineWidth = 3; ctx.stroke();
+
+    points.forEach(({x, y, day}) => {
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#526bf6'; ctx.stroke();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.font = 'bold 10px Segoe UI, Arial'; ctx.fillStyle = '#33436a';
+        if (day.count > 0) ctx.fillText(String(day.count), x, y - 10);
+        ctx.textBaseline = 'top'; ctx.font = '10px Segoe UI, Arial'; ctx.fillStyle = '#78859c';
+        ctx.fillText(day.label, x, pad.top + plotHeight + 10);
+        ctx.font = '9px Segoe UI, Arial'; ctx.fillStyle = '#a0aabd';
+        ctx.fillText(day.dateLabel, x, pad.top + plotHeight + 24);
+    });
+    updateWeekLabel();
+}
+
+function changeSelectedWeek(weekOffset) {
+    selectedWeekStart = addDays(selectedWeekStart, weekOffset * 7);
+    drawActivity();
+}
+
+document.getElementById('previousWeekButton').addEventListener('click', function () {
+    changeSelectedWeek(-1);
+});
+
+document.getElementById('nextWeekButton').addEventListener('click', function () {
+    changeSelectedWeek(1);
+});
+
+document.getElementById('currentWeekButton').addEventListener('click', function () {
+    selectedWeekStart = getMonday(new Date());
+    drawActivity();
+});
+
+function buildDonut() {
+    const types = [
+        { name: 'Automation', color: '#526bf6', count: 0 },
+        { name: 'Manual', color: '#10b99a', count: 0 },
+        { name: 'Other', color: '#a78bfa', count: 0 }
+    ];
+
+    recordRows.forEach(row => {
+        const type = (row.dataset.type || '').toLowerCase();
+        const item = types.find(t => t.name.toLowerCase() === type)
+            || types[2];
+
+        item.count++;
+    });
+
+    const active = types.filter(type => type.count > 0);
+    const total = types.reduce((sum, type) => sum + type.count, 0);
+
+    document.getElementById('typeTotal').textContent = total;
+
+    let offset = 0;
+
+    const segments = active.map(type => {
+        const start = offset;
+        offset += total ? type.count / total * 100 : 0;
+
+        return `${type.color} ${start}% ${offset}%`;
+    });
+
+    document.getElementById('typeDonut').style.background =
+        segments.length
+            ? `conic-gradient(${segments.join(',')})`
+            : '#edf1f7';
+
+    document.getElementById('typeLegend').innerHTML =
+        active.length
+            ? active.map(type => `
+                <div class="item">
+                    <span class="swatch" style="background:${type.color}"></span>
+                    <span>${type.name}</span>
+                    <b>${type.count}</b>
+                </div>
+            `).join('')
+            : '<div class="sub">No records yet</div>';
+}
+
+function buildStatusBars() {
+        const statuses = [
+        'Pending', 'Approved', 'Rejected', 'Scheduled', 'In Progress',
+        'Successful', 'Failed', 'Rolled Back', 'Cancelled'
+    ];
+
+    const colors = {
+        'Pending': 'linear-gradient(90deg,#f59e0b,#fbc56b)',
+        'Approved': 'linear-gradient(90deg,#526bf6,#9baaff)',
+        'Rejected': 'linear-gradient(90deg,#ef4444,#f99a9a)',
+        'Scheduled': 'linear-gradient(90deg,#6366f1,#a5b4fc)',
+        'In Progress': 'linear-gradient(90deg,#06b6d4,#67d8ea)',
+        'Successful': 'linear-gradient(90deg,#10b981,#6ee7b7)',
+        'Failed': 'linear-gradient(90deg,#ef4444,#fca5a5)',
+        'Rolled Back': 'linear-gradient(90deg,#8b5cf6,#c4b5fd)',
+        'Cancelled': 'linear-gradient(90deg,#94a3b8,#cbd5e1)'
+    };
+
+    const counts = {};
+    recordRows.forEach(row => {
+        const rawStatus = row.querySelector('td:last-child')?.innerText.trim() || 'Unknown';
+        const canonicalStatus = statuses.find(
+            status => status.toLowerCase() === rawStatus.toLowerCase()
+        ) || rawStatus;
+        counts[canonicalStatus] = (counts[canonicalStatus] || 0) + 1;
+    });
+
+    const knownStatuses = new Set(statuses.map(status => status.toLowerCase()));
+    const entries = statuses.map(status => ({
+        status,
+        count: counts[status] || 0
+    }));
+
+        Object.keys(counts)
+        .filter(status => !knownStatuses.has(status.toLowerCase()))
+        .sort()
+        .forEach(status => entries.push({ status, count: counts[status] }));
+
+    const maxCount = Math.max(1, ...entries.map(entry => entry.count));
+    const container = document.getElementById('statusBars');
+    container.replaceChildren();
+
+    entries.forEach(({ status, count }) => {
+        const row = document.createElement('div');
+        row.className = 'barrow status-option';
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('aria-label', `Filter records by status: ${status}`);
+        row.dataset.statusChoice = status.toLowerCase();
+        row.setAttribute('aria-pressed', String(statusFilter.value === status.toLowerCase()));
+        if (statusFilter.value === status.toLowerCase()) row.classList.add('is-selected');
+
+        const label = document.createElement('span');
+        label.className = 'status-name';
+        label.textContent = status;
+
+        const track = document.createElement('div');
+        track.className = 'track';
+        const fill = document.createElement('div');
+        fill.className = 'fill';
+        fill.style.width = `${count / maxCount * 100}%`;
+        fill.style.background = colors[status] || '#94a3b8';
+        track.appendChild(fill);
+
+        const number = document.createElement('strong');
+        number.textContent = String(count);
+
+        row.append(label, track, number);
+        container.appendChild(row);
+    });
+}
+
+function updateStatusBarSelection() {
+    const selectedValue = statusFilter.value;
+    document.querySelectorAll('#statusBars .status-option').forEach(row => {
+        const selected = Boolean(selectedValue) && row.dataset.statusChoice === selectedValue;
+        row.classList.toggle('is-selected', selected);
+        row.setAttribute('aria-pressed', String(selected));
+    });
+}
+
+function chooseStatus(statusValue) {
+   
+    statusFilter.value = statusFilter.value === statusValue ? '' : statusValue;
+    filterRows();
+}
+
+const statusBars = document.getElementById('statusBars');
+statusBars.addEventListener('click', event => {
+    const row = event.target.closest('.status-option');
+    if (row) chooseStatus(row.dataset.statusChoice);
+});
+statusBars.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest('.status-option');
+    if (!row) return;
+    event.preventDefault();
+    chooseStatus(row.dataset.statusChoice);
+});
+
+document.getElementById('clearStatusChoice').addEventListener('click', () => {
+    statusFilter.value = '';
+    filterRows();
+});
+
+function redraw() {
+    drawActivity();
+}
+
+buildDonut();
+buildStatusBars();
+filterRows(true);
+redraw();
+
+
+(function initChangeHistoryTable() {
+    const table = document.getElementById('changeHistoryTable');
+    if (!table) return;
+
+    const body = table.querySelector('tbody');
+    const rows = [...body.querySelectorAll('tr[data-history-row="true"]')];
+    const search = document.getElementById('historySearch');
+    const clearButton = document.getElementById('clearHistorySearch');
+    const prevButton = document.getElementById('historyPrev');
+    const nextButton = document.getElementById('historyNext');
+    const count = document.getElementById('historyCount');
+    const summary = document.getElementById('historyPageSummary');
+    const pageLabel = document.getElementById('historyPageLabel');
+    const noResults = document.getElementById('historyNoResults');
+    const pageSize = 10;
+    let page = 1;
+    let filteredRows = rows;
+    let historySort = { key: 'modifiedAt', direction: 'desc' };
+    const historySortColumns = { modifiedAt: 1, deploymentDate: 6, slotStart: 7 };
+
+    function updateHistorySortHeaders() {
+        table.querySelectorAll('[data-history-sort]').forEach(button => {
+            const active = button.dataset.historySort === historySort.key;
+            button.setAttribute('aria-sort', active
+                ? (historySort.direction === 'asc' ? 'ascending' : 'descending')
+                : 'none');
+            const indicator = button.querySelector('.sort-indicator');
+            if (indicator) indicator.textContent = active
+                ? (historySort.direction === 'asc' ? '↑' : '↓')
+                : '↕';
+        });
+    }
+
+    table.querySelectorAll('[data-history-sort]').forEach(button => {
+        button.addEventListener('click', () => {
+            const key = button.dataset.historySort;
+            if (historySort.key === key) {
+                historySort.direction = historySort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                historySort = { key, direction: 'asc' };
+            }
+            const columnIndex = historySortColumns[key];
+            const direction = historySort.direction === 'asc' ? 1 : -1;
+            rows.sort((a, b) => {
+                const av = a.cells[columnIndex]?.dataset.sortValue || '';
+                const bv = b.cells[columnIndex]?.dataset.sortValue || '';
+                if (!av && bv) return 1;
+                if (av && !bv) return -1;
+                return av.localeCompare(bv, undefined, { numeric: true }) * direction;
+            });
+            rows.forEach(row => body.appendChild(row));
+            updateHistorySortHeaders();
+            applyHistoryView(true);
+        });
+    });
+    updateHistorySortHeaders();
+
+    function applyHistoryView(resetPage = false) {
+        const query = search.value.trim().toLocaleLowerCase();
+        filteredRows = rows.filter(row => {
+            const modifiedBy = (row.cells[2]?.textContent || '').toLocaleLowerCase();
+            const crNumber = (row.cells[4]?.textContent || '').toLocaleLowerCase();
+            return modifiedBy.includes(query) || crNumber.includes(query);
+        });
+
+        const total = filteredRows.length;
+        const pageCount = Math.ceil(total / pageSize);
+        if (resetPage) page = 1;
+        page = Math.max(1, Math.min(page, pageCount || 1));
+
+        
+        filteredRows.forEach((row, index) => {
+            if (row.cells[0]) row.cells[0].textContent = String(index + 1);
+        });
+
+        rows.forEach(row => { row.hidden = true; });
+        const start = total ? (page - 1) * pageSize : 0;
+        const end = Math.min(start + pageSize, total);
+        filteredRows.slice(start, end).forEach(row => { row.hidden = false; });
+
+        noResults.hidden = total !== 0;
+        count.textContent = query
+            ? `${total} matching change${total === 1 ? '' : 's'}`
+            : `${rows.length} total change${rows.length === 1 ? '' : 's'}`;
+        summary.textContent = total
+            ? `Showing ${start + 1}–${end} of ${total} change${total === 1 ? '' : 's'}`
+            : 'Showing 0 changes';
+        pageLabel.textContent = `Page ${total ? page : 0} of ${pageCount}`;
+        prevButton.disabled = page <= 1 || total === 0;
+        nextButton.disabled = page >= pageCount || total === 0;
+    }
+
+    search.addEventListener('input', () => applyHistoryView(true));
+    clearButton.addEventListener('click', () => {
+        search.value = '';
+        applyHistoryView(true);
+        search.focus();
+    });
+    prevButton.addEventListener('click', () => {
+        if (page > 1) { page--; applyHistoryView(); }
+    });
+    nextButton.addEventListener('click', () => {
+        const pageCount = Math.ceil(filteredRows.length / pageSize);
+        if (page < pageCount) { page++; applyHistoryView(); }
+    });
+
+    applyHistoryView(true);
+})();
+
+// Apply team bar widths from data attributes. Keeping dynamic values out of
+// inline CSS avoids VS Code CSS parser errors on Jinja template expressions.
+document.querySelectorAll('.team-deployment-fill[data-percent]').forEach(bar => {
+    const percent = Number.parseFloat(bar.dataset.percent);
+    bar.style.width = `${Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0}%`;
+});
+
+window.addEventListener('resize', redraw);
+</script>
+
+</body>
+</html>

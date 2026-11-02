@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Super Manager | Release Calendar</title>
+<style>
+:root{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#172033;background:#f4f6fb}
+*{box-sizing:border-box}body{margin:0}.hero{padding:26px max(20px,calc((100% - 1400px)/2));background:linear-gradient(120deg,#111a3d,#263b82);color:white}
+.hero h1{margin:0 0 8px}.hero p{margin:0;color:#dbe5ff}.wrap{max-width:1400px;margin:25px auto;padding:0 20px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:white;border:1px solid #e2e8f0;border-radius:15px;padding:22px;box-shadow:0 5px 20px #17255408;min-width:0}
+.card h2{font-size:19px;margin:0 0 8px}.muted{color:#64748b;font-size:13px;line-height:1.5}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,textarea,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}textarea{min-height:95px;resize:vertical}
+button,.link{display:inline-block;border:0;border-radius:8px;padding:11px 14px;background:#3155d9;color:white;font-weight:700;cursor:pointer;text-decoration:none;margin-top:12px}
+button.red{background:#b91c1c}button.green{background:#047857}button.gray{background:#475569}.row{display:flex;gap:12px;align-items:end}.row>*{flex:1;min-width:0}
+.flash{padding:12px;border-radius:8px;margin-bottom:12px;background:#e0f2fe;color:#075985}.flash.error{background:#fee2e2;color:#991b1b}.flash.success{background:#dcfce7;color:#166534}
+.table-wrap{overflow:auto;margin-top:12px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left}th{background:#f8fafc;position:sticky;top:0}
+.full{grid-column:1/-1}.weekend-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.weekend-choice{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px}.weekend-choice input{width:auto;margin:0}.block-list{display:grid;gap:8px}.block-item{padding:10px;border:1px solid #fecaca;background:#fff7f7;border-radius:8px;font-size:13px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.row{flex-direction:column;align-items:stretch;gap:0}}
+</style>
+</head>
+<body>
+<header class="hero"><h1>Super Manager Control Center</h1><p>Release Calendar controls · Day blocks · Slot capacity · Bulk administration</p></header>
+<main class="wrap">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+{% endwith %}
+<div class="grid">
+<section class="card">
+<h2>Slot Capacity</h2><p class="muted">Set the maximum number of active CR requests allowed in one 30-minute slot. This applies to the Release Calendar and booking API.</p>
+<form method="post" action="{{ url_for('super_manager_update_capacity') }}">
+<label for="max_cr_per_slot">Maximum CR requests per slot</label>
+<input id="max_cr_per_slot" name="max_cr_per_slot" type="number" min="1" max="100" required value="{{ capacity }}">
+<button type="submit">Save Slot Capacity</button>
+</form></section>
+<section class="card">
+<h2>Block or Reopen a Whole Day</h2><p class="muted">A blocked day prevents new bookings. The message is shown to people viewing that date in the Release Calendar. Existing requests remain visible.</p>
+<form method="post" action="{{ url_for('super_manager_block_date') }}" id="weekendBlockForm">
+<label for="weekend_from">Select weekend date range</label>
+<div class="row">
+  <div><input id="weekend_from" type="date" required></div>
+  <div><input id="weekend_to" type="date" required></div>
+</div>
+<button type="button" class="gray" id="showWeekends">Show Saturdays and Sundays</button>
+<div id="weekendChoices" class="weekend-choices" aria-live="polite"><p class="muted">Choose a date range and click “Show Saturdays and Sundays”.</p></div>
+<label for="message">Message to display</label>
+<textarea id="message" name="message" maxlength="1000" placeholder="Example: Weekend release freeze — no deployments are allowed on the selected dates." required></textarea>
+<button class="red" name="action" value="block">Block Selected Weekend Dates</button>
+<button class="green" name="action" value="unblock" formnovalidate>Reopen Selected Weekend Dates</button>
+</form>
+</section>
+<section class="card">
+<h2>Blocked Dates</h2>
+{% if blocks %}<div class="block-list">{% for blocked_date, message, updated_at in blocks %}
+<div class="block-item"><strong>{{ blocked_date }}</strong><br>{{ message }}<br><span class="muted">Updated: {{ updated_at }}</span>
+<form method="post" action="{{ url_for('super_manager_block_date') }}"><input type="hidden" name="blocked_date" value="{{ blocked_date }}"><input type="hidden" name="action" value="unblock"><button class="green" type="submit">Unblock this date</button></form></div>
+{% endfor %}</div>{% else %}<p class="muted">No dates are currently blocked.</p>{% endif %}
+</section>
+<section class="card">
+<h2>Remove Registered Audit User</h2><p class="muted">Removes the selected email from public.audit_users. Existing deployment records and deployment history are retained.</p>
+<form method="post" action="{{ url_for('super_manager_delete_user') }}" onsubmit="return confirm('Remove this user from the registered audit-user list?');">
+<label for="email">Registered email</label><select id="email" name="email" required><option value="">Select user</option>{% for email in users %}<option value="{{ email }}">{{ email }}</option>{% endfor %}</select>
+<button class="red" type="submit">Delete User</button></form>
+</section>
+<section class="card full">
+<h2>Deployment Requests</h2><p class="muted">Select multiple rows to delete requests. This deletes the selected deployment_tracker records; change-history records are not deleted by this route.</p>
+<form method="post" action="{{ url_for('super_manager_delete_requests') }}" onsubmit="return confirm('Permanently delete all selected deployment requests? This cannot be undone.');">
+<div class="row"><div><label for="recordSearch">Search records</label><input id="recordSearch" type="search" placeholder="CR, RFID, application, status..."></div><div><label>&nbsp;</label><button type="button" class="gray" id="selectVisible">Select visible</button> <button type="button" class="gray" id="clearSelected">Clear selection</button></div></div>
+<div class="table-wrap"><table id="recordsTable"><thead><tr><th>Select</th><th>ID</th><th>CR</th><th>RFID</th><th>Date</th><th>Slot</th><th>Application</th><th>Status</th><th>Requestor</th></tr></thead><tbody>
+{% for id, cr_number, rfid, deployment_date, slots, application_name, status, change_requestor in deployments %}
+<tr><td><input type="checkbox" name="deployment_ids" value="{{ id }}" aria-label="Select record {{ id }}"></td><td>{{ id }}</td><td>{{ cr_number }}</td><td>{{ rfid or '' }}</td><td>{{ deployment_date }}</td><td>{{ slots or '' }}</td><td>{{ application_name }}</td><td>{{ status }}</td><td>{{ change_requestor }}</td></tr>
+{% else %}<tr><td colspan="9">No deployment records found.</td></tr>{% endfor %}
+</tbody></table></div><button class="red" type="submit">Delete Selected Requests</button>
+</form></section>
+</div><p class="muted"><a href="{{ url_for('manager_dashboard') }}">← Back to Manager Dashboard</a> · <a href="/">Deployment Tracker</a></p>
+</main>
+<script>
+const search=document.getElementById('recordSearch');
+search.addEventListener('input',()=>{const q=search.value.toLowerCase();document.querySelectorAll('#recordsTable tbody tr').forEach(r=>r.hidden=!r.innerText.toLowerCase().includes(q));});
+document.getElementById('selectVisible').addEventListener('click',()=>document.querySelectorAll('#recordsTable tbody tr:not([hidden]) input[type=checkbox]').forEach(c=>c.checked=true));
+document.getElementById('clearSelected').addEventListener('click',()=>document.querySelectorAll('#recordsTable input[type=checkbox]').forEach(c=>c.checked=false));
+
+// Generate only Saturdays and Sundays in the selected range. Each date is independently selectable.
+const weekendFrom=document.getElementById('weekend_from');
+const weekendTo=document.getElementById('weekend_to');
+const weekendChoices=document.getElementById('weekendChoices');
+document.getElementById('showWeekends').addEventListener('click',()=>{
+  weekendChoices.innerHTML='';
+  if(!weekendFrom.value || !weekendTo.value){weekendChoices.innerHTML='<p class="muted">Please select both range dates.</p>';return;}
+  const start=new Date(weekendFrom.value+'T00:00:00');
+  const end=new Date(weekendTo.value+'T00:00:00');
+  if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end<start){weekendChoices.innerHTML='<p class="muted">End date must be on or after start date.</p>';return;}
+  const dates=[];
+  const cursor=new Date(start);
+  while(cursor<=end){
+    if(cursor.getDay()===0 || cursor.getDay()===6){
+      const iso=cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0')+'-'+String(cursor.getDate()).padStart(2,'0');
+      dates.push({iso,label:cursor.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'short',day:'numeric'})});
+    }
+    cursor.setDate(cursor.getDate()+1);
+    if(dates.length>200){weekendChoices.innerHTML='<p class="muted">Please choose a range containing no more than 200 weekend dates.</p>';return;}
+  }
+  if(!dates.length){weekendChoices.innerHTML='<p class="muted">No Saturdays or Sundays found in this range.</p>';return;}
+  dates.forEach((item,index)=>{
+    const label=document.createElement('label');label.className='weekend-choice';
+    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.name='blocked_dates';checkbox.value=item.iso;checkbox.checked=true;
+    label.appendChild(checkbox);label.appendChild(document.createTextNode(item.label));weekendChoices.appendChild(label);
+  });
+});
+</script>
+</body></html>
