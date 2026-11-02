@@ -83,6 +83,11 @@
     .badge { display: inline-block; padding: 6px 10px; border-radius: 20px; background: #dbeafe; color: #1d4ed8; font-size: 12px; font-weight: 700; }
     .details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .field { min-width: 0; }
+    .tracker-tabs { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0; border-bottom:1px solid #dbe3ee; padding-bottom:10px; }
+    .tracker-tab { background:#eef2ff; color:#334155; border:1px solid #cbd5e1; padding:10px 16px; border-radius:9px; font-weight:700; cursor:pointer; }
+    .tracker-tab.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+    .tracker-tab-panel { display:none; }
+    .tracker-tab-panel.active { display:block; }
     .team-allocation-row { display:grid; grid-template-columns:minmax(0,1fr) 130px auto; gap:10px; align-items:center; margin:8px 0; }
     .team-allocation-row button { padding:10px 13px; background:#b91c1c; }
     @media (max-width:650px) { .team-allocation-row { grid-template-columns:1fr 100px auto; gap:6px; } }
@@ -323,6 +328,12 @@ html, body {
       <span id="resultBadge" class="badge">Record found</span>
     </div>
 
+    <div class="tracker-tabs" role="tablist" aria-label="Governance tracker sections">
+      <button type="button" class="tracker-tab active" id="deploymentDetailsTab" role="tab" aria-selected="true" aria-controls="deploymentDetailsPanel">Deployment Details</button>
+      <button type="button" class="tracker-tab" id="teamAllocationTab" role="tab" aria-selected="false" aria-controls="teamAllocationPanel">Team Allocation</button>
+    </div>
+
+    <div id="deploymentDetailsPanel" class="tracker-tab-panel active" role="tabpanel" aria-labelledby="deploymentDetailsTab">
     <div class="details-grid">
       <div class="field"><label for="out_cr_number">CR Number</label><input id="out_cr_number" readonly></div>
       <div class="field"><label for="out_rfid">RFID</label><input id="out_rfid" readonly></div>
@@ -330,20 +341,6 @@ html, body {
       <div class="field"><label for="out_slot_start">Slot Start</label><input id="out_slot_start" type="time" step="60" required></div>
       <div class="field"><label for="out_application_name">Application</label><input id="out_application_name" required></div>
       <div class="field"><label for="out_deployment_count">Deployment Count</label><input id="out_deployment_count" type="number" min="1" max="5" step="1" required></div>
-      <div class="field full" id="teamAllocationField">
-        <label>Team-wise Deployment Allocation <span class="required-star">*</span></label>
-        <p class="muted" style="margin:0 0 10px;font-size:12px">Split the deployment count across the teams responsible for this deployment. The total must equal Deployment Count.</p>
-        <datalist id="deploymentTeamSuggestions">
-          <option value="DevOps Team"></option><option value="DBA TEAM"></option>
-          <option value="MW TEAM"></option>
-        </datalist>
-        <div id="teamAllocationRows"></div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-          <button type="button" class="secondary" id="addTeamAllocationButton">+ Add Team</button>
-          <strong id="teamAllocationTotal" class="muted">Allocated: 0 / 0</strong>
-        </div>
-        <div id="teamAllocationMessage" class="muted" role="status" style="margin-top:6px;font-size:12px"></div>
-      </div>
       <div class="field full"><label for="out_git_links">Git Repository Links</label><textarea id="out_git_links" placeholder="Enter one HTTPS Git clone URL ending in .git per line"></textarea><p class="muted" style="margin:6px 0 0;font-size:12px">Enter multiple repository links on separate lines. Each URL must end with .git.</p></div>
       <div class="field"><label for="out_deployment_type">Deployment Type</label><select id="out_deployment_type" required>{% for item in deployment_types %}<option value="{{ item }}">{{ item }}</option>{% endfor %}</select></div>
       <div class="field"><label for="out_change_type">Change Type</label><select id="out_change_type" required>{% for item in change_types %}<option value="{{ item }}">{{ item }}</option>{% endfor %}</select></div>
@@ -396,10 +393,23 @@ html, body {
 
       <div class="field"><label for="out_roll_back">Roll Back</label><select id="out_roll_back" required><option value="No">No</option><option value="Yes">Yes</option></select></div>
 
-      <div class="field full"><label for="out_release_notes">Release Notes</label><textarea id="out_release_notes"></textarea></div>
-
       <div class="field full"><label for="out_comments">Comments <span class="muted" style="font-weight:400">(optional)</span></label><textarea id="out_comments" maxlength="5000" placeholder="Add optional comments for this deployment..."></textarea></div>
 
+    </div>
+    </div>
+
+    <div id="teamAllocationPanel" class="tracker-tab-panel" role="tabpanel" aria-labelledby="teamAllocationTab">
+      <div class="field full" id="teamAllocationField">
+        <label>Team-wise Deployment Allocation <span class="required-star">*</span></label>
+        <p class="muted" style="margin:0 0 10px;font-size:12px">Split the deployment count across the teams responsible for this deployment. The total must equal Deployment Count.</p>
+        <datalist id="deploymentTeamSuggestions"><option value="DevOps Team"></option><option value="DBA TEAM"></option><option value="MW TEAM"></option></datalist>
+        <div id="teamAllocationRows"></div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+          <button type="button" class="secondary" id="addTeamAllocationButton">+ Add Team</button>
+          <strong id="teamAllocationTotal" class="muted">Allocated: 0 / 0</strong>
+        </div>
+        <div id="teamAllocationMessage" class="muted" role="status" style="margin-top:6px;font-size:12px"></div>
+      </div>
     </div>
 
     <div class="field full">
@@ -539,70 +549,53 @@ document.addEventListener("DOMContentLoaded", function () {
   const allocationTotal = document.getElementById("teamAllocationTotal");
   const allocationMessage = document.getElementById("teamAllocationMessage");
   const deploymentCountField = document.getElementById("out_deployment_count");
-
   function readTeamAllocations() {
     return Array.from(allocationRows.querySelectorAll(".team-allocation-row")).map(row => ({
       team: row.querySelector(".team-allocation-name").value.trim(),
       count: Number(row.querySelector(".team-allocation-count").value)
     })).filter(item => item.team || item.count);
   }
-
   function refreshAllocationTotal() {
-    const count = Number(deploymentCountField.value || 0);
-    const rows = readTeamAllocations();
+    const count = Number(deploymentCountField.value || 0), rows = readTeamAllocations();
     const total = rows.reduce((sum, item) => sum + (Number.isInteger(item.count) ? item.count : 0), 0);
     allocationTotal.textContent = `Allocated: ${total} / ${count}`;
-    const valid = rows.length > 0 && rows.every(item => item.team && Number.isInteger(item.count) && item.count > 0)
-      && total === count;
-    allocationMessage.textContent = valid ? "Team allocation matches Deployment Count." :
-      `Assign all ${count} deployment(s). The allocated total must equal ${count}.`;
+    const valid = rows.length > 0 && rows.every(item => item.team && Number.isInteger(item.count) && item.count > 0) && total === count;
+    allocationMessage.textContent = valid ? "Team allocation matches Deployment Count." : `Assign all ${count} deployment(s). The allocated total must equal ${count}.`;
     allocationMessage.style.color = valid ? "#166534" : "#b45309";
     return valid;
   }
-
   function addTeamAllocationRow(team = "", count = 1) {
-    const row = document.createElement("div");
-    row.className = "team-allocation-row";
-    const teamInput = document.createElement("input");
-    teamInput.type = "text";
-    teamInput.className = "team-allocation-name";
-    teamInput.setAttribute("list", "deploymentTeamSuggestions");
-    teamInput.placeholder = "Team name (e.g. DevOps Team)";
-    teamInput.maxLength = 100;
-    teamInput.value = team;
-    teamInput.setAttribute("aria-label", "Team name");
-    const countInput = document.createElement("input");
-    countInput.type = "number";
-    countInput.className = "team-allocation-count";
-    countInput.min = "1";
-    countInput.max = "5";
-    countInput.step = "1";
-    countInput.value = String(count);
+    const row = document.createElement("div"); row.className = "team-allocation-row";
+    const teamInput = document.createElement("input"); teamInput.type = "text"; teamInput.className = "team-allocation-name";
+    teamInput.setAttribute("list", "deploymentTeamSuggestions"); teamInput.placeholder = "Team name (e.g. DevOps Team)";
+    teamInput.maxLength = 100; teamInput.value = team; teamInput.setAttribute("aria-label", "Team name");
+    const countInput = document.createElement("input"); countInput.type = "number"; countInput.className = "team-allocation-count";
+    countInput.min = "1"; countInput.max = "5"; countInput.step = "1"; countInput.value = String(count);
     countInput.setAttribute("aria-label", "Deployment count for team");
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.textContent = "Remove";
+    const removeButton = document.createElement("button"); removeButton.type = "button"; removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => { row.remove(); refreshAllocationTotal(); });
-    teamInput.addEventListener("input", refreshAllocationTotal);
-    countInput.addEventListener("input", refreshAllocationTotal);
-    row.append(teamInput, countInput, removeButton);
-    allocationRows.appendChild(row);
-    refreshAllocationTotal();
+    teamInput.addEventListener("input", refreshAllocationTotal); countInput.addEventListener("input", refreshAllocationTotal);
+    row.append(teamInput, countInput, removeButton); allocationRows.appendChild(row); refreshAllocationTotal();
   }
-
   function setTeamAllocations(items, deploymentCount) {
-    allocationRows.innerHTML = "";
-    const parsed = Array.isArray(items) ? items : [];
-    if (parsed.length) {
-      parsed.forEach(item => addTeamAllocationRow(item.team || "", item.count || 1));
-    } else {
-      addTeamAllocationRow("", Number(deploymentCount || 1));
-    }
+    allocationRows.innerHTML = ""; const parsed = Array.isArray(items) ? items : [];
+    if (parsed.length) parsed.forEach(item => addTeamAllocationRow(item.team || "", item.count || 1));
+    else addTeamAllocationRow("", Number(deploymentCount || 1));
     refreshAllocationTotal();
   }
-
   document.getElementById("addTeamAllocationButton").addEventListener("click", () => addTeamAllocationRow("", 1));
   deploymentCountField.addEventListener("input", refreshAllocationTotal);
+  function activateTrackerTab(tabName) {
+    const isTeam = tabName === "team";
+    document.getElementById("deploymentDetailsTab").classList.toggle("active", !isTeam);
+    document.getElementById("teamAllocationTab").classList.toggle("active", isTeam);
+    document.getElementById("deploymentDetailsTab").setAttribute("aria-selected", String(!isTeam));
+    document.getElementById("teamAllocationTab").setAttribute("aria-selected", String(isTeam));
+    document.getElementById("deploymentDetailsPanel").classList.toggle("active", !isTeam);
+    document.getElementById("teamAllocationPanel").classList.toggle("active", isTeam);
+  }
+  document.getElementById("deploymentDetailsTab").addEventListener("click", () => activateTrackerTab("details"));
+  document.getElementById("teamAllocationTab").addEventListener("click", () => activateTrackerTab("team"));
 
   function toggleAuditIdentityFields() {
     const adding = auditUserSelect.value === "__add__";
@@ -796,6 +789,38 @@ document.addEventListener("DOMContentLoaded", function () {
     message.className = "message " + type;
   }
 
+  // Bring the user directly to the field associated with a server/client error.
+  function focusFieldForError(errorText) {
+    const text = String(errorText || "").toLowerCase();
+    const fieldMap = [
+      [["deployment date", "date is required", "invalid deployment date", "blocked date"], "out_deployment_date"],
+      [["slot", "deployment time", "valid deployment date or slot"], "out_slot_start"],
+      [["application name", "application is required"], "out_application_name"],
+      [["deployment count", "team allocation", "allocation total"], "out_deployment_count"],
+      [["git", "repository url"], "out_git_links"],
+      [["deployment type"], "out_deployment_type"],
+      [["change type"], "out_change_type"],
+      [["status"], "out_status"],
+      [["released by"], "out_released_by"],
+      [["verified and deployed by"], text.includes("enter a name") ? "out_verified_by_other" : "out_verified_by"],
+      [["change requestor"], "out_change_requestor"],
+      [["incident number"], "out_incident_number"],
+      [["modified by", "registered email", "select a registered email"], "out_modified_by"],
+      [["passcode", "incorrect passcode", "4-digit"], "out_modified_by_passcode"]
+    ];
+
+    for (const [phrases, fieldId] of fieldMap) {
+      if (phrases.some(phrase => text.includes(phrase))) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.scrollIntoView({ behavior: "smooth", block: "center" });
+          window.setTimeout(() => field.focus({ preventScroll: true }), 250);
+          return;
+        }
+      }
+    }
+  }
+
   async function parseApiResponse(response) {
     const responseText = await response.text();
     let result;
@@ -829,23 +854,47 @@ document.addEventListener("DOMContentLoaded", function () {
     if (el) el.value = value === null || value === undefined ? "" : String(value);
   }
 
+  // Normalize Git links returned by PostgreSQL/API. Depending on how the
+  // database value was stored, it may be an array, JSON array, or a Python-like
+  // string such as ['https://host/repo.git']. Remove only list/quote wrappers;
+  // never pass those wrappers into URL validation or back to the API.
   function normalizeGitLinks(value) {
-    if (Array.isArray(value)) {
-      return value.map(item => String(item || "").trim()).filter(Boolean);
-    }
     if (value === null || value === undefined || value === "") return [];
-    if (typeof value === "string") {
-      const raw = value.trim();
+
+    let values = [];
+    if (Array.isArray(value)) {
+      values = value;
+    } else if (typeof value === "string") {
+      let raw = value.trim();
       if (!raw) return [];
+
+      // First handle valid JSON arrays.
       try {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          return parsed.map(item => String(item || "").trim()).filter(Boolean);
-        }
-      } catch (_) {}
-      return raw.split(/[\r\n,]+/).map(item => item.trim()).filter(Boolean);
+        if (Array.isArray(parsed)) values = parsed;
+        else values = [parsed];
+      } catch (_) {
+        // Handle PostgreSQL/Python textual array representations, for example:
+        // ['https://github.com/org/repo.git'] or
+        // ["https://github.com/org/repo.git"].
+        raw = raw.replace(/^\s*\[\s*/, "").replace(/\s*\]\s*$/, "");
+        values = raw.split(/[\r\n,]+/);
+      }
+    } else {
+      values = [value];
     }
-    return [];
+
+    return values
+      .map(item => String(item == null ? "" : item).trim())
+      .map(item => {
+        // Remove surrounding quote characters left by Python-style list strings.
+        if ((item.startsWith("'") && item.endsWith("'")) ||
+            (item.startsWith('"') && item.endsWith('"'))) {
+          item = item.slice(1, -1).trim();
+        }
+        return item;
+      })
+      .filter(Boolean);
   }
 
   function formatTime(value) {
@@ -1062,6 +1111,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setField("out_application_name", record.application_name);
     setField("out_deployment_count", record.deployment_count ?? 1);
     setTeamAllocations(record.team_allocations, record.deployment_count ?? 1);
+    activateTrackerTab("details");
     setField("out_git_links", normalizeGitLinks(record.git_links).join("\\n"));
     setField("out_deployment_type", record.deployment_type);
     setField("out_change_type", record.change_type);
@@ -1074,7 +1124,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setField("out_change_requestor", record.change_requestor);
     setField("out_incident_number", record.incident_number);
     setField("out_roll_back", record.roll_back || "No");
-    setField("out_release_notes", record.release_notes);
     setField("out_comments", record.comments);
     document.getElementById("resultBadge").textContent = record.status || "Pending";
 
@@ -1301,11 +1350,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!releasedBy) {
       showMessage("Select a Released By user or enter a new name.", "error");
+      (releasedByChoice === "__add__" ? releasedByNewInput : releasedBySelect).focus();
       return;
     }
 
     if (releasedBy.length > 100) {
       showMessage("Released By name cannot exceed 100 characters.", "error");
+      (releasedByChoice === "__add__" ? releasedByNewInput : releasedBySelect).focus();
       return;
     }
 
@@ -1355,6 +1406,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (!refreshAllocationTotal()) {
+      activateTrackerTab("team");
       showMessage("Team-wise allocation is required and its total must exactly match Deployment Count.", "error");
       allocationRows.querySelector(".team-allocation-name")?.focus();
       return;
@@ -1362,7 +1414,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const teamAllocations = readTeamAllocations();
 
     const gitLinksInput = document.getElementById("out_git_links");
-    const gitLinks = gitLinksInput.value.split(/[\r\n,]+/).map(url => url.trim()).filter(Boolean);
+    // Use the same normalizer for validation and the API payload. This prevents
+    // database array brackets/quotes from being mistaken for part of a URL.
+    const gitLinks = normalizeGitLinks(gitLinksInput.value);
     const invalidGitLink = gitLinks.find(url =>
       !/^https:\/\/(github\.com|gitlab\.com|bitbucket\.org|apnagit\.rblbank\.com)\/.+\.git$/i.test(url)
     );
@@ -1382,8 +1436,7 @@ document.addEventListener("DOMContentLoaded", function () {
       application_name: document.getElementById("out_application_name").value.trim(),
       deployment_count: Number(document.getElementById("out_deployment_count").value),
       team_allocations: teamAllocations,
-      git_links: document.getElementById("out_git_links").value
-        .split(/[\r\n,]+/).map(url => url.trim()).filter(Boolean),
+      git_links: gitLinks,
       deployment_type: document.getElementById("out_deployment_type").value,
       change_type: document.getElementById("out_change_type").value,
       released_by: releasedBy,
@@ -1391,7 +1444,6 @@ document.addEventListener("DOMContentLoaded", function () {
       verified_and_deployed_by_other: verifiedByOther,
       change_requestor: changeRequestor,
       incident_number: document.getElementById("out_incident_number").value.trim(),
-      release_notes: document.getElementById("out_release_notes").value,
       comments: document.getElementById("out_comments").value.trim(),
       roll_back: document.getElementById("out_roll_back").value,
       status: document.getElementById("out_status").value
@@ -1408,16 +1460,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const result = await parseApiResponse(response);
 
-      if (!response.ok || !result.success) throw new Error(result.message || "Could not save deployment changes.");
-      showMessage(result.message || "Deployment changes saved.", "success");
-      auditPasscodeInput.value = "";
-      document.getElementById("resultBadge").textContent = payload.status;
-      await loadPendingRequests();
-      await loadDailySchedule();
+      if (!response.ok || !result.success) {
+        const saveError = new Error(result.message || "Could not save deployment changes.");
+        throw saveError;
+      }
 
-    } catch (error) { showMessage(error.message || "Could not save deployment changes.", "error"); }
+      // The API message reports whether the notification email was sent or failed.
+      // Show it before reloading so the user receives the exact result.
+      const successText = result.message || "Form submitted successfully.";
+      alert(successText);
+      window.location.reload();
+      return;
 
-    finally { saveChangesButton.disabled = false; saveChangesButton.textContent = "Save Changes"; }
+    } catch (error) {
+      const errorText = error.message || "Could not save deployment changes.";
+      showMessage(errorText, "error");
+      focusFieldForError(errorText);
+      message.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    finally {
+      saveChangesButton.disabled = false;
+      saveChangesButton.textContent = "Save Changes";
+    }
 
   });
 
