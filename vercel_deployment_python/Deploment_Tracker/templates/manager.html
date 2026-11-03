@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1869,7 +1868,7 @@ function updateStatusBarSelection() {
 }
 
 function chooseStatus(statusValue) {
-   
+
     statusFilter.value = statusFilter.value === statusValue ? '' : statusValue;
     filterRows();
 }
@@ -1972,7 +1971,7 @@ redraw();
         if (resetPage) page = 1;
         page = Math.max(1, Math.min(page, pageCount || 1));
 
-        
+
         filteredRows.forEach((row, index) => {
             if (row.cells[0]) row.cells[0].textContent = String(index + 1);
         });

@@ -1071,6 +1071,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
   gap: 9px !important;
   transition: border-color .2s ease, background .2s ease;
 }
+
 .form-grid .calendar-launch-row:hover {
   border-color: var(--blue-600) !important;
   background: linear-gradient(180deg, #f2f7ff, #e6efff) !important;
@@ -1361,6 +1362,53 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+
+/* Slot availability preview inside the deployment-date card */
+.form-grid .calendar-launch-row {
+    align-items: flex-start;
+}
+.date-slot-summary {
+    display: none;
+    width: 100%;
+    margin-top: 2px;
+    padding: 10px 12px;
+    border: 1px solid #dbe5f5;
+    border-radius: 10px;
+    background: rgba(255,255,255,.88);
+    color: #334155;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.date-slot-summary.visible { display: block; }
+.date-slot-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.date-slot-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.date-slot-count.available { color: #166534; background: #dcfce7; }
+.date-slot-count.pending { color: #92400e; background: #fef3c7; }
+.date-slot-count.booked { color: #991b1b; background: #fee2e2; }
+.date-slot-count.blocked { color: #475569; background: #e2e8f0; }
+.date-slot-times { color: #475569; overflow-wrap: anywhere; }
+.date-slot-times strong { color: #172554; }
+.date-slot-selected { margin-top: 5px; color: #1d4ed8; font-weight: 800; }
+.date-slot-placeholder { color: #64748b; }
+@media (max-width: 480px) {
+    .date-slot-summary { font-size: 10px; padding: 8px; }
+    .date-slot-counts { gap: 4px; }
+    .date-slot-count { padding: 4px 7px; }
+}
+
 </style>
 
 
@@ -1523,6 +1571,9 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                  Select deployment date
             </button>
             <span class="selected-date-summary" id="selectedDateSummary" aria-live="polite">No date selected</span>
+            <div class="date-slot-summary" id="dateSlotSummary" aria-live="polite">
+                <span class="date-slot-placeholder">Slot details will appear after selecting a deployment date.</span>
+            </div>
         </div>
 
                     <input type="hidden" id="deployment_date" name="deployment_date"
@@ -1614,14 +1665,14 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
                 </div>
                 <aside class="save-panel">
-                    <h2>🖉  Save Deployment</h2>
+                    <h2>🖉  Save Release</h2>
                     <ul class="save-checklist">
                         <li>Select Change Type, then enter CR Number</li>
                         <li>Select deployment date and an available slot</li>
                         <li>Fill in all required fields</li>
                         <li>CR Number is validated automatically</li>
                     </ul>
-                    <button type="submit" class="submit-button" id="saveButton">Save Deployment</button>
+                    <button type="submit" class="submit-button" id="saveButton">Save Release</button>
                 </aside>
 
             </div>
@@ -1735,6 +1786,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
             let lookupFailed = false;
 
             let selectedSlot = slotInput.value || "";
+            let allowedCabDate = "";
 
             function normalizeCR(value) {
                 const suffix = value.trim().replace(/^CR-/i, "");
@@ -1782,6 +1834,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
                 try {
 
+                    const validationRequestId = ++requestSequence;
                     isChecking = true;
                     lookupFailed = false;
 
@@ -1800,53 +1853,58 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
                     const result = await response.json();
 
+                    if (validationRequestId !== requestSequence) return;
+
                     if (!response.ok || !result.success) {
-
-                        lookupFailed = true;
-                        clearRFID();
-
-                        throw new Error(
-                            result.message || "CR Validation failed"
-                        );
+                        throw new Error(result.message || "CR Validation failed");
                     }
+                    if (!result.cab_date_iso) {
+                        throw new Error("The ITSM API did not return a valid CAB date. Booking is disabled.");
+                    }
+
+                    allowedCabDate = result.cab_date_iso;
+                    dateInput.value = allowedCabDate;
+                    slotInput.value = "";
+                    selectedSlot = "";
+                    const cabDateObject = new Date(allowedCabDate + "T12:00:00");
+                    calendarMonth = new Date(cabDateObject.getFullYear(), cabDateObject.getMonth(), 1);
+                    renderMonthCalendar();
+                    updateCalendarLauncher();
+                    showMessage(
+                        "CR Approved. Only CAB date " + cabDateObject.toLocaleDateString(undefined, {
+                            day: "numeric", month: "short", year: "numeric"
+                        }) + " is available for booking.",
+                        "success"
+                    );
+                    loadSlots();
 
                     if (result.exists) {
 
                         rfidInput.value = result.rfid || "";
 
-                        showMessage(
-                            "CR Approved ✅ | Existing RFID: " +
-                            result.rfid,
-                            "success"
-                        );
+                        // Existing RFID loaded; retain the CAB date message.
 
                     } else {
 
                         clearRFID();
 
-                        showMessage(
-                            "CR Approved ✅ | New RFID will be generated after save",
-                            "success"
-                        );
+                        // A new RFID will be generated after saving.
                     }
 
                     lookupFailed = false;
 
                 } catch (error) {
-
                     lookupFailed = true;
-
+                    allowedCabDate = "";
+                    dateInput.value = "";
+                    slotInput.value = "";
+                    selectedSlot = "";
+                    renderMonthCalendar();
+                    updateCalendarLauncher();
                     clearRFID();
-
-                    showMessage(
-                        error.message,
-                        "error"
-                    );
-
+                    showMessage(error.message, "error");
                     throw error;
-
                 } finally {
-
                     isChecking = false;
                 }
             }
@@ -1876,11 +1934,15 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                 isChecking = false;
 
                 lookupFailed = false;
-
+                allowedCabDate = "";
+                dateInput.value = "";
+                slotInput.value = "";
+                selectedSlot = "";
+                renderMonthCalendar();
+                updateCalendarLauncher();
+                loadSlots();
                 clearRFID();
-
-                showMessage("", "");
-
+                showMessage("Validate the CR number to fetch its CAB date.", "");
                 lookupTimer = setTimeout(checkCRNumber, 350);
 
             });
@@ -1900,6 +1962,54 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                 return `${((hour + 11) % 12) + 1}:${minute} ${suffix}`;
             }
 
+            const dateSlotSummary = document.getElementById("dateSlotSummary");
+
+            function updateDateSlotSummary(slots, isBlocked, selectedStart) {
+                if (!dateSlotSummary) return;
+
+                if (!dateInput.value) {
+                    dateSlotSummary.classList.remove("visible");
+                    dateSlotSummary.innerHTML =
+                        '<span class="date-slot-placeholder">Slot details will appear after selecting a deployment date.</span>';
+                    return;
+                }
+
+                const slotList = Array.isArray(slots) ? slots : [];
+                const counts = { available: 0, pending: 0, booked: 0, blocked: 0 };
+
+                slotList.forEach(function (slot) {
+                    const state = isBlocked ? "blocked" : String(slot.state || "").toLowerCase();
+                    if (Object.prototype.hasOwnProperty.call(counts, state)) {
+                        counts[state] += 1;
+                    } else {
+                        counts.booked += 1;
+                    }
+                });
+
+                const availableTimes = isBlocked ? [] : slotList
+                    .filter(slot => String(slot.state || "").toLowerCase() === "available")
+                    .map(slot => formatSlotTime(slot.start));
+
+                const selected = slotList.find(slot => slot.start === selectedStart);
+                const selectedText = selected
+                    ? '<div class="date-slot-selected">Selected slot: ' +
+                        formatSlotTime(selected.start) + ' – ' + formatSlotTime(selected.end) + '</div>'
+                    : "";
+
+                dateSlotSummary.innerHTML =
+                    '<div class="date-slot-counts">' +
+                        '<span class="date-slot-count available">● Available: ' + counts.available + '</span>' +
+                        '<span class="date-slot-count pending">● Pending: ' + counts.pending + '</span>' +
+                        '<span class="date-slot-count booked">● Booked: ' + counts.booked + '</span>' +
+                        '<span class="date-slot-count blocked">● Blocked: ' + counts.blocked + '</span>' +
+                    '</div>' +
+                    '<div class="date-slot-times"><strong>Available times:</strong> ' +
+                        (availableTimes.length ? availableTimes.join(", ") : "No available slots") +
+                    '</div>' + selectedText;
+
+                dateSlotSummary.classList.add("visible");
+            }
+
             async function loadSlots() {
 
                 if (!dateInput.value) {
@@ -1916,6 +2026,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                     selectedSlot = "";
 
                     slotSelection.textContent = "No slot selected.";
+                    updateDateSlotSummary([], false, "");
 
                     return;
 
@@ -1928,7 +2039,8 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                 try {
                     const response = await fetch(
                         slotStatusUrl + "?date=" + encodeURIComponent(dateInput.value)
-                        + "&change_type=" + encodeURIComponent(changeTypeInput.value || ""),
+                        + "&change_type=" + encodeURIComponent(changeTypeInput.value || "")
+                        + "&cr_number=" + encodeURIComponent(crInput.value || ""),
 
                         {
 
@@ -1953,6 +2065,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                     }
 
                     const result = await response.json();
+                    updateDateSlotSummary(result.slots || [], Boolean(result.blocked), selectedSlot);
 
                     slotGrid.innerHTML = "";
                     slotDayMessage.classList.remove("visible");
@@ -2040,6 +2153,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                                 slotSelection.textContent =
                                     "Selected: " + formatSlotTime(slot.start) +
                                     " - " + formatSlotTime(slot.end);
+                                updateDateSlotSummary(result.slots || [], Boolean(result.blocked), selectedSlot);
                                 closeSlotSelection();
 
                             });
@@ -2067,6 +2181,7 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                             "Selected: " + formatSlotTime(selected.start) +
                             " - " + formatSlotTime(selected.end);
                     }
+                    updateDateSlotSummary(result.slots || [], Boolean(result.blocked), selectedSlot);
 
                 } catch (error) {
                     slotGrid.innerHTML =
@@ -2074,6 +2189,10 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                     slotInput.value = "";
                     selectedSlot = "";
                     slotSelection.textContent = "Slot availability could not be verified.";
+                    if (dateSlotSummary) {
+                        dateSlotSummary.innerHTML = '<span class="date-slot-placeholder">Unable to load slot details. Please try again.</span>';
+                        dateSlotSummary.classList.add("visible");
+                    }
                     console.error("Slot availability error:", error);
                 }
 
@@ -2118,6 +2237,11 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
             
 
             function openCalendar() {
+                if (!allowedCabDate) {
+                    calendarHelp.textContent = "Enter a valid CR number first. The only selectable date will be fetched from the ITSM API.";
+                    calendarHelp.style.color = "#b91c1c";
+                    return;
+                }
                 renderMonthCalendar();
                 calendarModal.hidden = false;
                 document.body.style.overflow = "hidden";
@@ -2248,18 +2372,8 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
             }
 
             function isDateAllowedForChangeType(date, changeType) {
-                const day = date.getDay(); // Sunday=0, Tuesday=2, Friday=5
-
-                if (date < todayLocal) return false;
-
-                if (!changeType) return true; // Users may choose a date before choosing the type.
-
-                if (changeType === "Emergency CR") return true;
-
-                // if (changeType === "Normal CR") return day === 2 || day === 5;
-
-                return day !== 0 && day !== 6; // Standard, Forward Fix, Bug Fix: weekdays only
-
+                // ITSM CAB date is the single source of truth for booking.
+                return Boolean(allowedCabDate) && dateToISO(date) === allowedCabDate;
             }
 
             function renderMonthCalendar() {
@@ -2340,20 +2454,16 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
 
                     if (button.disabled) {
 
-                        if (isPast) {
-                            button.title = "Past dates cannot be booked";
-
-                        } else if (changeTypeInput.value === "Normal CR") {
-                            button.title = "Normal CR deployments are allowed only on Tuesdays and Fridays";
-
+                        if (!allowedCabDate) {
+                            button.title = "Validate a CR number to fetch the allowed CAB date.";
                         } else {
-                            button.title = "This change type is allowed only Monday through Friday";
-
+                            button.title = "Only the ITSM CAB date " + allowedCabDate + " can be booked.";
                         }
 
                     }
 
                     button.addEventListener("click", function () {
+                        if (!allowedCabDate || iso !== allowedCabDate) return;
                         dateInput.value = iso;
                         dateInput.dispatchEvent(new Event("change", { bubbles: true }));
                         renderMonthCalendar();
@@ -2418,6 +2528,15 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
             dateInput.addEventListener("change", function () {
                 selectedSlot = "";
                 slotInput.value = "";
+
+                if (!allowedCabDate || dateInput.value !== allowedCabDate) {
+                    dateInput.value = "";
+                    updateCalendarLauncher();
+                    renderMonthCalendar();
+                    slotGrid.innerHTML = '<div class="slot-loading">Only the CAB date returned by the ITSM API can be booked.</div>';
+                    slotSelection.textContent = "No slot selected.";
+                    return;
+                }
 
                 if (dateInput.value) {
                     const changedDate = new Date(dateInput.value + "T12:00:00");
@@ -2484,14 +2603,19 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
                 try {
                     await checkCRNumber();
 
-                    if (lookupFailed || isChecking) {
-                        showMessage("CR verification failed. Please retry before saving.", "error");
+                    if (lookupFailed || isChecking || !allowedCabDate) {
+                        showMessage("CR verification failed or the ITSM CAB date is missing. Please retry before saving.", "error");
+                        return;
+                    }
+                    if (dateInput.value !== allowedCabDate) {
+                        showMessage("Only the CAB date returned by ITSM (" + allowedCabDate + ") can be booked.", "error");
                         return;
                     }
 
                     const response = await fetch(
                         slotStatusUrl + "?date=" + encodeURIComponent(dateInput.value)
-                        + "&change_type=" + encodeURIComponent(changeTypeInput.value || ""),
+                        + "&change_type=" + encodeURIComponent(changeTypeInput.value || "")
+                        + "&cr_number=" + encodeURIComponent(crInput.value || ""),
                         {
 
                             headers: { "Accept": "application/json" },
@@ -2546,8 +2670,6 @@ input[type=number] { appearance: textfield; -moz-appearance: textfield; }
             renderMonthCalendar();
 
             updateCalendarLauncher();
-
-            loadSlots();
 
             if (crInput.value) {
                 checkCRNumber();

@@ -300,6 +300,40 @@ def verify_audit_user_credentials(email_value, passcode):
         if conn is not None:
             conn.close()
 
+def parse_cab_date(value):
+    """Convert the ITSM CAB date display value to a Python date."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("The ITSM API did not return a CAB date for this CR.")
+
+    # Prefer ISO and Indian display formats; include common ITSM date formats.
+    formats = (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%d %b %Y",
+        "%d %B %Y",
+        "%b %d, %Y",
+        "%B %d, %Y",
+        "%m/%d/%Y",
+    )
+    for fmt in formats:
+        try:
+            return datetime.strptime(raw, fmt).date()
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
+    except ValueError as exc:
+        raise ValueError(
+            f"Unable to understand CAB date returned by ITSM: {raw}"
+        ) from exc
+
+
 @app.route("/api/validate-cr", methods=["GET"])
 def validate_cr():
 
@@ -330,10 +364,12 @@ def validate_cr():
 
         conn.close()
 
+        cab_date = parse_cab_date(cr_details.get("cab_date"))
         return jsonify({
             "success": True,
             "approved": True,
             "cab_date": cr_details.get("cab_date"),
+            "cab_date_iso": cab_date.isoformat(),
             "change_type": cr_details.get("change_type"),
             "exists": bool(row),
             "rfid": row[0] if row else None
@@ -701,6 +737,12 @@ def save_deployment(data):
         raise ValueError(
             "Enter a valid deployment date and time slot."
         ) from exc
+    cab_date = parse_cab_date(cr_details.get("cab_date"))
+    if deployment_date != cab_date:
+        raise ValueError(
+            f"Only the CAB date returned by ITSM can be booked: {cab_date.isoformat()}."
+        )
+
     change_type = (data.get("change_type") or "").strip()
 
     if change_type not in CHANGE_TYPES:
@@ -1632,6 +1674,21 @@ def slot_status():
         ), 400
     
     change_type = (request.args.get("change_type") or "").strip()
+    cr_number = (request.args.get("cr_number") or "").strip()
+    if not cr_number:
+        return jsonify(error="Enter and validate the CR number to load its CAB date and slots."), 400
+    try:
+        cr_details = validate_cr_number(cr_number)
+        cab_date = parse_cab_date(cr_details.get("cab_date"))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
+    if selected_date != cab_date:
+        return jsonify({
+            "error": f"Only the CAB date returned by ITSM can be booked: {cab_date.isoformat()}.",
+            "cab_date": cab_date.isoformat(),
+            "slots": []
+        }), 400
 
     if change_type and change_type not in CHANGE_TYPES:
         return jsonify({
