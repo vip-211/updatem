@@ -1,1 +1,68 @@
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/rbl_logo.png') }}">
+
+
+
+
+function setTeamAllocations(items, deploymentCount) {
+    allocationRows.innerHTML = "";
+    const parsed = Array.isArray(items) ? items : [];
+
+    if (parsed.length) {
+        parsed.forEach(item =>
+            addTeamAllocationRow(item.team || "", item.count || 1)
+        );
+    } else {
+        addTeamAllocationRow("", Number(deploymentCount || 1));
+    }
+
+    refreshAllocationTotal();
+}
+
+
+---------------------------
+
+
+function setTeamAllocations(items, deploymentCount) {
+    allocationRows.innerHTML = "";
+
+    const parsed = Array.isArray(items) ? items : [];
+    const requiredRows = Math.max(
+        1,
+        Number(deploymentCount) || 1,
+        parsed.length
+    );
+
+    for (let i = 0; i < requiredRows; i++) {
+        const item = parsed[i] || {};
+        addTeamAllocationRow(item.team || "", item.count || 1);
+    }
+
+    refreshAllocationTotal();
+}
+------------------
+
+
+deploymentCountField.addEventListener("input", refreshAllocationTotal);
+--------------------
+deploymentCountField.addEventListener("input", () => {
+    const requiredRows = Math.max(
+        1,
+        Number(deploymentCountField.value) || 1
+    );
+
+    const currentRows = allocationRows.querySelectorAll(
+        ".team-allocation-row"
+    ).length;
+
+    if (currentRows < requiredRows) {
+        for (let i = currentRows; i < requiredRows; i++) {
+            addTeamAllocationRow("", 1);
+        }
+    } else if (currentRows > requiredRows) {
+        for (let i = currentRows - 1; i >= requiredRows; i--) {
+            allocationRows.children[i].remove();
+        }
+    }
+
+    refreshAllocationTotal();
+});
