@@ -147,6 +147,18 @@ ALTER TABLE public.deployment_tracker
 ALTER TABLE public.deployment_tracker
     DROP CONSTRAINT IF EXISTS no_overlapping_deployment_slots;
 
+
+
+BEGIN;
+UPDATE public.deployment_tracker SET status = 'Scheduled Deployment'
+ WHERE status IS NULL OR LOWER(TRIM(status)) IN ('pending','scheduled','in progress','');
+UPDATE public.deployment_tracker SET status = 'Deployment Completed' WHERE LOWER(TRIM(status)) = 'successful';
+UPDATE public.deployment_tracker SET status = 'Deployment Failed'    WHERE LOWER(TRIM(status)) = 'failed';
+UPDATE public.deployment_tracker SET status = 'Rolled'              WHERE LOWER(TRIM(status)) = 'rolled back';
+-- If the status column has a DEFAULT or CHECK constraint, update it to the new list too.
+COMMIT;
+
+
 ALTER TABLE public.deployment_tracker
     ADD CONSTRAINT no_overlapping_deployment_slots
     EXCLUDE USING gist (

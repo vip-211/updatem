@@ -11,14 +11,14 @@ import os
 import secrets
 import hashlib
 import hmac
-from datetime import datetime, time, timedelta,date
+from datetime import datetime, time, timedelta, date
 from pathlib import Path
 from urllib.parse import urlparse
 import re
 import psycopg2
 from psycopg2 import errors
 from dotenv import load_dotenv
-from flask import (Flask,flash,jsonify,redirect,render_template,request,url_for,session,send_file)
+from flask import (Flask, flash, jsonify, redirect, render_template, request, url_for, session, send_file)
 import requests
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
@@ -34,7 +34,6 @@ if not app.secret_key:
     )
 
 AUDIT_PASSCODE_PEPPER = os.getenv("AUDIT_PASSCODE_PEPPER") or app.secret_key
-from logging.handlers import TimedRotatingFileHandler
 
 LOG_DIR = BASE_DIR / "logs"
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -90,8 +89,32 @@ DEPLOYMENT_TYPES = ["Automation", "Manual"]
 
 VERIFIED_BY_OPTIONS = ["DBA TEAM", "MW TEAM", "DevOps Team"]
 
-STATUSES = ["Pending","Approved","Rejected","Scheduled","In Progress","Successful","Failed","Rolled Back","Cancelled"]
-STATUS_EMAIL_STATUSES = {"Approved", "Cancelled", "Rejected", "Successful", "Failed"}
+# ---------------------------------------------------------------------------
+# Deployment statuses (these are the ONLY statuses offered to users).
+# "Scheduled Deployment" replaces the old "Pending" status and is the default
+# status of every newly submitted request.
+# ---------------------------------------------------------------------------
+PENDING_STATUS = "Scheduled Deployment"
+STATUSES = [
+    "Scheduled Deployment",
+    "Deployment Completed",
+    "Deployment Failed",
+    "On Hold",
+    "Postponed",
+    "Rolled",
+    "Cancelled",
+]
+# Written only by the Approve / Reject buttons on the approval screen.
+# They are not shown in the status dropdown, but are accepted when a record
+# that already carries one of them is saved again.
+APPROVAL_STATUSES = ["Approved", "Rejected"]
+STATUS_EMAIL_STATUSES = {
+    "Approved",
+    "Rejected",
+    "Cancelled",
+    "Deployment Completed",
+    "Deployment Failed",
+}
 
 SLOT_STARTS = ["18:30","19:00","19:30","20:00","20:30","21:00","21:30","22:00","22:30","23:00"]
 
@@ -695,7 +718,7 @@ def save_deployment(data):
         raise ValueError("Choose a 30-minute slot between 6:30 PM and 11:00 PM.")
     if data.get("deployment_type") not in DEPLOYMENT_TYPES:
         raise ValueError("Invalid deployment type.")
-    data["status"] = "Pending"
+    data["status"] = PENDING_STATUS  # "Scheduled Deployment" (formerly "Pending")
 
     roll_back = (data.get("roll_back") or "No").strip()
     if roll_back not in ("Yes", "No"):
@@ -753,7 +776,9 @@ def save_deployment(data):
                             "Could not generate an available RFID. "
                             "Please retry."
                         )
-                # Serialize all bookings for this exact half-hour slot before checking capacity.\n                # The legacy exclusion constraint must be dropped by the companion SQL migration\n                # because it forbids all overlapping rows even when capacity is greater than one.
+                # Serialize all bookings for this exact half-hour slot before checking capacity.
+                # The legacy exclusion constraint must be dropped by the companion SQL migration
+                # because it forbids all overlapping rows even when capacity is greater than one.
                 cur.execute(
                     "SELECT pg_advisory_xact_lock(hashtext(%s))",
                     (f"release-slot:{slot_start.isoformat()}",),
@@ -1095,7 +1120,7 @@ def update_devops_deployment(deployment_id):
         return jsonify({"success": False, "message": "Invalid deployment type."}), 400
     if data["change_type"] not in CHANGE_TYPES:
         return jsonify({"success": False, "message": "Invalid change type."}), 400
-    if data["status"] not in STATUSES:
+    if data["status"] not in STATUSES and data["status"] not in APPROVAL_STATUSES:
         return jsonify({"success": False, "message": "Invalid status."}), 400
     if data["roll_back"] not in ("Yes", "No"):
         return jsonify({"success": False, "message": "Invalid rollback selection."}), 400
@@ -1137,7 +1162,7 @@ def update_devops_deployment(deployment_id):
     
     # Governance can move a deployment to any valid time of day.
     # Keep the deployment duration at 30 minutes; do not apply the
-    # standard booking window (6:30 PM–11:00 PM) on this update route.
+    # standard booking window (6:30 PM-11:00 PM) on this update route.
     if not data["application_name"].strip():
         return jsonify({"success": False, "message": "Application Name is required."}), 400
 
@@ -1333,6 +1358,7 @@ def update_devops_deployment(deployment_id):
 @app.route("/api/pending-deployments", methods=["GET"])
 
 def pending_deployments():
+    """List requests still in the default 'Scheduled Deployment' status."""
     conn = None
     cursor = None
     try:
@@ -1359,9 +1385,9 @@ def pending_deployments():
                 roll_back,
                 status, team_allocations
             FROM public.deployment_tracker
-            WHERE LOWER(TRIM(COALESCE(status, 'Pending'))) = 'pending'
+            WHERE LOWER(TRIM(COALESCE(status, %s))) = LOWER(%s)
             ORDER BY id DESC
-        """)
+        """, (PENDING_STATUS, PENDING_STATUS))
         columns = [column[0] for column in cursor.description]
         requests_list = []
         for row in cursor.fetchall():
@@ -1517,8 +1543,8 @@ def decide_deployment_request(deployment_id):
 
         columns = [desc[0] for desc in cursor.description]
         deployment_snapshot = dict(zip(columns, old_row))
-        old_status = str(deployment_snapshot.get("status") or "Pending").strip()
-        if old_status.casefold() != "pending":
+        old_status = str(deployment_snapshot.get("status") or PENDING_STATUS).strip()
+        if old_status.casefold() != PENDING_STATUS.casefold():
             conn.rollback()
             return jsonify({
                 "success": False,
@@ -1529,9 +1555,9 @@ def decide_deployment_request(deployment_id):
             UPDATE public.deployment_tracker
             SET status = %s
             WHERE id = %s
-              AND LOWER(TRIM(COALESCE(status, 'Pending'))) = 'pending'
+              AND LOWER(TRIM(COALESCE(status, %s))) = LOWER(%s)
             RETURNING cr_number, rfid
-        """, (new_status, deployment_id))
+        """, (new_status, deployment_id, PENDING_STATUS, PENDING_STATUS))
         updated_row = cursor.fetchone()
         if updated_row is None:
             conn.rollback()
@@ -1834,7 +1860,7 @@ def send_deployment_notification(data, rfid):
             f"Change Requestor: {requestor}",
             f"Incident Number: {display(data.get('incident_number'))}",
             f"Git Links: {', '.join(git_links)}",
-            "Status: Pending",
+            f"Status: {PENDING_STATUS}",
             "",
             "This is an automated notification from the Deployment Tracker.",
         ])
