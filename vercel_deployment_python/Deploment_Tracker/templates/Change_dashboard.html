@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Change dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4f6;--surface:#fff;--ink:#1a2330;--muted:#5d6978;--line:#dde2e8;--accent:#0f6b64;--ok:#1d7a46;--okbg:#e2f3e9;--warn:#9a6200;--warnbg:#fdf0d5;--bad:#b3261e;--badbg:#fbe4e2;--sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;--accent:#4cc5b8;--ok:#5fd18d;--okbg:#17382a;--warn:#f0b95a;--warnbg:#3a2d12;--bad:#ff8d85;--badbg:#401c1a}}
+:root[data-theme="dark"]{--bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;--accent:#4cc5b8;--ok:#5fd18d;--okbg:#17382a;--warn:#f0b95a;--warnbg:#3a2d12;--bad:#ff8d85;--badbg:#401c1a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans)}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:26px;margin:0;font-weight:600;letter-spacing:-.01em}
+header p{margin:2px 0 0;color:var(--muted)}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;min-width:92px}
+.stat b{display:block;font-size:22px;font-weight:600;line-height:1.2}
+.stat span{font-size:12.5px;color:var(--muted)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:5}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input[type=search]{flex:1;min-width:200px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.day{display:grid;grid-template-columns:96px 1fr;gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+.date{position:sticky;top:70px;align-self:start}
+.date b{font-size:22px;font-weight:600;display:block;line-height:1.1}
+.date span{color:var(--muted);font-size:13px}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px}[hidden]{display:none!important}
+.chip{all:unset;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;padding:6px 10px;min-width:0;display:block}
+.chip:hover,.chip:focus-visible{border-color:var(--c);box-shadow:0 0 0 1px var(--c)}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chip .app{font-weight:600;display:block}
+.chip .cr{font:500 12.5px var(--mono);color:var(--muted)}
+.s-ok{--c:var(--ok)}.s-warn{--c:var(--warn)}.s-bad{--c:var(--bad)}
+.tag{display:inline-block;font-size:12.5px;font-weight:500;border-radius:20px;padding:1px 10px}
+.tag.s-ok{background:var(--okbg);color:var(--ok)}.tag.s-warn{background:var(--warnbg);color:var(--warn)}.tag.s-bad{background:var(--badbg);color:var(--bad)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:8px 11px;font-size:13px;max-width:260px;z-index:20;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#tip b{display:block;margin-bottom:2px}
+.s-live{--c:#2f6fe0}.tag.s-live{background:rgba(75,139,245,.18);color:#2f6fe0}
+.dsum{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--muted)}.dsum b{color:var(--ink);font-size:14px}
+.mini{display:flex;height:6px;width:140px;border-radius:3px;overflow:hidden;background:var(--line)}.mini i{display:block}
+.tog{all:unset;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;text-decoration:underline;display:block;margin-top:6px}.tog:focus-visible{outline:2px solid var(--accent)}
+.pg{display:block;height:5px;background:var(--line);border-radius:3px;overflow:hidden}.pg i{display:block;height:100%;background:#2f6fe0;transition:width .6s}.chip .pg{margin-top:5px}
+#live{background:var(--surface);border:1px solid #2f6fe0;border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.lh{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:6px}.lh small{font-weight:400;color:var(--muted);font-size:12.5px}
+.dot{width:9px;height:9px;border-radius:50%;background:#2f6fe0;animation:pl 1.4s infinite}@keyframes pl{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+.lr.chip{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 110px 38px;gap:10px;align-items:center;border:0;border-radius:6px;padding:6px 6px;box-shadow:none;background:none;width:100%}.lr.chip:hover{background:var(--bg);box-shadow:none}.lr .pct{font:500 12.5px var(--mono);text-align:right}
+@media(max-width:600px){.lr.chip{grid-template-columns:1fr 90px 36px}.lr .cr{display:none}}
+.empty{padding:40px 0;color:var(--muted);text-align:center}
+dialog{border:0;border-radius:12px;padding:0;width:min(640px,calc(100% - 24px));max-height:88vh;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(10,15,20,.55)}
+.mh{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.mh h2{margin:0;font-size:20px;font-weight:600}
+.mh .cr{font:500 13px var(--mono);color:var(--muted)}
+.x{all:unset;cursor:pointer;font-size:22px;line-height:1;padding:2px 8px;border-radius:6px;color:var(--muted)}
+.x:hover{background:var(--bg)}.x:focus-visible{outline:2px solid var(--accent)}
+.mb{padding:18px 22px 22px;overflow:auto;max-height:calc(88vh - 80px)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-bottom:18px}
+.grid div span{display:block;font-size:12.5px;color:var(--muted)}
+.mb h3{font-size:14px;margin:16px 0 6px}
+.mb ul{margin:0;padding-left:20px}
+.mb p{margin:0}
+@media(max-width:600px){.day{grid-template-columns:1fr;gap:8px}.date{position:static;display:flex;gap:8px;align-items:baseline}.chip{min-width:100%}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Change dashboard</h1><p>Live records from the deployment tracker database. Select any CR to view its complete details.</p></div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Search application or CR number" aria-label="Search">
+    <select id="env" aria-label="Environment"><option value="">All environments</option></select>
+    <select id="st" aria-label="Status">
+      <option value="">All statuses</option>
+      <option>Scheduled Deployment</option>
+      <option>Deployment Completed</option>
+      <option>Deployment Failed</option>
+      <option>On Hold</option>
+      <option>Postponed</option>
+      <option>Rolled</option>
+      <option>Cancelled</option>
+      <option>Approved</option>
+      <option>Rejected</option>
+    </select>
+    <input type="date" id="from" aria-label="From date"><input type="date" id="to" aria-label="To date">
+  </div>
+  <div id="live" hidden></div>
+  <div id="list"></div>
+</div>
+<div id="tip" role="tooltip"></div>
+<dialog id="dlg"><div class="mh"><div><h2 id="mt"></h2><div class="cr" id="mc"></div></div><button class="x" id="cl" aria-label="Close">&times;</button></div><div class="mb" id="mbody"></div></dialog>
+
+
+<script>
+const $ = selector => document.querySelector(selector);
+
+const STATUS_CLASS = {
+  "Deployment Completed": "s-ok",
+  "Successful": "s-ok",
+  "Deployment Failed": "s-bad",
+  "Rolled": "s-bad",
+  "Rolled Back": "s-bad",
+  "On Hold": "s-warn",
+  "Postponed": "s-warn",
+  "Scheduled Deployment": "s-live",
+  "Approved": "s-live",
+  "Rejected": "s-bad",
+  "Cancelled": "s-bad"
+};
+
+const STATUS_COLORS = {
+  "Deployment Completed": "var(--ok)",
+  "Successful": "var(--ok)",
+  "Deployment Failed": "var(--bad)",
+  "Rolled": "var(--bad)",
+  "Rolled Back": "var(--bad)",
+  "On Hold": "var(--warn)",
+  "Postponed": "var(--warn)",
+  "Scheduled Deployment": "#2f6fe0",
+  "Approved": "#2f6fe0",
+  "Rejected": "var(--bad)",
+  "Cancelled": "var(--bad)"
+};
+
+let DATA = [];
+let currentRecord = null;
+let loading = false;
+let loadError = "";
+
+const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[ch]));
+
+function parseJsonValue(value, fallback = []) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") return value;
+  if (typeof value === "string" && value.trim()) {
+    try { return JSON.parse(value); } catch (_) { return fallback; }
+  }
+  return fallback;
+}
+
+function dateOnly(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
+}
+
+function formatDate(value, options = { day: "numeric", month: "short", year: "numeric" }) {
+  const iso = dateOnly(value);
+  if (!iso) return "Not provided";
+  const parsed = new Date(iso + "T00:00:00");
+  return Number.isNaN(parsed.getTime()) ? iso : parsed.toLocaleDateString("en-IN", options);
+}
+
+function formatTime(value) {
+  if (!value) return "Not provided";
+  const raw = String(value);
+  const match = raw.match(/T?(\d{2}):(\d{2})/);
+  if (!match) return raw;
+  const hour = Number(match[1]);
+  const minute = match[2];
+  const suffix = hour >= 12 ? "PM" : "AM";
+  return `${hour % 12 || 12}:${minute} ${suffix}`;
+}
+
+function getSlot(record) {
+  const start = formatTime(record.slot_start);
+  const end = formatTime(record.slot_end);
+  if (start !== "Not provided" && end !== "Not provided") return `${start} – ${end}`;
+  return record.slots || start;
+}
+
+function getStatusClass(status) {
+  return STATUS_CLASS[String(status || "").trim()] || "s-live";
+}
+
+function getStatusColor(status) {
+  return STATUS_COLORS[String(status || "").trim()] || "#2f6fe0";
+}
+
+function getDeploymentUnits(record) {
+  const value = Number(record.deployment_count);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function normalizeRecord(record) {
+  return {
+    ...record,
+    cr_number: record.cr_number || "",
+    application_name: record.application_name || "Application not provided",
+    deployment_date: dateOnly(record.deployment_date),
+    status: record.status || "Scheduled Deployment",
+    git_links: parseJsonValue(record.git_links, []),
+    team_allocations: parseJsonValue(record.team_allocations, [])
+  };
+}
+
+function populateEnvironmentFilter() {
+  const select = $("#env");
+  const selected = select.value;
+  const environments = [...new Set(DATA.map(row => String(row.environment || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  select.innerHTML = '<option value="">All environments</option>' +
+    environments.map(env => `<option value="${esc(env)}">${esc(env)}</option>`).join("");
+  if (environments.includes(selected)) select.value = selected;
+}
+
+function visibleRows() {
+  const query = $("#q").value.trim().toLowerCase();
+  const environment = $("#env").value;
+  const status = $("#st").value;
+  const from = $("#from").value;
+  const to = $("#to").value;
+
+  return DATA.map((record, index) => ({ ...record, _index: index })).filter(record => {
+    const searchable = [
+      record.application_name, record.cr_number, record.rfid,
+      record.change_requestor, record.released_by,
+      record.verified_and_deployed_by, record.business_unit,
+      record.environment, record.incident_number, record.status
+    ].join(" ").toLowerCase();
+
+    return (!query || searchable.includes(query)) &&
+      (!environment || record.environment === environment) &&
+      (!status || record.status === status) &&
+      (!from || record.deployment_date >= from) &&
+      (!to || record.deployment_date <= to);
+  });
+}
+
+function renderStats(rows) {
+  const totalUnits = rows.reduce((sum, row) => sum + getDeploymentUnits(row), 0);
+  const scheduled = rows.filter(row => row.status === "Scheduled Deployment").length;
+  const completed = rows.filter(row => row.status === "Deployment Completed").length;
+  const failed = rows.filter(row => row.status === "Deployment Failed").length;
+  const rolled = rows.filter(row => ["Rolled", "Rolled Back"].includes(row.status)).length;
+
+  $("#stats").innerHTML = [
+    ["Total deployments", totalUnits],
+    ["Requests", rows.length],
+    ["Scheduled", scheduled],
+    ["Completed", completed],
+    ["Failed / Rolled", failed + rolled]
+  ].map(([label, value]) =>
+    `<div class="stat"><b>${value}</b><span>${esc(label)}</span></div>`
+  ).join("");
+}
+
+function renderDaySummary(rows) {
+  const counts = {};
+  rows.forEach(row => {
+    const status = row.status || "Unknown";
+    counts[status] = (counts[status] || 0) + 1;
+  });
+  const total = rows.length || 1;
+  const parts = Object.entries(counts);
+  return `<b>${rows.length} requests</b>
+    <span class="mini">${parts.map(([status, count]) =>
+      `<i title="${esc(status)}: ${count}" style="width:${count / total * 100}%;background:${getStatusColor(status)}"></i>`
+    ).join("")}</span>
+    <span>${parts.map(([status, count]) => `${count} ${esc(status)}`).join(", ")}</span>`;
+}
+
+function renderCard(record) {
+  const status = record.status || "Unknown";
+  const slot = getSlot(record);
+  return `<button class="chip ${getStatusClass(status)}" data-index="${record._index}" type="button">
+    <span class="app">${esc(record.application_name)}</span>
+    <span class="cr">${esc(record.cr_number)}${record.rfid ? " · RFID " + esc(record.rfid) : ""}</span>
+    <span class="tag ${getStatusClass(status)}">${esc(status)}</span>
+    <span class="cr">${esc(slot)}</span>
+  </button>`;
+}
+
+function render() {
+  const rows = visibleRows();
+  renderStats(rows);
+
+  const grouped = {};
+  rows.forEach(row => {
+    const key = row.deployment_date || "Date not provided";
+    (grouped[key] ||= []).push(row);
+  });
+
+  const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+  $("#list").innerHTML = dates.length ? dates.map(date => {
+    const dayRows = grouped[date].sort((a, b) =>
+      String(b.slot_start || "").localeCompare(String(a.slot_start || ""))
+    );
+    return `<section class="day">
+      <div class="date">
+        <b>${date === "Date not provided" ? "—" : esc(formatDate(date, { day: "numeric", month: "short" }))}</b>
+        <span>${date === "Date not provided" ? "Date not provided" : esc(formatDate(date, { weekday: "long", year: "numeric" }))}</span>
+      </div>
+      <div class="dc">
+        <div class="dsum">${renderDaySummary(dayRows)}</div>
+        <div class="chips">${dayRows.map(renderCard).join("")}</div>
+      </div>
+    </section>`;
+  }).join("") : `<div class="empty">${loading ? "Loading deployment records…" : esc(loadError || "No deployments match these filters.")}</div>`;
+}
+
+function detail(label, value) {
+  const display = value === null || value === undefined || value === "" ? "Not provided" : value;
+  return `<div><span>${esc(label)}</span>${esc(display)}</div>`;
+}
+
+function renderGitLinks(value) {
+  const links = parseJsonValue(value, []);
+  if (!Array.isArray(links) || !links.length) return "<li>Not provided</li>";
+  return links.map(link => {
+    const url = String(link || "").trim();
+    if (!url) return "";
+    const safeUrl = /^https:\/\/[^\s]+$/i.test(url) ? url : "";
+    return safeUrl
+      ? `<li><a href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a></li>`
+      : `<li>${esc(url)}</li>`;
+  }).join("");
+}
+
+function renderTeams(value) {
+  const teams = parseJsonValue(value, []);
+  if (!Array.isArray(teams) || !teams.length) return "<li>Not provided</li>";
+  return teams.filter(item => item && typeof item === "object").map(item =>
+    `<li>${esc(item.team || "Team")} — ${esc(item.count ?? "")}</li>`
+  ).join("") || "<li>Not provided</li>";
+}
+
+function openDetails(record) {
+  currentRecord = record;
+  $("#mt").textContent = record.application_name || "Deployment details";
+  $("#mc").textContent = `${record.cr_number || "CR not provided"}${record.rfid ? " · RFID: " + record.rfid : ""}`;
+
+  const slot = getSlot(record);
+  const grid = `<div class="grid">
+    ${detail("Status", record.status)}
+    ${detail("Environment", record.environment)}
+    ${detail("Deployment date", formatDate(record.deployment_date))}
+    ${detail("Slot timing", slot)}
+    ${detail("Deployment count", getDeploymentUnits(record))}
+    ${detail("Deployment type", record.deployment_type)}
+    ${detail("Change type", record.change_type)}
+    ${detail("Business unit", record.business_unit)}
+    ${detail("Change requestor", record.change_requestor)}
+    ${detail("Released by", record.released_by)}
+    ${detail("Verified and deployed by", record.verified_and_deployed_by)}
+    ${detail("Incident number", record.incident_number)}
+    ${detail("Rollback", record.roll_back)}
+  </div>`;
+
+  $("#mbody").innerHTML = grid +
+    `<h3>Git repository links</h3><ul>${renderGitLinks(record.git_links)}</ul>` +
+    `<h3>Team allocations</h3><ul>${renderTeams(record.team_allocations)}</ul>` +
+    `<h3>Comments</h3><p>${esc(record.comments || "No comments provided.")}</p>`;
+
+  if (!$("#dlg").open) $("#dlg").showModal();
+}
+
+async function loadDeployments() {
+  loading = true;
+  loadError = "";
+  render();
+
+  try {
+    const response = await fetch("/api/change-dashboard", {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      credentials: "same-origin"
+    });
+    const payload = await response.json();
+
+    if (!response.ok || payload.success !== true) {
+      throw new Error(payload.message || `Unable to load records (HTTP ${response.status}).`);
+    }
+
+    DATA = (payload.deployments || []).map(normalizeRecord);
+    populateEnvironmentFilter();
+    loading = false;
+    render();
+  } catch (error) {
+    loading = false;
+    loadError = error.message || "Unable to load deployment records.";
+    DATA = [];
+    render();
+  }
+}
+
+["q", "env", "st", "from", "to"].forEach(id => {
+  $("#" + id).addEventListener("input", render);
+  $("#" + id).addEventListener("change", render);
+});
+
+$("#list").addEventListener("click", event => {
+  const card = event.target.closest(".chip[data-index]");
+  if (!card) return;
+  const record = DATA[Number(card.dataset.index)];
+  if (record) openDetails(record);
+});
+
+$("#cl").addEventListener("click", () => $("#dlg").close());
+$("#dlg").addEventListener("click", event => {
+  if (event.target.id === "dlg") $("#dlg").close();
+});
+
+loadDeployments();
+</script>
+
+</body>
+</html>

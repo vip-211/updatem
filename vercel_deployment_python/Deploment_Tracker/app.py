@@ -338,6 +338,70 @@ def parse_cab_date(value):
         ) from exc
 
 
+
+@app.route("/api/change-dashboard", methods=["GET"])
+def change_dashboard_data():
+    """Return deployment records using the actual deployment_tracker columns."""
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                id, cr_number, rfid, deployment_date, slot_start, slot_end,
+                slots, application_name, deployment_count, deployment_type,
+                change_type, released_by, verified_and_deployed_by,
+                change_requestor, business_unit, environment, git_links,
+                incident_number, roll_back, status, comments, team_allocations
+            FROM public.deployment_tracker
+            ORDER BY deployment_date DESC NULLS LAST,
+                     slot_start DESC NULLS LAST,
+                     id DESC
+        """)
+
+        columns = [description[0] for description in cursor.description]
+        deployments = []
+
+        for row in cursor.fetchall():
+            record = dict(zip(columns, row))
+
+            for key, value in record.items():
+                if isinstance(value, (datetime, date, time)):
+                    record[key] = value.isoformat()
+
+            # Handle JSON/JSONB whether psycopg2 returns decoded values or text.
+            for json_field in ("git_links", "team_allocations"):
+                value = record.get(json_field)
+                if isinstance(value, str):
+                    try:
+                        record[json_field] = json.loads(value)
+                    except (TypeError, ValueError):
+                        record[json_field] = []
+
+            deployments.append(record)
+
+        return jsonify({
+            "success": True,
+            "count": len(deployments),
+            "deployments": deployments
+        })
+
+    except Exception:
+        app.logger.exception("Unable to load Change Dashboard records")
+        return jsonify({
+            "success": False,
+            "message": "Unable to load deployment records. Check the Flask logs."
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+
 @app.route("/api/validate-cr", methods=["GET"])
 def validate_cr():
 
