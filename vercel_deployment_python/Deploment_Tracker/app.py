@@ -320,6 +320,10 @@ def parse_cab_date(value):
         "%b %d, %Y",
         "%B %d, %Y",
         "%m/%d/%Y",
+
+       
+        "%b %d, %Y %I:%M %p",
+        "%B %d, %Y %I:%M %p",
     )
     for fmt in formats:
         try:
@@ -364,12 +368,20 @@ def validate_cr():
 
         conn.close()
 
-        cab_date = parse_cab_date(cr_details.get("cab_date"))
+        allowed_dates = [
+            parse_cab_date(d).isoformat()
+            for d in cr_details.get("cab_dates", [])
+        ]
+
         return jsonify({
             "success": True,
             "approved": True,
-            "cab_date": cr_details.get("cab_date"),
-            "cab_date_iso": cab_date.isoformat(),
+            "change_requestor": cr_details.get("change_requestor"),
+            "application_name": cr_details.get("application_name"),
+            "business_unit": cr_details.get("business_unit"),
+            "environment": cr_details.get("environment"),
+            "cab_dates": allowed_dates,
+            "cab_date_iso": allowed_dates[0] if allowed_dates else None,
             "change_type": cr_details.get("change_type"),
             "exists": bool(row),
             "rfid": row[0] if row else None
@@ -597,7 +609,7 @@ def validate_cr_number(cr_number):
 
 
     headers = {
-        "TECHNICIAN_KEY": "1A112622-14BF",
+        "TECHNICIAN_KEY": "1A112622",
         "Accept": "application/json"
     }
 
@@ -619,6 +631,44 @@ def validate_cr_number(cr_number):
             )
 
         change = data.get("change", {})
+
+        change_requestor = (
+            change.get("change_requester", {})
+            .get("email_id", "")
+        )
+
+        change_type = (
+            change.get("change_type", {})
+            .get("name", "")
+        )
+
+        change_type_mapping = {
+            "Normal Change": "Normal CR",
+            "Emergency Change": "Emergency CR",
+            "Standard Change": "Standard CR"
+        }
+
+        change_type = change_type_mapping.get(
+            change_type,
+            change_type
+        )
+
+        application_name = (
+            change.get("subcategory", {})
+            .get("name", "")
+        )
+
+        udf = change.get("udf_fields") or {}
+
+        udf = change.get("udf_fields") or {}
+
+        business_unit = str(
+            udf.get("udf_sline_39302") or ""
+        ).strip()
+        
+        environment = str(
+            udf.get("udf_sline_10801") or ""
+        ).strip()
 
         cr_status = (
             (change.get("status") or {})
@@ -655,13 +705,48 @@ def validate_cr_number(cr_number):
                    
         udf = change.get("udf_fields") or {}
 
+        cab_dates = []
+
+        for field in (
+           
+            # "udf_date_33001",
+            "udf_date_35717",
+            "udf_date_35719",
+            "udf_date_35720",
+            "udf_date_35721",
+            "udf_date_35722",
+            "udf_date_35723",
+            "udf_date_35724",
+            "udf_date_35725",
+            "udf_date_35726",
+            "udf_date_35727",
+
+            
+        ):
+            value = (udf.get(field) or {}).get("display_value")
+            if value:
+                cab_dates.append(value)
+        
+        cab_dates = list(dict.fromkeys(cab_dates))
+        
+        if not cab_dates:
+            raise ValueError(
+                f"CR-{change_id} does not have any deployment dates configured in ITSM."
+            )
+        
         return {
             "change_id": str(change.get("id")),
             "approval_status": approval_status,
             "cr_status": cr_status,
-            "change_type": change.get("template", {}).get("name"),
-            "cab_date": (udf.get("udf_date_33001") or {}).get("display_value")
+            "change_type": change_type,
+            "change_requestor": change_requestor,
+            "application_name": application_name,
+            "business_unit": business_unit,
+            "environment": environment,
+            "cab_dates": cab_dates
         }
+
+
     except requests.HTTPError as exc:
         if exc.response is not None and exc.response.status_code == 404:
             raise ValueError(f"CR-{change_id} not found.")
@@ -693,11 +778,14 @@ def save_deployment(data):
     cr_details = validate_cr_number(cr_number)
 
     app.logger.info(
-        "CR Validated | CR=%s | CAB Date=%s",
+        "CR Validated | CR=%s | CAB Dates=%s",
         cr_number,
-        cr_details["cab_date"]
+        cr_details.get("cab_dates")
     )    
     
+    business_unit = (data.get("business_unit") or "").strip()
+    environment = (data.get("environment") or "").strip()
+
     git_links = request.form.getlist("git_links[]")
     if not git_links:
         raise ValueError("At least one Git link is required.")
@@ -737,10 +825,14 @@ def save_deployment(data):
         raise ValueError(
             "Enter a valid deployment date and time slot."
         ) from exc
-    cab_date = parse_cab_date(cr_details.get("cab_date"))
-    if deployment_date != cab_date:
+    allowed_dates = [
+        parse_cab_date(d)
+        for d in cr_details.get("cab_dates", [])
+    ]
+
+    if deployment_date not in allowed_dates:
         raise ValueError(
-            f"Only the CAB date returned by ITSM can be booked: {cab_date.isoformat()}."
+            "Selected deployment date is not present in the CR."
         )
 
     change_type = (data.get("change_type") or "").strip()
@@ -866,6 +958,8 @@ def save_deployment(data):
                         released_by,
                         verified_and_deployed_by,
                         change_requestor,
+                        business_unit,
+                        environment,
                         git_links,
                         incident_number,
                         roll_back,
@@ -873,8 +967,8 @@ def save_deployment(data):
                     )
                     VALUES (
                         %s, %s, %s, %s,
-                        %s, %s, %s, %s,
-                        %s, %s, %s, %s,
+                        %s, %s, %s, %s,%s,
+                        %s, %s, %s, %s,%s,
                         %s, %s, %s, %s,%s
                     )
                     RETURNING id
@@ -896,6 +990,8 @@ def save_deployment(data):
                         released_by,
                         verified_and_deployed_by,
                         change_requestor,
+                        business_unit,
+                        environment,
                         json.dumps(git_links),
                         data.get("incident_number"),
                         data["roll_back"],
@@ -1076,6 +1172,156 @@ def get_deployment_by_cr():
     finally:
         if conn is not None:
             conn.close()
+
+
+def ensure_running_timer_table(cur):
+    """Create the timer table on first use; one accumulated timer per deployment."""
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS public.deployment_running_timers (
+            deployment_id BIGINT PRIMARY KEY
+                REFERENCES public.deployment_tracker(id) ON DELETE CASCADE,
+            started_at TIMESTAMPTZ,
+            stopped_at TIMESTAMPTZ,
+            accumulated_seconds BIGINT NOT NULL DEFAULT 0,
+            is_running BOOLEAN NOT NULL DEFAULT FALSE,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+
+def serialize_running_timer(row):
+    if not row:
+        return {
+            "started_at": None,
+            "stopped_at": None,
+            "accumulated_seconds": 0,
+            "is_running": False
+        }
+    started_at, stopped_at, accumulated_seconds, is_running = row
+    return {
+        "started_at": started_at.isoformat() if started_at else None,
+        "stopped_at": stopped_at.isoformat() if stopped_at else None,
+        "accumulated_seconds": int(accumulated_seconds or 0),
+        "is_running": bool(is_running)
+    }
+
+
+@app.route("/api/deployment-running-timer/<int:deployment_id>", methods=["GET"])
+def get_deployment_running_timer(deployment_id):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_running_timer_table(cur)
+                cur.execute(
+                    """
+                    SELECT started_at, stopped_at, accumulated_seconds, is_running
+                    FROM public.deployment_running_timers
+                    WHERE deployment_id = %s
+                    """,
+                    (deployment_id,)
+                )
+                row = cur.fetchone()
+                cur.execute("SELECT 1 FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+                if not cur.fetchone():
+                    return jsonify({"success": False, "message": "Deployment record not found."}), 404
+        return jsonify({"success": True, "timer": serialize_running_timer(row)})
+    except Exception:
+        app.logger.exception("Could not load deployment running timer: %s", deployment_id)
+        return jsonify({"success": False, "message": "Could not load running timer. Check server logs."}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.route("/api/deployment-running-timer/<int:deployment_id>", methods=["POST"])
+def update_deployment_running_timer(deployment_id):
+    payload = request.get_json(silent=True) or {}
+    action = str(payload.get("action") or "").strip().lower()
+    if action not in ("start", "stop"):
+        return jsonify({"success": False, "message": "Timer action must be start or stop."}), 400
+
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_running_timer_table(cur)
+                cur.execute("SELECT 1 FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+                if not cur.fetchone():
+                    return jsonify({"success": False, "message": "Deployment record not found."}), 404
+
+                cur.execute(
+                    """
+                    INSERT INTO public.deployment_running_timers (deployment_id)
+                    VALUES (%s)
+                    ON CONFLICT (deployment_id) DO NOTHING
+                    """,
+                    (deployment_id,)
+                )
+                cur.execute(
+                    """
+                    SELECT started_at, stopped_at, accumulated_seconds, is_running
+                    FROM public.deployment_running_timers
+                    WHERE deployment_id = %s
+                    FOR UPDATE
+                    """,
+                    (deployment_id,)
+                )
+                row = cur.fetchone()
+                started_at, stopped_at, accumulated_seconds, is_running = row
+                now = datetime.now().astimezone()
+
+                if action == "start":
+                    if is_running:
+                        return jsonify({
+                            "success": True,
+                            "message": "Timer is already running.",
+                            "timer": serialize_running_timer(row)
+                        })
+                    cur.execute(
+                        """
+                        UPDATE public.deployment_running_timers
+                        SET started_at = %s, stopped_at = NULL, is_running = TRUE,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE deployment_id = %s
+                        RETURNING started_at, stopped_at, accumulated_seconds, is_running
+                        """,
+                        (now, deployment_id)
+                    )
+                    message = "Timer started. Start date and time recorded."
+                else:
+                    if not is_running or not started_at:
+                        return jsonify({"success": False, "message": "The timer is not currently running."}), 409
+                    elapsed = max(0, int((now - started_at).total_seconds()))
+                    cur.execute(
+                        """
+                        UPDATE public.deployment_running_timers
+                        SET stopped_at = %s,
+                            accumulated_seconds = accumulated_seconds + %s,
+                            is_running = FALSE,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE deployment_id = %s
+                        RETURNING started_at, stopped_at, accumulated_seconds, is_running
+                        """,
+                        (now, elapsed, deployment_id)
+                    )
+                    message = "Timer stopped. Stop date and time recorded."
+
+                updated = cur.fetchone()
+        return jsonify({
+            "success": True,
+            "message": message,
+            "timer": serialize_running_timer(updated)
+        })
+    except Exception:
+        app.logger.exception("Could not update deployment running timer: %s", deployment_id)
+        return jsonify({"success": False, "message": "Could not update running timer. Check server logs."}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 @app.route("/api/deployment-by-id/<int:deployment_id>", methods=["PUT"])
 
@@ -1677,16 +1923,28 @@ def slot_status():
     cr_number = (request.args.get("cr_number") or "").strip()
     if not cr_number:
         return jsonify(error="Enter and validate the CR number to load its CAB date and slots."), 400
+    
     try:
         cr_details = validate_cr_number(cr_number)
-        cab_date = parse_cab_date(cr_details.get("cab_date"))
+    
+        allowed_dates = {
+            parse_cab_date(d)
+            for d in cr_details.get("cab_dates", [])
+            if d
+        }
+    
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
-
-    if selected_date != cab_date:
+    
+    if selected_date not in allowed_dates:
         return jsonify({
-            "error": f"Only the CAB date returned by ITSM can be booked: {cab_date.isoformat()}.",
-            "cab_date": cab_date.isoformat(),
+            "error": (
+                "Selected date is not present in the CR. "
+                f"Allowed dates: {', '.join(sorted(d.isoformat() for d in allowed_dates))}"
+            ),
+            "allowed_dates": [
+                d.isoformat() for d in sorted(allowed_dates)
+            ],
             "slots": []
         }), 400
 
@@ -1706,15 +1964,15 @@ def slot_status():
                 )
         }), 400
 
-        if selected_date.weekday() in (5, 6) and not is_emergency:
-            return jsonify({
-                "week_off": True,
-                "message": (
-                    "Week Off — Only Emergency CR deployments are "
-                    "allowed on Saturday and Sunday."
-            ),
-            "slots": []
-        }), 200
+        # if selected_date.weekday() in (5, 6) and not is_emergency:
+        #     return jsonify({
+        #         "week_off": True,
+        #         "message": (
+        #             "Week Off — Only Emergency CR deployments are "
+        #             "allowed on Saturday and Sunday."
+        #     ),
+        #     "slots": []
+        # }), 200
 
     slot_starts = get_slot_starts(change_type)
 
@@ -1853,6 +2111,9 @@ def send_deployment_notification(data, rfid):
     Configure recipients and SMTP credentials in .env, never in source code.
     """
     git_links = data.get("git_links", [])
+
+
+    requestor_email = (data.get("change_requestor") or "").strip()
     # Read application_name from the submitted deployment data before building
     # the email subject. This keeps it defined throughout this function.
     application_name = (data.get("application_name") or "").strip()
@@ -1860,11 +2121,18 @@ def send_deployment_notification(data, rfid):
         application_name = "Not provided"
 
     recipients_raw = os.getenv("DEPLOYMENT_EMAIL_RECIPIENTS", "")
+
     recipients = [
         address.strip()
         for address in re.split(r"[,;\n]+", recipients_raw)
         if address.strip()
     ]
+
+    if requestor_email and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", requestor_email):
+        recipients.append(requestor_email)
+
+    recipients = list(set(recipients))
+    
     if not recipients:
         app.logger.warning(
             "Deployment saved, but email was not sent: "
