@@ -49,7 +49,7 @@ JENKINS_TOKEN = os.getenv("JENKINS_TOKEN", "").strip()
 VERIFY_SSL = os.getenv("JENKINS_VERIFY_SSL", "true").strip().lower() == "true"
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "5"))
 REFRESH_SECONDS = int(os.getenv("REFRESH_SECONDS", "120"))
-PORT = int(os.getenv("PORT", "3030"))
+PORT = int(os.getenv("PORT", "5050"))
 TZ_NAME = os.getenv("TZ", "Asia/Kolkata")
 
 JENKINS_URLS = [
