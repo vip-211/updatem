@@ -327,6 +327,7 @@ td button { padding: 7px 16px; font-size: 12.5px; }
       <button type="button" class="tracker-tab active" id="deploymentDetailsTab" role="tab" aria-selected="true" aria-controls="deploymentDetailsPanel">Deployment Details</button>
       <button type="button" class="tracker-tab" id="teamAllocationTab" role="tab" aria-selected="false" aria-controls="teamAllocationPanel">Team Allocation</button>
       <button type="button" class="tracker-tab" id="runningStatusTab" role="tab" aria-selected="false" aria-controls="runningStatusPanel">Running Status</button>
+      <button type="button" class="tracker-tab" id="jenkinsBuildsTab" role="tab" aria-selected="false" aria-controls="jenkinsBuildsPanel">Jenkins Builds</button>
     </div>
 
     <div id="deploymentDetailsPanel" class="tracker-tab-panel active" role="tabpanel" aria-labelledby="deploymentDetailsTab">
@@ -405,6 +406,18 @@ td button { padding: 7px 16px; font-size: 12.5px; }
           <strong id="teamAllocationTotal" class="muted">Allocated: 0 / 0</strong>
         </div>
         <div id="teamAllocationMessage" class="muted" role="status" style="margin-top:6px;font-size:12px"></div>
+      </div>
+    </div>
+
+    <div id="jenkinsBuildsPanel" class="tracker-tab-panel" role="tabpanel" aria-labelledby="jenkinsBuildsTab">
+      <h3 style="margin:0 0 8px">Jenkins Build / Deployment History</h3>
+      <p class="muted" style="margin:0 0 14px">Builds are linked automatically using the CR number found in Jenkins build parameters or metadata.</p>
+      <div id="jenkinsBuildsMessage" class="muted" role="status" aria-live="polite">Select a deployment request to load its Jenkins history.</div>
+      <div class="table-wrap" id="jenkinsBuildsTableWrap" style="display:none">
+        <table>
+          <thead><tr><th>Start Time</th><th>End Time</th><th>Build / Deploy</th><th>Linux / Windows</th><th>Triggered User</th><th>Job / Build</th><th>Status</th></tr></thead>
+          <tbody id="jenkinsBuildsBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -640,7 +653,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const tabMap = {
       details: ["deploymentDetailsTab", "deploymentDetailsPanel"],
       team: ["teamAllocationTab", "teamAllocationPanel"],
-      running: ["runningStatusTab", "runningStatusPanel"]
+      running: ["runningStatusTab", "runningStatusPanel"],
+      jenkins: ["jenkinsBuildsTab", "jenkinsBuildsPanel"]
     };
     Object.entries(tabMap).forEach(([name, ids]) => {
       const active = name === tabName;
@@ -652,6 +666,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("deploymentDetailsTab").addEventListener("click", () => activateTrackerTab("details"));
   document.getElementById("teamAllocationTab").addEventListener("click", () => activateTrackerTab("team"));
   document.getElementById("runningStatusTab").addEventListener("click", () => activateTrackerTab("running"));
+  document.getElementById("jenkinsBuildsTab").addEventListener("click", () => activateTrackerTab("jenkins"));
 
   // Running Status timer: records are persisted by deployment ID in PostgreSQL.
   let runningTimerInterval = null;
@@ -1255,11 +1270,66 @@ document.addEventListener("DOMContentLoaded", function () {
     loadDailySchedule();
   }
 
+  async function loadJenkinsBuilds(crNumber) {
+    const messageEl = document.getElementById("jenkinsBuildsMessage");
+    const tableWrap = document.getElementById("jenkinsBuildsTableWrap");
+    const body = document.getElementById("jenkinsBuildsBody");
+    body.replaceChildren();
+    tableWrap.style.display = "none";
+    if (!crNumber) {
+      messageEl.textContent = "No CR number is available for this request.";
+      return;
+    }
+    messageEl.textContent = "Loading Jenkins history for " + crNumber + "...";
+    try {
+      const response = await fetch("/api/jenkins/by-cr/" + encodeURIComponent(crNumber), {
+        headers: { Accept: "application/json" }, cache: "no-store"
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.message || "Could not load Jenkins history.");
+      const builds = payload.builds || [];
+      if (!builds.length) {
+        messageEl.textContent = payload.jenkins_available
+          ? "No Jenkins build/deploy records containing this CR number were found."
+          : "Jenkins servers are currently unavailable; build details could not be checked.";
+        return;
+      }
+      const columns = ["start_time", "end_time", "build_type", "platform", "triggered_by"];
+      builds.forEach(build => {
+        const row = document.createElement("tr");
+        columns.forEach(key => {
+          const cell = document.createElement("td");
+          let value = build[key] || "—";
+          if ((key === "start_time" || key === "end_time") && value) value = String(value).replace("T", " ");
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        const jobCell = document.createElement("td");
+        const link = document.createElement("a");
+        link.href = build.url || "#";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = (build.job_name || "Jenkins Job") + " #" + (build.number ?? "");
+        jobCell.appendChild(link);
+        row.appendChild(jobCell);
+        const statusCell = document.createElement("td");
+        statusCell.textContent = build.status || "Unknown";
+        row.appendChild(statusCell);
+        body.appendChild(row);
+      });
+      tableWrap.style.display = "";
+      messageEl.textContent = builds.length + " Jenkins build/deploy record(s) linked to " + payload.cr_number + ".";
+    } catch (error) {
+      messageEl.textContent = "Jenkins history could not be loaded: " + error.message;
+    }
+  }
+
   function populateDetails(record) {
 
     if (!record || record.id === undefined || record.id === null) throw new Error("The selected request does not contain a deployment ID.");
     currentDeploymentId = record.id;
     activateTrackerTab("details");
+    loadJenkinsBuilds(record.cr_number);
     runningTimerState = null;
     renderRunningTimer();
     loadRunningTimer();

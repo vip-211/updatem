@@ -20,6 +20,7 @@ from psycopg2 import errors
 from dotenv import load_dotenv
 from flask import (Flask, flash, jsonify, redirect, render_template, request, url_for, session, send_file)
 import requests
+import time as time_module
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -32,6 +33,752 @@ if not app.secret_key:
     raise RuntimeError(
         "FLASK_SECRET_KEY is missing. Add it to your .env file."
     )
+
+
+# ============================================================
+# JENKINS CONFIGURATION
+# ============================================================
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from requests.auth import HTTPBasicAuth
+from threading import Lock
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+JENKINS_USER = os.getenv("JENKINS_USER", "devops").strip()
+JENKINS_TOKEN = os.getenv("JENKINS_TOKEN", "").strip()
+VERIFY_SSL = os.getenv("JENKINS_VERIFY_SSL", "true").strip().lower() == "true"
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "5"))
+REFRESH_SECONDS = int(os.getenv("REFRESH_SECONDS", "120"))
+PORT = int(os.getenv("PORT", "3030"))
+TZ_NAME = os.getenv("TZ", "Asia/Kolkata")
+
+JENKINS_URLS = [
+    item.strip().rstrip("/")
+    for item in os.getenv(
+        "JENKINS_URLS",
+        "https://jenkins-build-linux.rblbank.com,"
+        "https://jenkins-deploy-linux.rblbank.com,"
+        "https://jenkins-build-win.rblbank.com,"
+        "https://jenkins-deploy-win.rblbank.com",
+    ).split(",")
+    if item.strip()
+]
+
+JENKINS_BUILD_PAGE_SIZE = max(1, int(os.getenv("JENKINS_BUILD_PAGE_SIZE", "100")))
+# 0 = fetch all available build history for each job.
+JENKINS_MAX_BUILDS = max(0, int(os.getenv("JENKINS_MAX_BUILDS", "0")))
+JENKINS_JOB_WORKERS = max(1, int(os.getenv("JENKINS_JOB_WORKERS", "8")))
+
+try:
+    JENKINS_TIMEZONE = ZoneInfo(TZ_NAME)
+except ZoneInfoNotFoundError:
+    app.logger.warning("Unknown TZ '%s'; using Asia/Kolkata", TZ_NAME)
+    JENKINS_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+_JENKINS_CACHE = {"created_at": 0.0, "data": None}
+_JENKINS_CACHE_LOCK = Lock()
+
+
+def _jenkins_get_json(url, params=None):
+    """GET a Jenkins JSON API endpoint using the configured credentials."""
+    response = requests.get(
+        url,
+        params=params,
+        auth=HTTPBasicAuth(JENKINS_USER, JENKINS_TOKEN),
+        timeout=REQUEST_TIMEOUT,
+        verify=VERIFY_SSL,
+        headers={"Accept": "application/json"},
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _jenkins_status(result=None, building=False, color=None):
+    if building:
+        return "RUNNING"
+    if result:
+        return str(result).upper()
+    color = (color or "").lower()
+    if "anime" in color:
+        return "RUNNING"
+    if color.startswith("blue"):
+        return "SUCCESS"
+    if color.startswith("red"):
+        return "FAILURE"
+    if color.startswith("yellow"):
+        return "UNSTABLE"
+    if color.startswith("aborted"):
+        return "ABORTED"
+    if color.startswith("disabled"):
+        return "DISABLED"
+    if color.startswith("notbuilt"):
+        return "NOT_BUILT"
+    return "NOT_BUILT"
+
+
+def _jenkins_is_container(item):
+    class_name = (item.get("_class") or "").lower()
+    return any(
+        marker in class_name
+        for marker in (
+            "folder",
+            "multibranchproject",
+            "organizationfolder",
+        )
+    )
+
+
+def _jenkins_discover_jobs(item_url, server_name, server_url, item_hint=None):
+    """Recursively traverse folders and multibranch projects."""
+    data = _jenkins_get_json(
+        item_url.rstrip("/") + "/api/json",
+        params={"tree": "name,url,_class,color,jobs[name,url,_class,color]"},
+    )
+    children = data.get("jobs") or []
+    if children:
+        found = []
+        for child in children:
+            child_url = child.get("url")
+            if child_url:
+                found.extend(
+                    _jenkins_discover_jobs(
+                        child_url, server_name, server_url, child
+                    )
+                )
+        return found
+
+    job_class = data.get("_class") or (item_hint or {}).get("_class") or ""
+    # Empty folders are containers, not buildable jobs.
+    if _jenkins_is_container({"_class": job_class}):
+        return []
+
+    return [{
+        "server": server_name,
+        "server_url": server_url,
+        "name": data.get("name") or (item_hint or {}).get("name"),
+        "url": data.get("url") or item_url,
+        "job_class": job_class,
+        "color": data.get("color") or (item_hint or {}).get("color"),
+        "status": _jenkins_status(color=data.get("color") or (item_hint or {}).get("color")),
+    }]
+
+
+def _jenkins_build_local_time(timestamp_ms):
+    if timestamp_ms is None:
+        return None
+    try:
+        return datetime.fromtimestamp(
+            float(timestamp_ms) / 1000.0, tz=JENKINS_TIMEZONE
+        ).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def _jenkins_extract_build_details(data):
+    parameters, causes, repositories, branches = [], [], [], []
+    commits, commit_records = [], []
+
+    for action in data.get("actions") or []:
+        if not isinstance(action, dict):
+            continue
+        for parameter in action.get("parameters") or []:
+            if isinstance(parameter, dict):
+                parameters.append({
+                    "name": parameter.get("name"),
+                    "value": parameter.get("value"),
+                })
+        for cause in action.get("causes") or []:
+            if isinstance(cause, dict):
+                causes.append({
+                    "user": cause.get("userName"),
+                    "user_id": cause.get("userId"),
+                    "description": cause.get("shortDescription"),
+                    "upstream_project": cause.get("upstreamProject"),
+                    "upstream_build": cause.get("upstreamBuild"),
+                })
+        repositories.extend(action.get("remoteUrls") or [])
+        revision = action.get("lastBuiltRevision") or {}
+        for branch in revision.get("branch") or []:
+            if branch.get("name"):
+                branches.append(branch["name"])
+
+    for change_set in data.get("changeSets") or []:
+        for item in change_set.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            commit_id = item.get("commitId")
+            if commit_id:
+                commits.append(commit_id)
+            author = item.get("author") or {}
+            author_name = (
+                author.get("fullName") if isinstance(author, dict)
+                else str(author) if author else None
+            )
+            commit_records.append({
+                "commit_id": commit_id,
+                "author": author_name,
+                "message": item.get("msg") or item.get("comment"),
+            })
+
+    triggering_user = next(
+        (cause.get("user") or cause.get("user_id") for cause in causes
+         if cause.get("user") or cause.get("user_id")),
+        None,
+    )
+    return {
+        "parameters": parameters,
+        "causes": causes,
+        "triggered_by": triggering_user,
+        "git_branches": sorted(set(branches)),
+        "git_repositories": sorted(set(repositories)),
+        "commit_ids": sorted(set(commits)),
+        "commits": commit_records,
+    }
+
+
+def _jenkins_normalize_cr(value):
+    """Normalize CR values without dropping meaningful leading zeroes."""
+    value = str(value or "").strip()
+    value = re.sub(r"^CR[\s:_-]*", "", value, flags=re.IGNORECASE)
+    return value if value.isdigit() else ""
+
+
+def _jenkins_extract_cr_numbers(data, job_name=None):
+    """Find explicit CR references in Jenkins parameters and build metadata."""
+    found = set()
+    cr_pattern = re.compile(r"\bCR[\s:_-]*([0-9]+)\b", re.IGNORECASE)
+    cr_parameter_names = {
+        "cr", "crno", "crnumber", "crnum", "crid",
+        "changerequest", "changerequestno", "changerequestnumber",
+    }
+
+    for action in data.get("actions") or []:
+        if not isinstance(action, dict):
+            continue
+        for parameter in action.get("parameters") or []:
+            if not isinstance(parameter, dict):
+                continue
+            name = re.sub(r"[^a-z0-9]", "", str(parameter.get("name") or "").lower())
+            value = str(parameter.get("value") or "").strip()
+            if name in cr_parameter_names or name.startswith("crnumber"):
+                normalized = _jenkins_normalize_cr(value)
+                if normalized:
+                    found.add(normalized)
+            for match in cr_pattern.finditer(value):
+                found.add(match.group(1))
+
+    for field in ("displayName", "fullDisplayName", "description"):
+        value = str(data.get(field) or "")
+        found.update(match.group(1) for match in cr_pattern.finditer(value))
+
+    # Job names are accepted only when they contain an explicit CR-<digits> token.
+    for match in cr_pattern.finditer(str(job_name or "")):
+        found.add(match.group(1))
+    return sorted(found)
+
+
+def _jenkins_execution_metadata(job):
+    server_url = str(job.get("server_url") or "").lower()
+    server_name = str(job.get("server") or "").lower()
+    job_name = str(job.get("name") or "").lower()
+    combined = " ".join((server_url, server_name, job_name))
+
+    if "deploy" in combined:
+        build_type = "Deploy"
+    elif "build" in combined:
+        build_type = "Build"
+    else:
+        build_type = "Unknown"
+
+    if any(token in combined for token in ("windows", "win-", "-win", "win/")):
+        platform = "Windows"
+    elif "linux" in combined:
+        platform = "Linux"
+    else:
+        platform = "Unknown"
+    return build_type, platform
+
+
+def _jenkins_fetch_build(build_summary, job=None):
+    build_url = build_summary.get("url")
+    if not build_url:
+        return None
+    data = _jenkins_get_json(
+        build_url.rstrip("/") + "/api/json",
+        params={
+            "tree": (
+                "number,url,result,timestamp,duration,estimatedDuration,building,"
+                "displayName,description,fullDisplayName,"
+                "actions[parameters[name,value],"
+                "causes[userName,userId,shortDescription,upstreamProject,upstreamBuild],"
+                "remoteUrls,lastBuiltRevision[branch[name]]],"
+                "changeSets[items[commitId,author[fullName],msg,comment]]"
+            )
+        },
+    )
+    timestamp = data.get("timestamp")
+    duration_ms = data.get("duration")
+    building = bool(data.get("building", False))
+    job = job or {}
+    build_type, platform = _jenkins_execution_metadata(job)
+    details = _jenkins_extract_build_details(data)
+    start_time = _jenkins_build_local_time(timestamp)
+    end_time = None
+    if timestamp is not None and duration_ms is not None and not building:
+        try:
+            end_time = _jenkins_build_local_time(float(timestamp) + float(duration_ms))
+        except (TypeError, ValueError, OverflowError):
+            end_time = None
+    return {
+        "number": data.get("number"),
+        "url": data.get("url") or build_url,
+        "job_name": job.get("name"),
+        "server": job.get("server"),
+        "server_url": job.get("server_url"),
+        "display_name": data.get("displayName"),
+        "full_display_name": data.get("fullDisplayName"),
+        "description": data.get("description"),
+        "result": data.get("result"),
+        "status": _jenkins_status(data.get("result"), building),
+        "building": building,
+        "timestamp": timestamp,
+        "timestamp_local": start_time,
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration_ms": duration_ms,
+        "estimated_duration_ms": data.get("estimatedDuration"),
+        "build_type": build_type,
+        "platform": platform,
+        "cr_numbers": _jenkins_extract_cr_numbers(data, job.get("name")),
+        **details,
+    }
+
+
+def _persist_jenkins_builds(builds):
+    """Persist each Jenkins build against every explicitly detected CR number."""
+    rows = []
+    for build in builds or []:
+        build_url = str(build.get("url") or "").strip()
+        if not build_url:
+            continue
+        for raw_cr in build.get("cr_numbers") or []:
+            cr_number = _jenkins_normalize_cr(raw_cr)
+            if not cr_number:
+                continue
+            rows.append((
+                cr_number, build_url, build.get("job_name"),
+                str(build.get("number")) if build.get("number") is not None else None,
+                build.get("server"), build.get("build_type"), build.get("platform"),
+                build.get("start_time"), build.get("end_time"),
+                build.get("triggered_by"), build.get("status"),
+                bool(build.get("building")), build.get("duration_ms"),
+                json.dumps({
+                    "display_name": build.get("display_name"),
+                    "full_display_name": build.get("full_display_name"),
+                    "description": build.get("description"),
+                    "causes": build.get("causes") or [],
+                    "parameters": build.get("parameters") or [],
+                    "git_branches": build.get("git_branches") or [],
+                    "git_repositories": build.get("git_repositories") or [],
+                    "commit_ids": build.get("commit_ids") or [],
+                    "commits": build.get("commits") or [],
+                }, default=str),
+            ))
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS public.jenkins_build_history (
+                cr_number TEXT NOT NULL,
+                build_url TEXT NOT NULL,
+                job_name TEXT,
+                build_number TEXT,
+                server TEXT,
+                build_type TEXT,
+                platform TEXT,
+                start_time TIMESTAMPTZ,
+                end_time TIMESTAMPTZ,
+                triggered_by TEXT,
+                status TEXT,
+                building BOOLEAN NOT NULL DEFAULT FALSE,
+                duration_ms BIGINT,
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (build_url, cr_number)
+            )
+        """)
+        if rows:
+            cur.executemany("""
+                INSERT INTO public.jenkins_build_history (
+                cr_number, build_url, job_name, build_number, server,
+                build_type, platform, start_time, end_time, triggered_by,
+                status, building, duration_ms, metadata, last_seen_at
+            ) VALUES (
+                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,NOW()
+            )
+            ON CONFLICT (build_url, cr_number) DO UPDATE SET
+                job_name = EXCLUDED.job_name,
+                build_number = EXCLUDED.build_number,
+                server = EXCLUDED.server,
+                build_type = EXCLUDED.build_type,
+                platform = EXCLUDED.platform,
+                start_time = COALESCE(EXCLUDED.start_time, public.jenkins_build_history.start_time),
+                end_time = COALESCE(EXCLUDED.end_time, public.jenkins_build_history.end_time),
+                triggered_by = COALESCE(EXCLUDED.triggered_by, public.jenkins_build_history.triggered_by),
+                status = EXCLUDED.status,
+                building = EXCLUDED.building,
+                duration_ms = COALESCE(EXCLUDED.duration_ms, public.jenkins_build_history.duration_ms),
+                metadata = EXCLUDED.metadata,
+                last_seen_at = NOW()
+        """, rows)
+        conn.commit()
+        return len(rows)
+    except Exception:
+        if conn:
+            conn.rollback()
+        app.logger.exception("Could not persist Jenkins build history")
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _load_persisted_jenkins_builds(cr_number):
+    """Load saved Jenkins build records for a normalized CR number."""
+    normalized = _jenkins_normalize_cr(cr_number)
+    if not normalized:
+        return []
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT cr_number, build_url, job_name, build_number, server,
+                   build_type, platform, start_time, end_time, triggered_by,
+                   status, building, duration_ms, metadata
+            FROM public.jenkins_build_history
+            WHERE cr_number = %s
+            ORDER BY start_time DESC NULLS LAST, build_number DESC NULLS LAST
+        """, (normalized,))
+        columns = [d[0] for d in cur.description]
+        saved = []
+        for row in cur.fetchall():
+            item = dict(zip(columns, row))
+            item["url"] = item.pop("build_url")
+            item["number"] = item.pop("build_number")
+            for key in ("start_time", "end_time"):
+                if item.get(key) is not None:
+                    item[key] = item[key].isoformat()
+            metadata = item.pop("metadata") or {}
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except ValueError:
+                    metadata = {}
+            item.update(metadata if isinstance(metadata, dict) else {})
+            saved.append(item)
+        return saved
+    except Exception:
+        # An older installation may not have run the table-creation path yet.
+        app.logger.exception("Could not load saved Jenkins build history")
+        return []
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def _all_jenkins_builds(jenkins_data):
+    return [
+        build
+        for server in (jenkins_data or {}).get("servers") or []
+        for job in server.get("jobs") or []
+        for build in job.get("builds") or []
+    ]
+
+
+def _jenkins_fetch_job_history(job):
+    """Fetch build summaries in pages, then retrieve details for each build."""
+    builds, offset = [], 0
+    while True:
+        page_size = JENKINS_BUILD_PAGE_SIZE
+        if JENKINS_MAX_BUILDS:
+            remaining = JENKINS_MAX_BUILDS - offset
+            if remaining <= 0:
+                break
+            page_size = min(page_size, remaining)
+        end = offset + page_size
+        response = _jenkins_get_json(
+            job["url"].rstrip("/") + "/api/json",
+            params={
+                "tree": (
+                    "builds[number,url,result,timestamp,duration,building]"
+                    f"{{{offset},{end}}}"
+                )
+            },
+        )
+        page = response.get("builds") or []
+        if not page:
+            break
+        builds.extend(page)
+        if len(page) < page_size:
+            break
+        offset = end
+
+    detailed = []
+    for summary in builds:
+        try:
+            build = _jenkins_fetch_build(summary, job)
+            if build:
+                detailed.append(build)
+        except requests.RequestException as exc:
+            app.logger.warning(
+                "Could not fetch Jenkins build %s: %s", summary.get("url"), exc
+            )
+            detailed.append({
+                "number": summary.get("number"),
+                "url": summary.get("url"),
+                "result": summary.get("result"),
+                "status": _jenkins_status(
+                    summary.get("result"), summary.get("building", False)
+                ),
+                "building": bool(summary.get("building", False)),
+                "timestamp": summary.get("timestamp"),
+                "timestamp_local": _jenkins_build_local_time(summary.get("timestamp")),
+                "duration_ms": summary.get("duration"),
+                "start_time": _jenkins_build_local_time(summary.get("timestamp")),
+                "end_time": None,
+                "job_name": job.get("name"),
+                "server": job.get("server"),
+                "server_url": job.get("server_url"),
+                "build_type": _jenkins_execution_metadata(job)[0],
+                "platform": _jenkins_execution_metadata(job)[1],
+                "cr_numbers": [],
+                "error": str(exc),
+            })
+
+    job["builds"] = detailed
+    job["build_count"] = len(detailed)
+    job["last_build"] = detailed[0] if detailed else None
+    return job
+
+
+def _jenkins_fetch_queue(server_url):
+    data = _jenkins_get_json(
+        server_url.rstrip("/") + "/queue/api/json",
+        params={
+            "tree": (
+                "items[id,why,blocked,buildable,stuck,inQueueSince,"
+                "task[name,url],actions[parameters[name,value]]]"
+            )
+        },
+    )
+    queue = []
+    for item in data.get("items") or []:
+        task = item.get("task") or {}
+        queue.append({
+            "id": item.get("id"),
+            "job_name": task.get("name"),
+            "job_url": task.get("url"),
+            "why": item.get("why"),
+            "blocked": item.get("blocked"),
+            "buildable": item.get("buildable"),
+            "stuck": item.get("stuck"),
+            "in_queue_since": item.get("inQueueSince"),
+            "actions": item.get("actions") or [],
+            "status": "QUEUED",
+        })
+    return queue
+
+
+def _jenkins_fetch_server(server_url):
+    parsed = urlparse(server_url)
+    server_name = parsed.hostname or server_url
+    result = {
+        "server": server_name,
+        "server_url": server_url,
+        "success": False,
+        "jobs": [],
+        "job_count": 0,
+        "build_count": 0,
+        "queue": [],
+        "queue_count": 0,
+        "error": None,
+    }
+    try:
+        root = _jenkins_get_json(
+            server_url.rstrip("/") + "/api/json",
+            params={"tree": "jobs[name,url,_class,color]"},
+        )
+        jobs = []
+        for item in root.get("jobs") or []:
+            if item.get("url"):
+                jobs.extend(
+                    _jenkins_discover_jobs(
+                        item["url"], server_name, server_url, item
+                    )
+                )
+
+        if jobs:
+            with ThreadPoolExecutor(max_workers=JENKINS_JOB_WORKERS) as pool:
+                futures = [pool.submit(_jenkins_fetch_job_history, job) for job in jobs]
+                for future in as_completed(futures):
+                    try:
+                        result["jobs"].append(future.result())
+                    except Exception:
+                        app.logger.exception("A Jenkins job could not be fetched on %s", server_name)
+
+        result["jobs"].sort(key=lambda job: (job.get("name") or "").lower())
+        result["job_count"] = len(result["jobs"])
+        result["build_count"] = sum(job.get("build_count", 0) for job in result["jobs"])
+        result["queue"] = _jenkins_fetch_queue(server_url)
+        result["queue_count"] = len(result["queue"])
+        result["success"] = True
+    except requests.RequestException as exc:
+        result["error"] = str(exc)
+        app.logger.exception("Jenkins server request failed: %s", server_url)
+    except (ValueError, KeyError) as exc:
+        result["error"] = str(exc)
+        app.logger.exception("Invalid Jenkins response from: %s", server_url)
+    return result
+
+
+def fetch_all_jenkins_data(force_refresh=False):
+    """Fetch all configured Jenkins servers; cache successful/partial results."""
+    now = time_module.monotonic()
+    with _JENKINS_CACHE_LOCK:
+        cached = _JENKINS_CACHE.get("data")
+        age = now - _JENKINS_CACHE.get("created_at", 0.0)
+        if cached is not None and not force_refresh and age < REFRESH_SECONDS:
+            return cached
+
+    results = []
+    with ThreadPoolExecutor(max_workers=max(1, len(JENKINS_URLS))) as pool:
+        futures = {pool.submit(_jenkins_fetch_server, url): url for url in JENKINS_URLS}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as exc:
+                results.append({
+                    "server": urlparse(futures[future]).hostname,
+                    "server_url": futures[future],
+                    "success": False,
+                    "jobs": [],
+                    "job_count": 0,
+                    "build_count": 0,
+                    "queue": [],
+                    "queue_count": 0,
+                    "error": str(exc),
+                })
+
+    results.sort(key=lambda server: server.get("server_url", ""))
+    response = {
+        "success": bool(results) and any(server["success"] for server in results),
+        "total_servers": len(results),
+        "successful_servers": sum(1 for server in results if server["success"]),
+        "failed_servers": sum(1 for server in results if not server["success"]),
+        "total_jobs": sum(server["job_count"] for server in results),
+        "total_builds": sum(server["build_count"] for server in results),
+        "total_queued": sum(server["queue_count"] for server in results),
+        "refreshed_at": datetime.now(JENKINS_TIMEZONE).isoformat(),
+        "servers": results,
+    }
+    with _JENKINS_CACHE_LOCK:
+        _JENKINS_CACHE["created_at"] = time_module.monotonic()
+        _JENKINS_CACHE["data"] = response
+    return response
+
+
+@app.route("/api/jenkins/all", methods=["GET"])
+def api_jenkins_all():
+    """Combined jobs, build history, build metadata and queue from all servers."""
+    if not JENKINS_USER or not JENKINS_TOKEN:
+        return jsonify({
+            "success": False,
+            "message": "Configure JENKINS_USER and JENKINS_TOKEN.",
+        }), 500
+    force_refresh = request.args.get("refresh", "false").lower() in ("1", "true", "yes")
+    try:
+        data = fetch_all_jenkins_data(force_refresh=force_refresh)
+        return jsonify(data), (200 if data["success"] else 502)
+    except Exception:
+        app.logger.exception("Unable to fetch combined Jenkins data")
+        return jsonify({
+            "success": False,
+            "message": "Unable to fetch Jenkins data. Check application logs.",
+        }), 500
+
+
+def _jenkins_builds_for_cr(jenkins_data, cr_number):
+    normalized_cr = _jenkins_normalize_cr(cr_number)
+    if not normalized_cr:
+        return []
+    matches = []
+    for server in (jenkins_data or {}).get("servers") or []:
+        for job in server.get("jobs") or []:
+            for build in job.get("builds") or []:
+                if normalized_cr in (build.get("cr_numbers") or []):
+                    matches.append(build)
+    matches.sort(key=lambda item: item.get("timestamp") or 0, reverse=True)
+    return matches
+
+
+@app.route("/api/jenkins/by-cr/<path:cr_number>", methods=["GET"])
+def api_jenkins_by_cr(cr_number):
+    """Return saved Jenkins history for a CR, refreshing it when Jenkins is available."""
+    normalized_cr = _jenkins_normalize_cr(cr_number)
+    if not normalized_cr:
+        return jsonify({"success": False, "message": "Enter a valid CR number."}), 400
+    try:
+        # Ensure the history table exists and load the last successfully saved snapshot.
+        _persist_jenkins_builds([])
+        saved_builds = _load_persisted_jenkins_builds(normalized_cr)
+
+        if not JENKINS_USER or not JENKINS_TOKEN:
+            return jsonify({
+                "success": True,
+                "cr_number": f"CR-{normalized_cr}",
+                "builds": saved_builds,
+                "count": len(saved_builds),
+                "jenkins_available": False,
+                "message": "Showing saved Jenkins history; configure Jenkins credentials to refresh." if saved_builds else "Jenkins credentials are not configured and no saved history exists for this CR.",
+            })
+
+        try:
+            data = fetch_all_jenkins_data()
+            live_builds = _jenkins_builds_for_cr(data, normalized_cr)
+            _persist_jenkins_builds(live_builds)
+            saved_builds = _load_persisted_jenkins_builds(normalized_cr)
+            return jsonify({
+                "success": True,
+                "cr_number": f"CR-{normalized_cr}",
+                "builds": saved_builds,
+                "count": len(saved_builds),
+                "jenkins_available": bool(data.get("success")),
+                "refreshed_at": data.get("refreshed_at"),
+                "message": "Matching Jenkins build/deploy records loaded and saved." if saved_builds else "No Jenkins build with this CR number was found in the available build history.",
+            })
+        except Exception:
+            app.logger.exception("Jenkins CR refresh failed for %s; returning saved history", normalized_cr)
+            return jsonify({
+                "success": True,
+                "cr_number": f"CR-{normalized_cr}",
+                "builds": saved_builds,
+                "count": len(saved_builds),
+                "jenkins_available": False,
+                "message": "Jenkins is currently unavailable. Showing previously saved history." if saved_builds else "Jenkins is unavailable and no saved history exists for this CR.",
+            })
+    except Exception:
+        app.logger.exception("Jenkins CR history storage failed for %s", normalized_cr)
+        return jsonify({"success": False, "message": "Unable to read or save Jenkins history. Check the database connection and application logs."}), 500
+
 
 AUDIT_PASSCODE_PEPPER = os.getenv("AUDIT_PASSCODE_PEPPER") or app.secret_key
 
@@ -673,7 +1420,7 @@ def validate_cr_number(cr_number):
 
 
     headers = {
-        "TECHNICIAN_KEY": "1A112622",
+        "TECHNICIAN_KEY": "1A112622-14BF-4A6C-A897-8888870B2526",
         "Accept": "application/json"
     }
 
@@ -1275,29 +2022,52 @@ def get_deployment_running_timer(deployment_id):
     conn = None
     try:
         conn = get_connection()
+
         with conn:
             with conn.cursor() as cur:
                 ensure_running_timer_table(cur)
-                cur.execute(
-                    """
-                    SELECT started_at, stopped_at, accumulated_seconds, is_running
+
+                cur.execute("""
+                    SELECT started_at,
+                           stopped_at,
+                           accumulated_seconds,
+                           is_running
                     FROM public.deployment_running_timers
                     WHERE deployment_id = %s
-                    """,
-                    (deployment_id,)
-                )
+                """, (deployment_id,))
                 row = cur.fetchone()
-                cur.execute("SELECT 1 FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+
+                cur.execute("""
+                    SELECT 1
+                    FROM public.deployment_tracker
+                    WHERE id = %s
+                """, (deployment_id,))
+
                 if not cur.fetchone():
-                    return jsonify({"success": False, "message": "Deployment record not found."}), 404
-        return jsonify({"success": True, "timer": serialize_running_timer(row)})
-    except Exception:
-        app.logger.exception("Could not load deployment running timer: %s", deployment_id)
-        return jsonify({"success": False, "message": "Could not load running timer. Check server logs."}), 500
+                    return jsonify({
+                        "success": False,
+                        "message": "Deployment record not found."
+                    }), 404
+
+        return jsonify({
+            "success": True,
+            "timer": serialize_running_timer(row)
+        })
+
+    except Exception as e:
+        app.logger.exception(
+            "Could not load deployment running timer: %s",
+            deployment_id
+        )
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
     finally:
         if conn is not None:
             conn.close()
-
 
 @app.route("/api/deployment-running-timer/<int:deployment_id>", methods=["POST"])
 def update_deployment_running_timer(deployment_id):
@@ -1379,9 +2149,15 @@ def update_deployment_running_timer(deployment_id):
             "message": message,
             "timer": serialize_running_timer(updated)
         })
-    except Exception:
-        app.logger.exception("Could not update deployment running timer: %s", deployment_id)
-        return jsonify({"success": False, "message": "Could not update running timer. Check server logs."}), 500
+    except Exception as e:
+        app.logger.exception(
+            "Could not update deployment running timer: %s",
+            deployment_id
+        )
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
     finally:
         if conn is not None:
             conn.close()
@@ -2692,6 +3468,29 @@ def manager_dashboard():
         columns = [desc[0] for desc in cursor.description]
         records = [dict(zip(columns, row)) for row in rows]
 
+        # Attach persisted Jenkins build/deploy history to each deployment by CR.
+        # A refresh updates saved rows; previously saved rows remain visible offline.
+        try:
+            if JENKINS_USER and JENKINS_TOKEN:
+                jenkins_snapshot = fetch_all_jenkins_data()
+                _persist_jenkins_builds(_all_jenkins_builds(jenkins_snapshot))
+                for record in records:
+                    record["jenkins_builds"] = _load_persisted_jenkins_builds(
+                        record.get("cr_number")
+                    )
+            else:
+                _persist_jenkins_builds([])
+                for record in records:
+                    record["jenkins_builds"] = _load_persisted_jenkins_builds(
+                        record.get("cr_number")
+                    )
+        except Exception:
+            app.logger.exception("Could not refresh Jenkins history; loading saved records")
+            for record in records:
+                record["jenkins_builds"] = _load_persisted_jenkins_builds(
+                    record.get("cr_number")
+                )
+
         # Prepare readable per-record team allocations for the All Deployment Records table.
         # JSONB may be returned by psycopg2 as a Python list or as serialized JSON text.
         for record in records:
@@ -3243,6 +4042,6 @@ def super_manager_logout():
 if __name__ == "__main__":
     app.run(
         host=os.getenv("FLASK_HOST", "127.0.0.1"),
-        port=int(os.getenv("FLASK_PORT", "5050")),
+        port=PORT,
         debug=False,
     )

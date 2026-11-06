@@ -1091,6 +1091,10 @@ tbody tr:hover td { background:#f4f7ff; }
     .top.topbar .header-title p { display: none; }
 }
 
+    .jenkins-manager-cell { min-width: 145px; white-space: nowrap; font-size: 11px; line-height: 1.7; }
+    .jenkins-manager-cell a { color: var(--primary, #2457d6); text-decoration: none; font-weight: 700; }
+    .jenkins-manager-cell a:hover { text-decoration: underline; }
+
 </style>
 </head>
 
@@ -1290,8 +1294,8 @@ tbody tr:hover td { background:#f4f7ff; }
                     <option value="postponed">Postponed</option>
                     <option value="rolled">Rolled</option>
                     <option value="cancelled">Cancelled</option>
-                    <!-- <option value="approved">Approved</option> -->
-                    <!-- <option value="rejected">Rejected</option> -->
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
                     {% for record_status in records|map(attribute='status')|select|unique|sort %}
                         {% if record_status|lower not in ['scheduled deployment', 'deployment completed', 'deployment failed', 'on hold', 'postponed', 'rolled', 'cancelled', 'approved', 'rejected'] %}
                     <option value="{{ record_status|lower }}">{{ record_status }}</option>
@@ -1328,6 +1332,11 @@ tbody tr:hover td { background:#f4f7ff; }
                         <th>Incident</th>
                         <th>Roll Back</th>
                         <th>Status</th>
+                        <th>Jenkins Start Time</th>
+                        <th>Jenkins End Time</th>
+                        <th>Build / Deploy</th>
+                        <th>Linux / Windows</th>
+                        <th>Triggered User</th>
                     </tr>
                 </thead>
 
@@ -1377,10 +1386,26 @@ tbody tr:hover td { background:#f4f7ff; }
                                 {{ r.status or 'Unknown' }}
                             </span>
                         </td>
+                        {% set jenkins_builds = r.jenkins_builds or [] %}
+                        <td class="jenkins-manager-cell">
+                            {% for build in jenkins_builds %}<div>{{ (build.start_time or '—')|replace('T', ' ') }}</div>{% else %}—{% endfor %}
+                        </td>
+                        <td class="jenkins-manager-cell">
+                            {% for build in jenkins_builds %}<div>{{ (build.end_time or ('Running' if build.building else '—'))|replace('T', ' ') }}</div>{% else %}—{% endfor %}
+                        </td>
+                        <td class="jenkins-manager-cell">
+                            {% for build in jenkins_builds %}<div>{{ build.build_type or 'Unknown' }}</div>{% else %}—{% endfor %}
+                        </td>
+                        <td class="jenkins-manager-cell">
+                            {% for build in jenkins_builds %}<div>{{ build.platform or 'Unknown' }}</div>{% else %}—{% endfor %}
+                        </td>
+                        <td class="jenkins-manager-cell">
+                            {% for build in jenkins_builds %}<div>{% if build.url %}<a href="{{ build.url|e }}" target="_blank" rel="noopener noreferrer">{{ build.triggered_by or 'Unknown' }} (#{{ build.number }})</a>{% else %}{{ build.triggered_by or 'Unknown' }}{% endif %}</div>{% else %}—{% endfor %}
+                        </td>
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="16" class="empty">
+                        <td colspan="21" class="empty">
                             No deployment records found.
                         </td>
                     </tr>
