@@ -27,12 +27,14 @@ load_dotenv(BASE_DIR / ".env")
 app = Flask(
     __name__,
     template_folder=str(BASE_DIR / "templates"),
+    static_folder =str(BASE_DIR / "static"),
+    static_url_path = "/static"
 )
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "")
-if not app.secret_key:
-    raise RuntimeError(
-        "FLASK_SECRET_KEY is missing. Add it to your .env file."
-    )
+# app.secret_key = os.getenv("FLASK_SECRET_KEY", "")
+# if not app.secret_key:
+#     raise RuntimeError(
+#         "FLASK_SECRET_KEY is missing. Add it to your .env file."
+#     )
 
 
 # ============================================================
@@ -1191,6 +1193,8 @@ def validate_cr():
             "application_name": cr_details.get("application_name"),
             "business_unit": cr_details.get("business_unit"),
             "environment": cr_details.get("environment"),
+            "category" :cr_details.get("category"),
+            "impacted_application":cr_details.get("impacted_application"),
             "cab_dates": allowed_dates,
             "cab_date_iso": allowed_dates[0] if allowed_dates else None,
             "change_type": cr_details.get("change_type"),
@@ -1476,6 +1480,16 @@ def validate_cr_number(cr_number):
         business_unit = str(
             udf.get("udf_sline_39302") or ""
         ).strip()
+
+        category =(
+            (change.get("category") or {})
+            .get("name","")
+            .strip()
+        )
+
+        impacted_application = str(
+            udf.get("udf_mline_42302") or ""
+        ).strip()
         
         environment = str(
             udf.get("udf_sline_10801") or ""
@@ -1554,6 +1568,8 @@ def validate_cr_number(cr_number):
             "application_name": application_name,
             "business_unit": business_unit,
             "environment": environment,
+            "category": category,                          # NEW
+            "impacted_application": impacted_application,  # NEW
             "cab_dates": cab_dates
         }
 
@@ -1587,6 +1603,11 @@ def save_deployment(data):
     cr_number = f"CR-{cr_number}"
 
     cr_details = validate_cr_number(cr_number)
+
+    category = cr_details.get("category","")
+    impacted_application=  cr_details.get(
+        "impacted_application",""
+    )
 
     app.logger.info(
         "CR Validated | CR=%s | CAB Dates=%s",
@@ -1756,57 +1777,28 @@ def save_deployment(data):
                 cur.execute(
                     """
                     INSERT INTO public.deployment_tracker (
-                        cr_number,
-                        rfid,
-                        deployment_date,
-                        slots,
-                        slot_start,
-                        slot_end,
-                        application_name,
-                        deployment_count,
-                        deployment_type,
-                        change_type,
-                        released_by,
-                        verified_and_deployed_by,
-                        change_requestor,
-                        business_unit,
-                        environment,
-                        git_links,
-                        incident_number,
-                        roll_back,
-                        status
+                        cr_number, rfid, deployment_date, slots, slot_start, slot_end,
+                        application_name, category, deployment_count, deployment_type,
+                        change_type, released_by, verified_and_deployed_by,
+                        change_requestor, business_unit, environment, git_links,
+                        incident_number, roll_back, status
                     )
-                    VALUES (
-                        %s, %s, %s, %s,
-                        %s, %s, %s, %s,%s,
-                        %s, %s, %s, %s,%s,
-                        %s, %s, %s, %s,%s
-                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     RETURNING id
                     """,
                     (
-                        cr_number,
-                        rfid,
-                        deployment_date,
-                        (
-                            f"{slot_start:%H:%M} - "
-                            f"{slot_end:%H:%M}"
-                        ),
-                        slot_start,
-                        slot_end,
+                        cr_number, rfid, deployment_date,
+                        f"{slot_start:%H:%M} - {slot_end:%H:%M}",
+                        slot_start, slot_end,
                         application_name,
-                        deployment_count, 
-                        data["deployment_type"],
-                        data["change_type"],
-                        released_by,
-                        verified_and_deployed_by,
-                        change_requestor,
-                        business_unit,
-                        environment,
+                        (category or "").strip() or None,
+                        deployment_count,
+                        data["deployment_type"], data["change_type"],
+                        released_by, verified_and_deployed_by,
+                        change_requestor, business_unit, environment,
                         json.dumps(git_links),
                         data.get("incident_number"),
-                        data["roll_back"],
-                        data["status"],
+                        data["roll_back"], data["status"],
                     ),
                 )
                 record_id = cur.fetchone()[0]
@@ -2295,6 +2287,113 @@ def running_history():
     except Exception:
         app.logger.exception("Could not load running history")
         return jsonify({"success": False, "message": "Unable to load running history."}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def running_category(status, change_type, roll_back, is_running):
+    """Colour group for the Running Status view."""
+    s = (status or "").strip().lower()
+    ct = (change_type or "").strip().lower()
+    rolled = "roll" in s or (roll_back or "").strip().lower() == "yes"
+    if rolled or "fail" in s:
+        return "failed", ("ROLLED BACK" if rolled else "FAILED")
+    if "complet" in s:
+        return "completed", "COMPLETED"
+    if is_running:
+        return "running", "RUNNING"
+    if "forward" in ct:
+        return "forward", "FORWARD FIX"
+    if s in ("cancelled", "rejected", "on hold", "postponed"):
+        return "planned", s.upper()
+    return "planned", "PLANNED"
+
+
+@app.route("/api/running-daily", methods=["GET"])
+def running_daily():
+    """All deployments of ONE day with their timer state and colour group, plus that day's sessions."""
+    date_text = (request.args.get("date") or "").strip()
+    try:
+        selected = date.fromisoformat(date_text) if date_text else date.today()
+    except ValueError:
+        return jsonify({"success": False, "message": "Choose a valid date (YYYY-MM-DD)."}), 400
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_running_timer_table(cur)
+                ensure_timer_history_table(cur)
+                cur.execute("""
+                    SELECT d.id, d.cr_number, d.rfid, d.application_name, d.status,
+                           d.change_type, d.roll_back, d.slots,
+                           t.started_at, t.stopped_at,
+                           COALESCE(t.accumulated_seconds, 0), COALESCE(t.is_running, FALSE),
+                           d.category
+                    FROM public.deployment_tracker d
+                    LEFT JOIN public.deployment_running_timers t ON t.deployment_id = d.id
+                    WHERE d.deployment_date = %s
+                    ORDER BY d.slot_start NULLS LAST, d.id
+                """, (selected,))
+                rows = cur.fetchall()
+                cur.execute("""
+                    SELECT h.id, h.deployment_id, h.cr_number, d.rfid, d.application_name,
+                           h.started_at, h.stopped_at, h.duration_seconds
+                    FROM public.deployment_timer_history h
+                    JOIN public.deployment_tracker d ON d.id = h.deployment_id
+                    WHERE d.deployment_date = %s
+                    ORDER BY h.started_at DESC
+                    LIMIT 500
+                """, (selected,))
+                hrows = cur.fetchall()
+                cur.execute("SELECT COUNT(*) FROM public.deployment_running_timers WHERE is_running")
+                running_total = int(cur.fetchone()[0] or 0)
+
+        now = datetime.now().astimezone()
+        items = []
+        for (dep_id, cr, rfid, app_name, status, ctype, rb, slots,
+             started_at, stopped_at, acc, is_running, cr_category) in rows:
+            is_running = bool(is_running)
+            elapsed = int(acc or 0)
+            if is_running and started_at:
+                elapsed += max(0, int((now - started_at).total_seconds()))
+            category, label = running_category(status, ctype, rb, is_running)
+            items.append({
+                "deployment_id": dep_id, "cr_number": cr, "rfid": rfid,
+                "application_name": app_name, "status": status, "change_type": ctype,
+                "roll_back": rb, "slots": slots,
+                "started_at": started_at.isoformat() if started_at else None,
+                "stopped_at": stopped_at.isoformat() if stopped_at else None,
+                "has_timer": started_at is not None,
+                "is_running": is_running, "elapsed_seconds": elapsed,
+                "category": category, "category_label": label,
+                "cr_category": (cr_category or "Uncategorized").strip() or "Uncategorized",
+            })
+        items.sort(key=lambda i: 0 if i["category"] == "running" else 1)   # stable: slot order kept
+
+        sessions = []
+        for hid, dep_id, cr, rfid, app_name, started, stopped, dur in hrows:
+            sessions.append({
+                "id": hid, "deployment_id": dep_id, "cr_number": cr, "rfid": rfid,
+                "application_name": app_name,
+                "started_at": started.isoformat() if started else None,
+                "stopped_at": stopped.isoformat() if stopped else None,
+                "is_running": stopped is None,
+                "duration_seconds": int(dur) if dur is not None
+                    else max(0, int((now - started).total_seconds())),
+            })
+        counts = {k: 0 for k in ("running", "completed", "planned", "forward", "failed")}
+        for i in items:
+            counts[i["category"]] += 1
+        return jsonify({
+            "success": True, "date": selected.isoformat(), "count": len(items),
+            "counts": counts, "running_total": running_total,
+            "items": items, "sessions": sessions,
+        })
+    except Exception:
+        app.logger.exception("Could not load daily running status")
+        return jsonify({"success": False, "message": "Unable to load running status."}), 500
     finally:
         if conn is not None:
             conn.close()
