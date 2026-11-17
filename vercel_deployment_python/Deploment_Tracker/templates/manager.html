@@ -1318,6 +1318,7 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
 .fab-txt small { display:block; margin-top:2px; font-size:11px; color:#8a96aa; }
 .fab-item .mgr-live-badge { position:absolute; top:-5px; right:-5px; }
 
+.fab-item:nth-of-type(6) .fab-ico { background:#e0e7ff; color:#4338ca; }
 /* popups sit above content; leave room for the floating button */
 .mgr-modal { padding-bottom:3vh; }
 .mgr-modal-box { max-height:94vh; }
@@ -1449,6 +1450,8 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
             <span class="fab-ico">●<span class="mgr-live-badge" id="liveBadge" hidden>0</span></span><span class="fab-txt"><b>Jenkins Live Room</b><small>CRs running right now</small></span></button>
         <button class="fab-item" type="button" role="menuitem" id="toggleJenkinsDiff" data-open-modal="jenkinsDiffModal" aria-haspopup="dialog" aria-expanded="false">
             <span class="fab-ico">⇄</span><span class="fab-txt"><b>Jenkins Build Diff</b><small>Compare two builds</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" data-open-modal="runningStatusModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">⏱<span class="mgr-live-badge" id="rsBadge" hidden>0</span></span><span class="fab-txt"><b>Running Status</b><small>Live timers and Start/Stop history</small></span></button>
     </div>
     <button class="fab-main" type="button" id="fabMain" aria-haspopup="menu" aria-expanded="false" aria-controls="fabMenu" aria-label="Open views menu">
         <span class="fab-main-ico" aria-hidden="true">☰</span><span class="fab-main-lbl">Views</span>
@@ -1942,6 +1945,38 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
                 <div id="diffResult" class="diff-result" aria-live="polite"></div>
             </section>
         </div>
+    </div>
+
+    <!-- ===== Running Status (live timers + Start/Stop history) ===== -->
+    <div class="mgr-modal" id="runningStatusModal" data-modal hidden>
+    <div class="mgr-modal-box" role="dialog" aria-modal="true" aria-label="Running Status">
+    <section class="panel records">
+        <div class="panelhead">
+            <div>
+                <h3>Running Status</h3>
+                <div class="sub">Deployments started from the DevOps workspace, by CR number. Refreshes every 10 seconds while open.</div>
+            </div>
+            <div class="mgr-head-actions">
+                <button class="btn" type="button" id="rsTabLive">Live <span id="rsLiveCount">0</span></button>
+                <button class="btn light" type="button" id="rsTabHistory">History</button>
+                <button class="mgr-close" type="button" data-close-modal aria-label="Close Running Status">✕</button>
+            </div>
+        </div>
+        <div class="history-tools">
+            <div class="history-search-wrap">
+                <input id="rsSearch" type="search" placeholder="Search CR number..." autocomplete="off" aria-label="Search running status by CR number">
+                <button class="btn light" type="button" id="rsClear">Clear</button>
+            </div>
+            <span class="history-count" id="rsCount" aria-live="polite"></span>
+        </div>
+        <div class="tablewrap">
+            <table style="min-width:900px">
+                <thead id="rsHead"></thead>
+                <tbody id="rsBody"><tr><td class="empty">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+    </div>
     </div>
 
 </main>
@@ -2995,6 +3030,93 @@ document.querySelectorAll('.team-deployment-fill[data-percent]').forEach(bar => 
 window.addEventListener('resize', redraw);
 </script>
 
+
+<script>
+(function runningStatusModal() {
+    const modal = document.getElementById('runningStatusModal');
+    if (!modal) return;
+    const body = document.getElementById('rsBody'), head = document.getElementById('rsHead');
+    const search = document.getElementById('rsSearch'), countEl = document.getElementById('rsCount');
+    const tabLive = document.getElementById('rsTabLive'), tabHist = document.getElementById('rsTabHistory');
+    const liveCount = document.getElementById('rsLiveCount'), badge = document.getElementById('rsBadge');
+    let tab = 'live', live = [], history = [], pollId = null, tickId = null;
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmtT = iso => iso ? new Date(iso).toLocaleString() : '—';
+    const fmtD = s => { s = Math.max(0, s|0); const p = n => String(n).padStart(2,'0');
+        return p(Math.floor(s/3600)) + ':' + p(Math.floor(s%3600/60)) + ':' + p(s%60); };
+    const state = r => r.is_running
+        ? '<span class="jenkins-state running">● Running</span>'
+        : '<span class="jenkins-state">■ Stopped</span>';
+
+    function render() {
+        const q = search.value.trim().toLowerCase();
+        const match = r => !q || String(r.cr_number || '').toLowerCase().includes(q);
+        if (tab === 'live') {
+            head.innerHTML = '<tr><th>CR Number</th><th>RFID</th><th>Application</th><th>Deployment Status</th><th>Started At</th><th>Stopped At</th><th>Elapsed (total)</th><th>Running Status</th></tr>';
+            const rows = live.filter(match);
+            countEl.textContent = rows.length + ' timer' + (rows.length === 1 ? '' : 's');
+            body.innerHTML = rows.length ? rows.map(r =>
+                '<tr><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                '</td><td>' + esc(r.deployment_status) + '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                '</td><td data-live-id="' + r.deployment_id + '">' + fmtD(r.elapsed_seconds) + '</td><td>' + state(r) + '</td></tr>'
+            ).join('') : '<tr><td colspan="8" class="empty">No deployment has been started yet.</td></tr>';
+        } else {
+            head.innerHTML = '<tr><th>SR No.</th><th>CR Number</th><th>RFID</th><th>Application</th><th>Started At</th><th>Stopped At</th><th>Duration</th><th>Status</th></tr>';
+            const rows = history.filter(match);
+            countEl.textContent = rows.length + ' session' + (rows.length === 1 ? '' : 's');
+            body.innerHTML = rows.length ? rows.map((r, i) =>
+                '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                '</td><td data-hist-id="' + r.id + '">' + fmtD(r.duration_seconds) + '</td><td>' + state(r) + '</td></tr>'
+            ).join('') : '<tr><td colspan="8" class="empty">No Start/Stop history found.</td></tr>';
+        }
+    }
+
+    async function load() {
+        try {
+            const [a, b] = await Promise.all([
+                fetch('/api/running-status', {cache:'no-store'}).then(r => r.json()),
+                fetch('/api/running-history', {cache:'no-store'}).then(r => r.json())
+            ]);
+            if (a.success) { live = a.timers; liveCount.textContent = a.running_count;
+                badge.textContent = a.running_count; badge.hidden = !a.running_count; }
+            if (b.success) history = b.history;
+            render();
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="8" class="empty">Could not load running status.</td></tr>';
+        }
+    }
+
+    function setTab(t) {
+        tab = t;
+        tabLive.className = 'btn' + (t === 'live' ? '' : ' light');
+        tabHist.className = 'btn' + (t === 'history' ? '' : ' light');
+        render();
+    }
+
+    tabLive.addEventListener('click', () => setTab('live'));
+    tabHist.addEventListener('click', () => setTab('history'));
+    search.addEventListener('input', render);
+    document.getElementById('rsClear').addEventListener('click', () => { search.value = ''; render(); });
+
+    modal.addEventListener('modal:open', () => {
+        load(); setTab('live');
+        clearInterval(pollId); clearInterval(tickId);
+        pollId = setInterval(() => { if (modal.hidden) { clearInterval(pollId); clearInterval(tickId); } else load(); }, 10000);
+        tickId = setInterval(() => {   // tick running timers locally every second
+            if (modal.hidden) return;
+            live.forEach(r => { if (!r.is_running) return; r.elapsed_seconds++;
+                const c = body.querySelector('[data-live-id="' + r.deployment_id + '"]'); if (c) c.textContent = fmtD(r.elapsed_seconds); });
+            history.forEach(r => { if (!r.is_running) return; r.duration_seconds++;
+                const c = body.querySelector('[data-hist-id="' + r.id + '"]'); if (c) c.textContent = fmtD(r.duration_seconds); });
+        }, 1000);
+    });
+
+    load();   // preload so the Views badge shows the running count on page load
+})();
+</script>
 
 <!-- ===== Page Assistant (answers only from data on this page; no AI model) ===== -->
 <button class="bot-launcher" id="botLauncher" type="button" aria-label="Open page assistant" aria-expanded="false" aria-controls="botWindow" title="Ask about this page">

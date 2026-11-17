@@ -2000,6 +2000,24 @@ def ensure_running_timer_table(cur):
     """)
 
 
+def ensure_timer_history_table(cur):
+    """One row per Start->Stop session. No FK, so history survives deleted requests."""
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS public.deployment_timer_history (
+            id BIGSERIAL PRIMARY KEY,
+            deployment_id BIGINT NOT NULL,
+            cr_number TEXT,
+            started_at TIMESTAMPTZ NOT NULL,
+            stopped_at TIMESTAMPTZ,
+            duration_seconds BIGINT
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_timer_history_cr
+        ON public.deployment_timer_history (cr_number, started_at DESC)
+    """)
+
+
 def serialize_running_timer(row):
     if not row:
         return {
@@ -2082,9 +2100,12 @@ def update_deployment_running_timer(deployment_id):
         with conn:
             with conn.cursor() as cur:
                 ensure_running_timer_table(cur)
-                cur.execute("SELECT 1 FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
-                if not cur.fetchone():
+                ensure_timer_history_table(cur)
+                cur.execute("SELECT cr_number FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+                dep_row = cur.fetchone()
+                if not dep_row:
                     return jsonify({"success": False, "message": "Deployment record not found."}), 404
+                cr_number = dep_row[0]
 
                 cur.execute(
                     """
@@ -2144,6 +2165,21 @@ def update_deployment_running_timer(deployment_id):
                     message = "Timer stopped. Stop date and time recorded."
 
                 updated = cur.fetchone()
+                if action == "start":
+                    cur.execute(
+                        "INSERT INTO public.deployment_timer_history (deployment_id, cr_number, started_at) VALUES (%s, %s, %s)",
+                        (deployment_id, cr_number, now),
+                    )
+                else:
+                    cur.execute("""
+                        UPDATE public.deployment_timer_history
+                        SET stopped_at = %s, duration_seconds = %s
+                        WHERE id = (
+                            SELECT id FROM public.deployment_timer_history
+                            WHERE deployment_id = %s AND stopped_at IS NULL
+                            ORDER BY id DESC LIMIT 1
+                        )
+                    """, (now, elapsed, deployment_id))
         return jsonify({
             "success": True,
             "message": message,
@@ -2158,6 +2194,107 @@ def update_deployment_running_timer(deployment_id):
             "success": False,
             "message": str(e)
         }), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.route("/api/running-status", methods=["GET"])
+def running_status():
+    """Timers that have been started, with CR number, for the Manager page."""
+    only_running = request.args.get("only_running", "false").lower() in ("1", "true", "yes")
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_running_timer_table(cur)
+                cur.execute("""
+                    SELECT t.deployment_id, d.cr_number, d.rfid, d.application_name,
+                           d.status, d.deployment_date, d.slots,
+                           t.started_at, t.stopped_at,
+                           t.accumulated_seconds, t.is_running
+                    FROM public.deployment_running_timers t
+                    JOIN public.deployment_tracker d ON d.id = t.deployment_id
+                    WHERE t.started_at IS NOT NULL
+                      AND (%s = FALSE OR t.is_running = TRUE)
+                    ORDER BY t.is_running DESC, t.started_at DESC
+                """, (only_running,))
+                rows = cur.fetchall()
+
+        now = datetime.now().astimezone()
+        timers = []
+        for (dep_id, cr, rfid, app_name, status, dep_date, slots,
+             started_at, stopped_at, acc, is_running) in rows:
+            elapsed = int(acc or 0)
+            if is_running and started_at:
+                elapsed += max(0, int((now - started_at).total_seconds()))
+            timers.append({
+                "deployment_id": dep_id,
+                "cr_number": cr,
+                "rfid": rfid,
+                "application_name": app_name,
+                "deployment_status": status,
+                "deployment_date": dep_date.isoformat() if dep_date else None,
+                "slots": slots,
+                "started_at": started_at.isoformat() if started_at else None,
+                "stopped_at": stopped_at.isoformat() if stopped_at else None,
+                "is_running": bool(is_running),
+                "running_status": "Running" if is_running else "Stopped",
+                "elapsed_seconds": elapsed,
+            })
+        return jsonify({
+            "success": True,
+            "count": len(timers),
+            "running_count": sum(1 for t in timers if t["is_running"]),
+            "server_time": now.isoformat(),
+            "timers": timers,
+        })
+    except Exception:
+        app.logger.exception("Could not load running status")
+        return jsonify({"success": False, "message": "Unable to load running status."}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.route("/api/running-history", methods=["GET"])
+def running_history():
+    """Every Start/Stop session with its CR number, newest first."""
+    cr = (request.args.get("cr") or "").strip()
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_timer_history_table(cur)
+                cur.execute("""
+                    SELECT h.id, h.deployment_id, h.cr_number, d.rfid, d.application_name,
+                           h.started_at, h.stopped_at, h.duration_seconds
+                    FROM public.deployment_timer_history h
+                    LEFT JOIN public.deployment_tracker d ON d.id = h.deployment_id
+                    WHERE (%s = '' OR h.cr_number ILIKE %s)
+                    ORDER BY h.started_at DESC
+                    LIMIT 500
+                """, (cr, f"%{cr}%"))
+                rows = cur.fetchall()
+        now = datetime.now().astimezone()
+        history = []
+        for hid, dep_id, cr_no, rfid, app_name, started, stopped, dur in rows:
+            running = stopped is None
+            history.append({
+                "id": hid, "deployment_id": dep_id, "cr_number": cr_no,
+                "rfid": rfid, "application_name": app_name,
+                "started_at": started.isoformat() if started else None,
+                "stopped_at": stopped.isoformat() if stopped else None,
+                "is_running": running,
+                "duration_seconds": int(dur) if dur is not None
+                    else max(0, int((now - started).total_seconds())),
+            })
+        return jsonify({"success": True, "count": len(history), "history": history})
+    except Exception:
+        app.logger.exception("Could not load running history")
+        return jsonify({"success": False, "message": "Unable to load running history."}), 500
     finally:
         if conn is not None:
             conn.close()
