@@ -1583,6 +1583,83 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
 .cat-cell.cs-planned { background:linear-gradient(135deg,#64748b,#94a3b8); }
 .cat-cell.cs-forward { background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
 .cat-cell.cs-failed { background:linear-gradient(135deg,#b91c1c,#f43f5e); }
+
+/* ===== Rollback status (manager "Rolled Back" view) ===== */
+.rs-card.cs-rb-running { background:linear-gradient(135deg,#be123c 0%,#ea580c 100%); box-shadow:0 8px 20px #ea580c40; }
+.rs-card.cs-rb-completed { background:linear-gradient(135deg,#6d28d9 0%,#a78bfa 100%); box-shadow:0 8px 20px #7c3aed35; }
+.rs-card.cs-rb-pending { background:linear-gradient(135deg,#64748b 0%,#94a3b8 100%); box-shadow:0 8px 20px #64748b30; }
+.rb-section { margin:24px 0 10px; font-size:13px; font-weight:850; color:#172554; }
+
+/* ===== Running Status panel: tidy toolbar + hideable counters ===== */
+.rsp-stats[hidden] { display:none !important; }
+.rsp-panel .panelhead { align-items:center; margin-bottom:12px; }
+.rsp-head-right { gap:10px; row-gap:8px; justify-content:flex-end; }
+.rsp-head-right .btn { padding:9px 13px; }
+.rsp-daynav { padding-right:12px; border-right:1px solid #e3e9f7; }
+.rsp-bar-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 12px; padding:8px 12px; border-radius:12px; background:#f3f6ff; }
+.rsp-bar-row .rsp-day { margin:0; }
+.rsp-statsbtn { padding:6px 12px; border:1px solid #cfd8fb; border-radius:20px; background:#fff; color:#3656c8; font-size:11px; font-weight:800; cursor:pointer; box-shadow:none; transition:.15s; }
+.rsp-statsbtn:hover { background:#4f67f6; border-color:#4f67f6; color:#fff; }
+.rsp-stats { margin-bottom:14px; }
+.rsp-stat { padding:8px 6px; }
+.rsp-stat b { font-size:20px; }
+@media (max-width:760px) { .rsp-daynav { border-right:0; padding-right:0; } }
+
+/* ===== CR detail popup (opened from any Running Status CR card) ===== */
+[data-dep-id] { cursor:pointer; }
+[data-dep-id]:focus-visible { outline:3px solid #ffffffcc; outline-offset:2px; }
+.crd-overlay { position:fixed; inset:0; z-index:1200; display:flex; align-items:flex-start; justify-content:center;
+    padding:3vh 16px; background:#0b1230bf; backdrop-filter:blur(3px); overflow:auto; }
+.crd-overlay[hidden] { display:none !important; }
+.crd-box { width:min(1180px,100%); max-height:94vh; overflow:auto; background:#f5f7fc; border-radius:20px;
+    box-shadow:0 30px 80px #0007; animation:mgrIn .18s ease; }
+.crd-top { position:sticky; top:0; z-index:3; display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap;
+    padding:20px 24px; color:#fff;
+    background:radial-gradient(circle at 92% 0%,#8b5cf6 0,transparent 42%),radial-gradient(circle at 5% 0%,#0891b2 0,transparent 36%),linear-gradient(120deg,#111a3d,#243b82 60%,#3449a5); }
+.crd-top h3 { margin:0; font-size:22px; letter-spacing:-.4px; color:#fff; }
+.crd-top p { margin:7px 0 0; color:#cbd5ff; font-size:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.crd-top-actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.crd-top .mgr-close { background:#ffffff26; color:#fff; }
+.crd-top .mgr-close:hover { background:#dc2626; }
+.crd-count { display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:#ffffff30; font-size:10px; font-weight:800; }
+.crd-body { padding:20px 24px 26px; }
+.crd-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+@media (max-width:900px) { .crd-grid { grid-template-columns:1fr; } .crd-top, .crd-body { padding-left:14px; padding-right:14px; } }
+.crd-panel { overflow:hidden; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 6px 22px #1b2d590a; }
+.crd-ph { padding:15px 18px; }
+.crd-ph h4 { margin:0; font-size:14px; font-weight:850; }
+.crd-ph small { display:block; margin-top:4px; font-size:11px; font-weight:600; opacity:.85; line-height:1.45; }
+.crd-panel.rel .crd-ph { background:linear-gradient(120deg,#e9edff,#f3eeff); color:#3656c8; }
+.crd-panel.dev .crd-ph { background:linear-gradient(120deg,#dcfce7,#dff8fc); color:#047857; }
+.crd-kv { display:grid; grid-template-columns:150px minmax(0,1fr); gap:4px 12px; padding:10px 18px; border-top:1px solid #edf1f6; font-size:12px; }
+.crd-kv > span { color:#8a96aa; font-weight:700; font-size:11px; letter-spacing:.2px; }
+.crd-kv > div { color:#243050; font-weight:600; overflow-wrap:anywhere; }
+.crd-kv a { color:#3656c8; font-weight:700; text-decoration:none; }
+.crd-kv a:hover { text-decoration:underline; }
+.crd-kv.crd-changed { background:#fffbeb; box-shadow:inset 3px 0 0 #f59e0b; }
+@media (max-width:520px) { .crd-kv { grid-template-columns:1fr; } }
+.crd-was { display:block; margin-top:4px; color:#a16207; font-size:10.5px; font-weight:600; }
+.crd-empty { color:#a0aabd; }
+.crd-pre { white-space:pre-wrap; }
+.crd-chip { display:inline-block; margin:0 4px 4px 0; padding:3px 9px; border-radius:20px; background:#edf1ff; color:#3656c8; font-size:11px; font-weight:700; }
+.crd-chip b { color:#172554; }
+.crd-foot { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:13px 18px; border-top:1px solid #edf1f6; background:#fafbff; font-size:11px; color:#64748b; }
+.crd-foot .btn { padding:8px 12px; }
+.crd-loading, .crd-emptybox { padding:46px 20px; text-align:center; color:#8a96aa; font-size:13px; line-height:1.6; }
+.crd-emptybox b { display:block; margin-bottom:3px; font-size:14px; color:#3656c8; }
+.crd-timeline { display:grid; gap:14px; }
+.crd-ev { overflow:hidden; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 4px 16px #1b2d5909; }
+.crd-ev-head { display:flex; align-items:center; gap:12px; padding:13px 16px; background:linear-gradient(90deg,#fbfcff,#f5f7ff); border-bottom:1px solid #edf1f6; }
+.crd-avatar { flex-shrink:0; width:36px; height:36px; display:grid; place-items:center; border-radius:50%; color:#fff; font-size:12px; font-weight:800; background:linear-gradient(135deg,#4f67f6,#7c5cf0); }
+.crd-ev-head b { display:block; font-size:13px; color:#172554; overflow-wrap:anywhere; }
+.crd-ev-head small { display:block; margin-top:2px; font-size:11px; color:#8a96aa; }
+.crd-action { margin-left:auto; padding:4px 10px; border-radius:7px; background:#e8edff; color:#3656c8; font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; }
+.crd-ev table { width:100%; min-width:0; table-layout:fixed; font-size:12px; }
+.crd-ev th, .crd-ev td { padding:10px 14px; white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
+.crd-ev th { position:static; }
+.crd-ev td.crd-old { background:#fff5f5; }
+.crd-ev td.crd-new { background:#f0fdf4; }
+.crd-ev td:first-child { font-weight:750; color:#475569; width:24%; }
 </style>
 </head>
 
@@ -1727,10 +1804,14 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
                     </div>
                     <span class="rsp-live"><i></i>LIVE</span>
                     <button class="btn light" type="button" id="rspTableToggle">▦ By Category</button>
+                    <button class="btn light" type="button" id="rspRollbackBtn" data-open-modal="runningStatusModal">↶ Rolled Back <span class="mgr-live-badge" id="rbBadge" hidden>0</span></button>
                     <button class="btn light" type="button" data-open-modal="runningStatusModal">Full view ↗</button>
                 </div>
             </div>
-            <div class="rsp-day" id="rspDayLabel"></div>
+            <div class="rsp-bar-row">
+                <div class="rsp-day" id="rspDayLabel"></div>
+                <button type="button" class="rsp-statsbtn" id="rspStatsToggle" aria-expanded="true" title="Show or hide the colour counters">◎ Hide counts</button>
+            </div>
             <div class="rsp-stats">
                 <button type="button" class="rsp-stat t-all active" data-rsp-cat="all"><b>0</b><span>ALL</span></button>
                 <button type="button" class="rsp-stat t-running" data-rsp-cat="running"><b>0</b><span>RUNNING</span></button>
@@ -2183,7 +2264,7 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
                 <button type="button" class="rsv-arrow" id="rsvNext" aria-label="Next day" title="Next day">›</button>
                 <button type="button" class="rsv-today" id="rsvToday">Today</button>
             </div>
-            <div class="rsv-seg" id="rsvViews"><button type="button" class="active" data-rsv-view="live">Live</button><button type="button" data-rsv-view="category">By Category</button><button type="button" data-rsv-view="history">History</button></div>
+            <div class="rsv-seg" id="rsvViews"><button type="button" class="active" data-rsv-view="live">Live</button><button type="button" data-rsv-view="category">By Category</button><button type="button" data-rsv-view="rollback">↶ Rolled Back</button><button type="button" data-rsv-view="history">History</button></div>
             <div class="rsv-seg" id="rsvFilters">
                 <button type="button" class="active" data-rsv-filter="all">All</button>
                 <button type="button" data-rsv-filter="running">Running</button>
@@ -3267,7 +3348,7 @@ window.rsCategoryTable = function (items, o) {
         const time = t.has_timer
             ? '<div class="cc-time" ' + o.idAttr + '="' + esc(t.deployment_id) + '">' + o.fmtD(o.secs(t)) + '</div>'
             : '<div class="cc-time">' + esc(slot) + '</div>';
-        return '<div class="cat-cell cs-' + t.category + '">' +
+        return '<div class="cat-cell cs-' + t.category + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
             '<div class="cc-top"><span>' + esc(t.cr_number || '—') + '</span><span class="cc-pill">' + esc(t.category_label) + '</span></div>' +
             '<div class="cc-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
             time + '<div class="cc-meta">' + esc(t.status || 'No status') + '</div></div>';
@@ -3310,10 +3391,62 @@ window.rsCategoryTable = function (items, o) {
     let day = window.__rsDay || ymd(new Date());
     window.__rsDay = day;
     let view = 'live', filter = 'all', items = [], sessions = [], fetchedAt = Date.now(), ticks = 0, seq = 0;
+    let rbItems = [], rbSessions = [], rbFetchedAt = Date.now();
     const sinceFetch = () => (Date.now() - fetchedAt) / 1000;
     const liveSecs = t => t.elapsed_seconds + (t.is_running ? sinceFetch() : 0);
     const histSecs = h => h.duration_seconds + (h.is_running ? sinceFetch() : 0);
     const fmtT = iso => iso ? new Date(iso).toLocaleString() : '—';
+    const rbSecs = t => t.elapsed_seconds + (t.is_running ? (Date.now() - rbFetchedAt) / 1000 : 0);
+    const rbHistSecs = h => h.duration_seconds + (h.is_running ? (Date.now() - rbFetchedAt) / 1000 : 0);
+
+    function rbCard(t) {
+        const c = t.rb_state;
+        let timeHtml, meta;
+        if (t.has_timer) {
+            timeHtml = '<div class="rs-time" data-rb-id="' + esc(t.deployment_id) + '">' + fmtD(rbSecs(t)) + '</div>';
+            meta = t.is_running ? 'Rollback started ' + fmtShort(t.started_at) : 'Rollback stopped ' + fmtShort(t.stopped_at);
+        } else {
+            timeHtml = '<div class="rs-time rs-slot">' + esc(slotStart(t)) + '</div>';
+            meta = 'Rollback not started · slot ' + (t.slots || '—');
+        }
+        return '<div class="rs-card cs-rb-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
+            '<div class="rs-card-top"><span class="rs-cr" title="' + esc(t.cr_number) + '">' + esc(t.cr_number || '—') + '</span><span class="rs-pill">' + esc(t.rb_label) + '</span></div>' +
+            '<div class="rs-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
+            timeHtml + '<div class="rs-meta">' + esc(meta) + '</div>' +
+            '<div class="rs-foot">RFID ' + esc(t.rfid || '—') + ' · ' + esc(t.status || 'No status') + '</div>' +
+            '<div class="rs-bar"></div></div>';
+    }
+
+    function rollbackHtml() {
+        const q = search.value.trim().toLowerCase();
+        const match = r => !q || String(r.cr_number || '').toLowerCase().includes(q) || String(r.application_name || '').toLowerCase().includes(q);
+        const rows = rbItems.filter(match), hist = rbSessions.filter(match);
+        const n = { running: 0, completed: 0, pending: 0 };
+        rbItems.forEach(i => { n[i.rb_state] = (n[i.rb_state] || 0) + 1; });
+        let h = '<div class="rs-chips" style="margin-bottom:14px"><span class="rs-chip run">Rollback running: ' + n.running +
+            '</span><span class="rs-chip stop">Rollback done: ' + n.completed + '</span><span class="rs-chip tot">Not started: ' + n.pending + '</span></div>';
+        h += rows.length
+            ? '<div class="rs-cards">' + rows.map(rbCard).join('') + '</div>'
+            : '<div class="rs-empty"><b>' + (rbItems.length ? 'No matches' : 'No rolled-back deployments on this day') + '</b>' +
+              'A deployment appears here when Roll Back = Yes, its status is Rolled, or its rollback timer was started.</div>';
+        if (hist.length) {
+            h += '<div class="rb-section">ROLLBACK START / STOP HISTORY</div><div class="tablewrap"><table style="min-width:900px"><thead><tr><th>SR No.</th><th>CR Number</th><th>RFID</th><th>Application</th><th>Started At</th><th>Stopped At</th><th>Duration</th><th>Status</th></tr></thead><tbody>' +
+                hist.map((r, i) => '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                    '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                    '</td><td data-rbh-id="' + esc(r.id) + '">' + fmtD(rbHistSecs(r)) + '</td><td>' +
+                    (r.is_running ? '<span class="rs-hpill amber">● Rollback running</span>' : '<span class="rs-hpill grey">■ Stopped</span>') + '</td></tr>').join('') +
+                '</tbody></table></div>';
+        }
+        return h;
+    }
+
+    setInterval(() => {
+        if (modal.hidden || document.hidden || view !== 'rollback') return;
+        rbItems.forEach(t => { if (!t.is_running) return;
+            const el = body.querySelector('[data-rb-id="' + t.deployment_id + '"]'); if (el) el.textContent = fmtD(rbSecs(t)); });
+        rbSessions.forEach(h => { if (!h.is_running) return;
+            const el = body.querySelector('[data-rbh-id="' + h.id + '"]'); if (el) el.textContent = fmtD(rbHistSecs(h)); });
+    }, 1000);
 
     function passes(r) {
         if (filter !== 'all' && r.category !== undefined && r.category !== filter) return false;
@@ -3332,7 +3465,7 @@ window.rsCategoryTable = function (items, o) {
             timeHtml = '<div class="rs-time rs-slot">' + esc(slotStart(t)) + '</div>';
             meta = 'Planned slot ' + (t.slots || '—');
         }
-        return '<div class="rs-card cs-' + c + (c === 'running' ? ' running' : '') + '">' +
+        return '<div class="rs-card cs-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
             '<div class="rs-card-top"><span class="rs-cr" title="' + esc(t.cr_number) + '">' + esc(t.cr_number || '—') + '</span><span class="rs-pill">' + esc(t.category_label) + '</span></div>' +
             '<div class="rs-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
             timeHtml + '<div class="rs-meta">' + esc(meta) + '</div>' +
@@ -3359,6 +3492,8 @@ window.rsCategoryTable = function (items, o) {
                 ? '<div class="rs-cards">' + rows.map(cardHtml).join('') + '</div>'
                 : '<div class="rs-empty"><b>' + (items.length ? 'No matches' : 'No deployments scheduled for this day') + '</b>' +
                   (items.length ? 'Try a different colour filter or search.' : 'Use the arrows to look at another day.') + '</div>';
+        } else if (view === 'rollback') {
+            body.innerHTML = rollbackHtml();
         } else {
             const rows = sessions.filter(r => { const q = search.value.trim().toLowerCase();
                 return !q || String(r.cr_number || '').toLowerCase().includes(q) || String(r.application_name || '').toLowerCase().includes(q); });
@@ -3383,6 +3518,16 @@ window.rsCategoryTable = function (items, o) {
             if (my !== seq) return;
             if (!data.success) throw new Error(data.message || 'failed');
             items = data.items || []; sessions = data.sessions || [];
+            try {
+                const rr = await fetch('/api/rollback-daily?date=' + encodeURIComponent(day), { cache: 'no-store' });
+                const rd = await rr.json();
+                if (my !== seq) return;
+                if (rd.success) {
+                    rbItems = rd.items || []; rbSessions = rd.sessions || []; rbFetchedAt = Date.now();
+                    const rbb = document.getElementById('rbBadge');
+                    if (rbb) { rbb.textContent = rd.running_total || 0; rbb.hidden = !rd.running_total; }
+                }
+            } catch (_) { /* rollback API not available yet */ }
             fetchedAt = Date.now();
             if (badge) { badge.textContent = data.running_total || 0; badge.hidden = !data.running_total; }
             sub.textContent = 'Updated ' + new Date().toLocaleTimeString() + ' · refreshes every 5 seconds';
@@ -3406,7 +3551,9 @@ window.rsCategoryTable = function (items, o) {
     document.querySelectorAll('[data-rsv-view]').forEach(b => b.addEventListener('click', () => { view = b.dataset.rsvView; render(); }));
     document.querySelectorAll('[data-rsv-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.rsvFilter; render(); }));
     search.addEventListener('input', render);
-    modal.addEventListener('modal:open', () => { view = 'live'; render(); load(); });
+    modal.addEventListener('modal:open', () => { view = window.__rsOpenRollback ? 'rollback' : 'live'; window.__rsOpenRollback = false; render(); load(); });
+    const rbBtn = document.getElementById('rspRollbackBtn');
+    if (rbBtn) rbBtn.addEventListener('click', () => { window.__rsOpenRollback = true; });
 
     setInterval(() => {
         if (modal.hidden || document.hidden) return;
@@ -3464,7 +3611,7 @@ window.rsCategoryTable = function (items, o) {
             timeHtml = '<div class="rsp-time rsp-slot">' + esc(slotStart(t)) + '</div>';
             meta = 'Slot ' + (t.slots || '—') + ' · ' + (t.status || '');
         }
-        return '<div class="rsp-row cs-' + c + (c === 'running' ? ' running' : '') + '"><div class="rsp-main">' +
+        return '<div class="rsp-row cs-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details"><div class="rsp-main">' +
             '<div class="rsp-cr">' + esc(t.cr_number || '—') + '<span class="rsp-pill">' + esc(t.category_label) + '</span>' + fwdChip + '</div>' +
             '<div class="rsp-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
             '<div class="rsp-meta">' + esc(meta) + '</div></div>' + timeHtml + '<div class="rsp-bar"></div></div>';
@@ -3527,6 +3674,18 @@ window.rsCategoryTable = function (items, o) {
     });
     $('rspPrev').addEventListener('click', () => setDay(shiftDay(day, -1)));
     $('rspNext').addEventListener('click', () => setDay(shiftDay(day, 1)));
+    const statsBox = document.querySelector('.rsp-stats'), statsBtn = $('rspStatsToggle');
+    function setStatsHidden(hide) {
+        statsBox.hidden = hide;
+        statsBtn.setAttribute('aria-expanded', String(!hide));
+        statsBtn.textContent = hide ? '◉ Show counts' : '◎ Hide counts';
+        try { localStorage.setItem('rspStatsHidden', hide ? '1' : '0'); } catch (_) { /* storage unavailable */ }
+        if (hide && cat !== 'all') { cat = 'all'; render(); }
+    }
+    statsBtn.addEventListener('click', () => setStatsHidden(!statsBox.hidden));
+    let startHidden = false;
+    try { startHidden = localStorage.getItem('rspStatsHidden') === '1'; } catch (_) { /* ignore */ }
+    if (startHidden) setStatsHidden(true);
     $('rspToday').addEventListener('click', () => setDay(ymd(new Date())));
     dateInput.addEventListener('change', () => setDay(dateInput.value));
     document.addEventListener('rs:day', e => { if (e.detail !== day) setDay(e.detail, true); });
@@ -3542,6 +3701,208 @@ window.rsCategoryTable = function (items, o) {
     setInterval(load, 5000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
     render(); load();
+})();
+</script>
+
+
+    <!-- ===== CR detail popup (Release Calendar + DevOps latest + Change History) ===== -->
+    <div class="crd-overlay" id="crDetailModal" hidden>
+        <div class="crd-box" role="dialog" aria-modal="true" aria-label="CR details">
+            <header class="crd-top">
+                <div>
+                    <h3 id="crdTitle">CR details</h3>
+                    <p id="crdSub">Loading…</p>
+                </div>
+                <div class="crd-top-actions">
+                    <button class="btn ghost" type="button" id="crdHistoryBtn" data-crd-toggle>⟲ Change History <span class="crd-count" id="crdHistCount">0</span></button>
+                    <button class="mgr-close" type="button" id="crdClose" aria-label="Close CR details">✕</button>
+                </div>
+            </header>
+            <div class="crd-body" id="crdBody"><div class="crd-loading">Loading details…</div></div>
+        </div>
+    </div>
+
+
+<script>
+(function crDetailView() {
+    const $ = id => document.getElementById(id);
+    const overlay = $('crDetailModal');
+    if (!overlay) return;
+    const body = $('crdBody'), title = $('crdTitle'), sub = $('crdSub'), histBtn = $('crdHistoryBtn'), histCount = $('crdHistCount');
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const RELEASE = [
+        ['cr_number','CR Number'], ['rfid','RFID'], ['application_name','Application'], ['category','Category'],
+        ['business_unit','Business Unit'], ['environment','Environment'], ['change_type','Change Type'],
+        ['deployment_type','Deployment Type'], ['deployment_count','Deployment Count'], ['change_requestor','Change Requestor'],
+        ['deployment_date','Deployment Date'], ['slot','Slot'], ['git_links','Git Links'],
+        ['incident_number','Incident Number'], ['roll_back','Roll Back'], ['status','Initial Status']
+    ];
+    const DEVOPS = [
+        ['status','Status'], ['deployment_date','Deployment Date'], ['slot','Slot'], ['application_name','Application'],
+        ['deployment_count','Deployment Count'], ['team_allocations','Team Allocation'], ['deployment_type','Deployment Type'],
+        ['change_type','Change Type'], ['released_by','Released By'], ['verified_and_deployed_by','Verified & Deployed By'],
+        ['change_requestor','Change Requestor'], ['incident_number','Incident Number'], ['roll_back','Roll Back'],
+        ['git_links','Git Links'], ['comments','Comments']
+    ];
+    const LABELS = {};
+    RELEASE.concat(DEVOPS).forEach(p => { LABELS[p[0]] = p[1]; });
+    LABELS.slot_start = 'Slot Start'; LABELS.slot_end = 'Slot End'; LABELS.slots = 'Slot';
+
+    let data = null, view = 'detail', seq = 0, lastFocus = null;
+
+    function parse(v) {
+        if (typeof v === 'string') {
+            const t = v.trim();
+            if (t[0] === '[' || t[0] === '{') { try { return JSON.parse(t); } catch (_) { /* keep text */ } }
+        }
+        return v;
+    }
+
+    function valHtml(key, raw) {
+        const v = parse(raw);
+        if (v === null || v === undefined || v === '') return '<span class="crd-empty">—</span>';
+        if (key === 'git_links') {
+            const arr = Array.isArray(v) ? v : [v];
+            if (!arr.length) return '<span class="crd-empty">—</span>';
+            return arr.map(l => {
+                const s = String(l);
+                return /^https?:\/\//i.test(s)
+                    ? '<a href="' + esc(s) + '" target="_blank" rel="noopener noreferrer">' + esc(s) + ' ↗</a>'
+                    : esc(s);
+            }).join('<br>');
+        }
+        if (key === 'team_allocations' && Array.isArray(v)) {
+            if (!v.length) return '<span class="crd-empty">—</span>';
+            return v.map(a => '<span class="crd-chip">' + esc(a && a.team) + ': <b>' + esc(a && a.count) + '</b></span>').join('');
+        }
+        if (key === 'slot_start' || key === 'slot_end') return esc(String(v).replace('T', ' ').slice(0, 16));
+        if (key === 'status') return '<span class="pill ' + esc(String(v).toLowerCase().replace(/\s+/g, '-')) + '">' + esc(v) + '</span>';
+        if (key === 'comments') return '<span class="crd-pre">' + esc(v) + '</span>';
+        if (Array.isArray(v)) return esc(v.join(', '));
+        if (typeof v === 'object') return esc(JSON.stringify(v));
+        return esc(v);
+    }
+
+    function fmtWhen(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? String(iso).replace('T', ' ') : d.toLocaleString();
+    }
+    function initials(name) {
+        const parts = String(name || '?').split(/[^A-Za-z0-9]+/).filter(Boolean);
+        return ((parts[0] || '?')[0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+
+    function isChanged(k) {
+        const keys = k === 'slot' ? ['slot', 'slot_start', 'slot_end'] : [k];
+        if (!keys.some(x => data.changed_fields.includes(x))) return false;
+        return JSON.stringify(parse(data.original[k])) !== JSON.stringify(parse(data.current[k]));
+    }
+
+    function rows(list, src, compare) {
+        return list.map(pair => {
+            const k = pair[0], label = pair[1];
+            const changed = compare && isChanged(k);
+            return '<div class="crd-kv' + (changed ? ' crd-changed' : '') + '"><span>' + esc(label) + '</span><div>' + valHtml(k, src[k]) +
+                (changed ? '<small class="crd-was">Submitted as: ' + valHtml(k, data.original[k]) + '</small>' : '') + '</div></div>';
+        }).join('');
+    }
+
+    function detailHtml() {
+        const n = data.history.length, lm = data.last_modified;
+        const changedCount = data.changed_fields.filter(f => f !== 'slot_start' && f !== 'slot_end').length;
+        const foot = lm
+            ? 'Last modified by <b>' + esc(lm.by || 'Not provided') + '</b> · ' + esc(fmtWhen(lm.at)) + ' · ' + changedCount + ' field' + (changedCount === 1 ? '' : 's') + ' changed'
+            : 'No DevOps edits yet. These are the original details.';
+        return '<div class="crd-grid">' +
+            '<section class="crd-panel rel"><div class="crd-ph"><h4>📝 Release Calendar</h4><small>Details entered by the requester when the deployment was scheduled (rebuilt from the audit trail).</small></div>' +
+                rows(RELEASE, data.original, false) + '</section>' +
+            '<section class="crd-panel dev"><div class="crd-ph"><h4>🛠 DevOps Workspace</h4><small>Latest modified details. Highlighted rows were changed after submission.</small></div>' +
+                rows(DEVOPS, data.current, true) +
+                '<div class="crd-foot"><span>' + foot + '</span>' +
+                '<button class="btn light" type="button" data-crd-toggle>⟲ View change history (' + n + ')</button></div></section>' +
+            '</div>';
+    }
+
+    function historyHtml() {
+        const h = data.history;
+        if (!h.length) {
+            return '<div class="crd-emptybox"><b>No changes recorded</b>This deployment still matches what the requester submitted in the Release Calendar.</div>';
+        }
+        return '<div class="crd-timeline">' + h.map(ev =>
+            '<article class="crd-ev"><div class="crd-ev-head"><span class="crd-avatar">' + esc(initials(ev.modified_by)) + '</span>' +
+            '<div><b>' + esc(ev.modified_by || 'Not provided') + '</b><small>' + esc(fmtWhen(ev.modified_at)) + '</small></div>' +
+            '<span class="crd-action">' + esc(ev.action || 'Updated') + '</span></div>' +
+            '<div class="tablewrap"><table><thead><tr><th>Field</th><th>Previous value</th><th>New value</th></tr></thead><tbody>' +
+            ev.changes.map(c =>
+                '<tr><td>' + esc(LABELS[c.field] || String(c.field).replace(/_/g, ' ')) + '</td>' +
+                '<td class="crd-old">' + valHtml(c.field, c.old) + '</td><td class="crd-new">' + valHtml(c.field, c.new) + '</td></tr>').join('') +
+            '</tbody></table></div></article>').join('') + '</div>';
+    }
+
+    function render() {
+        if (!data) return;
+        const d = data.deployment, cur = data.current;
+        title.textContent = d.cr_number || 'CR details';
+        sub.innerHTML = esc(d.application_name || 'Application not set') + ' · RFID ' + esc(d.rfid || '—') +
+            ' · ' + esc(cur.deployment_date || '—') + ' ' + esc(cur.slot || '') + ' ' + valHtml('status', d.status);
+        histCount.textContent = data.history.length;
+        histBtn.firstChild.nodeValue = view === 'history' ? '← Back to details ' : '⟲ Change History ';
+        body.innerHTML = view === 'history' ? historyHtml() : detailHtml();
+        body.scrollTop = 0;
+        const box = overlay.querySelector('.crd-box');
+        if (box) box.scrollTop = 0;
+    }
+
+    async function openDetail(id, trigger) {
+        const my = ++seq;
+        lastFocus = trigger || null;
+        data = null; view = 'detail';
+        title.textContent = 'CR details'; sub.textContent = 'Loading…'; histCount.textContent = '0';
+        histBtn.firstChild.nodeValue = '⟲ Change History ';
+        body.innerHTML = '<div class="crd-loading">Loading details…</div>';
+        overlay.hidden = false;
+        document.body.classList.add('mgr-modal-open');
+        try {
+            const resp = await fetch('/api/deployment-detail/' + encodeURIComponent(id), { cache: 'no-store' });
+            let json;
+            try { json = await resp.json(); } catch (_) { throw new Error('HTTP ' + resp.status + ', not JSON (restart Flask so the new route loads)'); }
+            if (my !== seq) return;
+            if (!json.success) throw new Error(json.message || 'Request failed');
+            data = json; render();
+        } catch (e) {
+            if (my !== seq) return;
+            sub.textContent = 'Could not load';
+            body.innerHTML = '<div class="crd-emptybox"><b>Could not load details</b>' + esc(e && e.message ? e.message : e) + '</div>';
+        }
+    }
+
+    function closeDetail() {
+        seq++;
+        overlay.hidden = true;
+        if (!document.querySelector('[data-modal]:not([hidden])')) document.body.classList.remove('mgr-modal-open');
+        if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+    }
+
+    document.addEventListener('click', e => {
+        if (overlay.contains(e.target)) {
+            if (e.target === overlay || e.target.closest('#crdClose')) { closeDetail(); return; }
+            if (e.target.closest('[data-crd-toggle]') && data) { view = view === 'history' ? 'detail' : 'history'; render(); }
+            return;
+        }
+        const card = e.target.closest('[data-dep-id]');
+        if (card) openDetail(card.dataset.depId, card);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !overlay.hidden) { e.stopImmediatePropagation(); closeDetail(); return; }
+        if ((e.key === 'Enter' || e.key === ' ') && !overlay.contains(e.target)) {
+            const card = e.target.closest && e.target.closest('[data-dep-id]');
+            if (card) { e.preventDefault(); openDetail(card.dataset.depId, card); }
+        }
+    }, true);
 })();
 </script>
 

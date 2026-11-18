@@ -238,7 +238,7 @@ td button { padding: 7px 16px; font-size: 12.5px; }
   .field.full { grid-column: auto; }
   .tracker-tab { flex: 1; padding: 11px 8px; text-align: center; }
   .team-allocation-row { grid-template-columns: 1fr 80px auto; gap: 6px; }
-  #runningStatusField > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  #runningStatusField > div[style*="grid-template-columns"], #rollbackStatusField > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
   .button-row { margin: 22px 0 0; bottom: 8px; }
   .button-row button { flex: 1 1 100%; padding: 14px; }
   th, td { padding: 10px 12px; }
@@ -327,6 +327,7 @@ td button { padding: 7px 16px; font-size: 12.5px; }
       <button type="button" class="tracker-tab active" id="deploymentDetailsTab" role="tab" aria-selected="true" aria-controls="deploymentDetailsPanel">Deployment Details</button>
       <button type="button" class="tracker-tab" id="teamAllocationTab" role="tab" aria-selected="false" aria-controls="teamAllocationPanel">Team Allocation</button>
       <button type="button" class="tracker-tab" id="runningStatusTab" role="tab" aria-selected="false" aria-controls="runningStatusPanel">Running Status</button>
+      <button type="button" class="tracker-tab" id="rollbackStatusTab" role="tab" aria-selected="false" aria-controls="rollbackStatusPanel">Rollback Status</button>
       <button type="button" class="tracker-tab" id="jenkinsBuildsTab" role="tab" aria-selected="false" aria-controls="jenkinsBuildsPanel">Jenkins Builds</button>
     </div>
 
@@ -406,6 +407,25 @@ td button { padding: 7px 16px; font-size: 12.5px; }
           <strong id="teamAllocationTotal" class="muted">Allocated: 0 / 0</strong>
         </div>
         <div id="teamAllocationMessage" class="muted" role="status" style="margin-top:6px;font-size:12px"></div>
+      </div>
+    </div>
+
+    <div id="rollbackStatusPanel" class="tracker-tab-panel" role="tabpanel" aria-labelledby="rollbackStatusTab">
+      <div class="field full" id="rollbackStatusField" style="padding:20px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r)">
+        <h3 style="margin:0 0 8px">Rollback Running Timer</h3>
+        <p class="muted" style="margin:0 0 16px">Start this timer when the rollback work begins and stop it when the rollback is complete. It is saved against this deployment and appears on the Manager dashboard under Running Status &rarr; Rolled Back.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
+          <button type="button" id="startRollbackTimerButton" class="approve">Start Rollback</button>
+          <button type="button" id="stopRollbackTimerButton" class="reject" disabled>Stop Rollback</button>
+          <span id="rollbackTimerState" class="badge">Not Started</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <div><label>Elapsed Time</label><div id="rollbackElapsedTime" style="font-size:24px;font-weight:800;color:var(--bad);font-variant-numeric:tabular-nums">00:00:00</div></div>
+          <div><label>Accumulated Duration</label><div id="rollbackAccumulatedTime" style="font-weight:700">00:00:00</div></div>
+          <div><label>Last Start Date &amp; Time</label><div id="rollbackStartedAt" class="muted">Not started</div></div>
+          <div><label>Last Stop Date &amp; Time</label><div id="rollbackStoppedAt" class="muted">Not stopped</div></div>
+        </div>
+        <div id="rollbackTimerMessage" class="muted" role="status" aria-live="polite" style="margin-top:14px"></div>
       </div>
     </div>
 
@@ -654,6 +674,7 @@ document.addEventListener("DOMContentLoaded", function () {
       details: ["deploymentDetailsTab", "deploymentDetailsPanel"],
       team: ["teamAllocationTab", "teamAllocationPanel"],
       running: ["runningStatusTab", "runningStatusPanel"],
+      rollback: ["rollbackStatusTab", "rollbackStatusPanel"],
       jenkins: ["jenkinsBuildsTab", "jenkinsBuildsPanel"]
     };
     Object.entries(tabMap).forEach(([name, ids]) => {
@@ -666,6 +687,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("deploymentDetailsTab").addEventListener("click", () => activateTrackerTab("details"));
   document.getElementById("teamAllocationTab").addEventListener("click", () => activateTrackerTab("team"));
   document.getElementById("runningStatusTab").addEventListener("click", () => activateTrackerTab("running"));
+  document.getElementById("rollbackStatusTab").addEventListener("click", () => activateTrackerTab("rollback"));
   document.getElementById("jenkinsBuildsTab").addEventListener("click", () => activateTrackerTab("jenkins"));
 
   // Running Status timer: records are persisted by deployment ID in PostgreSQL.
@@ -766,6 +788,82 @@ document.addEventListener("DOMContentLoaded", function () {
 
   startRunningTimerButton.addEventListener("click", () => changeRunningTimer("start"));
   stopRunningTimerButton.addEventListener("click", () => changeRunningTimer("stop"));
+
+  // Rollback timer: separate from the deployment timer, saved per deployment ID.
+  let rollbackTimerInterval = null;
+  let rollbackTimerState = null;
+  const startRollbackTimerButton = document.getElementById("startRollbackTimerButton");
+  const stopRollbackTimerButton = document.getElementById("stopRollbackTimerButton");
+  const rollbackTimerMessage = document.getElementById("rollbackTimerMessage");
+
+  function renderRollbackTimer() {
+    const state = rollbackTimerState || {};
+    const isRunning = Boolean(state.is_running);
+    const accumulated = Number(state.accumulated_seconds || 0);
+    const liveSeconds = isRunning && state.started_at
+      ? Math.max(0, Math.floor((Date.now() - new Date(state.started_at).getTime()) / 1000))
+      : 0;
+    document.getElementById("rollbackElapsedTime").textContent = formatDuration(accumulated + liveSeconds);
+    document.getElementById("rollbackAccumulatedTime").textContent = formatDuration(accumulated);
+    document.getElementById("rollbackStartedAt").textContent = formatTimerDate(state.started_at);
+    document.getElementById("rollbackStoppedAt").textContent = formatTimerDate(state.stopped_at);
+    document.getElementById("rollbackTimerState").textContent =
+      isRunning ? "Rollback Running" : (state.started_at ? "Stopped" : "Not Started");
+    startRollbackTimerButton.disabled = isRunning || !currentDeploymentId;
+    stopRollbackTimerButton.disabled = !isRunning || !currentDeploymentId;
+    if (rollbackTimerInterval) { clearInterval(rollbackTimerInterval); rollbackTimerInterval = null; }
+    if (isRunning) rollbackTimerInterval = setInterval(renderRollbackTimer, 1000);
+  }
+
+  async function loadRollbackTimer() {
+    if (!currentDeploymentId) return;
+    rollbackTimerMessage.textContent = "Loading rollback timer...";
+    try {
+      const response = await fetch(
+        "/api/deployment-rollback-timer/" + encodeURIComponent(currentDeploymentId),
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+      const result = await parseApiResponse(response);
+      if (!result.success) throw new Error(result.message || "Could not load the rollback timer.");
+      rollbackTimerState = result.timer || {};
+      renderRollbackTimer();
+      rollbackTimerMessage.textContent = "Rollback timer is saved against this deployment record.";
+    } catch (error) {
+      rollbackTimerMessage.textContent = error.message || "Could not load the rollback timer.";
+      console.error("Rollback timer load error:", error);
+    }
+  }
+
+  async function changeRollbackTimer(action) {
+    if (!currentDeploymentId) {
+      showMessage("Open a CR deployment record before using the rollback timer.", "error");
+      return;
+    }
+    const button = action === "start" ? startRollbackTimerButton : stopRollbackTimerButton;
+    button.disabled = true;
+    rollbackTimerMessage.textContent = action === "start" ? "Starting rollback timer..." : "Stopping rollback timer...";
+    try {
+      const response = await fetch(
+        "/api/deployment-rollback-timer/" + encodeURIComponent(currentDeploymentId),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ action })
+        }
+      );
+      const result = await parseApiResponse(response);
+      if (!result.success) throw new Error(result.message || "Rollback timer action failed.");
+      rollbackTimerState = result.timer || {};
+      renderRollbackTimer();
+      rollbackTimerMessage.textContent = result.message || "Rollback timer updated successfully.";
+    } catch (error) {
+      rollbackTimerMessage.textContent = error.message || "Could not update the rollback timer.";
+      renderRollbackTimer();
+    }
+  }
+
+  startRollbackTimerButton.addEventListener("click", () => changeRollbackTimer("start"));
+  stopRollbackTimerButton.addEventListener("click", () => changeRollbackTimer("stop"));
 
   function toggleAuditIdentityFields() {
     const adding = auditUserSelect.value === "__add__";
@@ -1333,6 +1431,9 @@ document.addEventListener("DOMContentLoaded", function () {
     runningTimerState = null;
     renderRunningTimer();
     loadRunningTimer();
+    rollbackTimerState = null;
+    renderRollbackTimer();
+    loadRollbackTimer();
     setField("out_cr_number", record.cr_number);
     setField("out_rfid", record.rfid);
     setField("out_deployment_date", record.deployment_date ? String(record.deployment_date).substring(0, 10) : "");

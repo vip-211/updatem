@@ -1,0 +1,16 @@
+2026-11-17 18:46:25,775 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5050
+2026-11-17 18:46:25,782 INFO werkzeug: [33mPress CTRL+C to quit[0m
+2026-11-17 18:46:30,098 INFO werkzeug: 127.0.0.1 - - [17/Nov/2026 18:46:30] "GET / HTTP/1.1" 200 -
+2026-11-17 18:46:30,491 INFO werkzeug: 127.0.0.1 - - [17/Nov/2026 18:46:30] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-11-17 18:46:36,740 ERROR app: Unable to load manager dashboard
+Traceback (most recent call last):
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\app.py", line 3609, in manager_dashboard
+    conn = get_connection()
+           ^^^^^^^^^^^^^^^^
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\app.py", line 884, in get_connection
+    host=os.environ["DB_HOST"],
+         ~~~~~~~~~~^^^^^^^^^^^
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'DB_HOST'
+2026-11-17 18:46:36,750 INFO werkzeug: 127.0.0.1 - - [17/Nov/2026 18:46:36] "[35m[1mGET /manager HTTP/1.1[0m" 500 -

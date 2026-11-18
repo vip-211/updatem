@@ -2399,6 +2399,231 @@ def running_daily():
             conn.close()
 
 
+def ensure_rollback_timer_tables(cur):
+    """Rollback timers: one accumulated timer per deployment + one history row per Start->Stop."""
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS public.deployment_rollback_timers (
+            deployment_id BIGINT PRIMARY KEY
+                REFERENCES public.deployment_tracker(id) ON DELETE CASCADE,
+            started_at TIMESTAMPTZ,
+            stopped_at TIMESTAMPTZ,
+            accumulated_seconds BIGINT NOT NULL DEFAULT 0,
+            is_running BOOLEAN NOT NULL DEFAULT FALSE,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS public.deployment_rollback_timer_history (
+            id BIGSERIAL PRIMARY KEY,
+            deployment_id BIGINT NOT NULL,
+            cr_number TEXT,
+            started_at TIMESTAMPTZ NOT NULL,
+            stopped_at TIMESTAMPTZ,
+            duration_seconds BIGINT
+        )
+    """)
+
+
+@app.route("/api/deployment-rollback-timer/<int:deployment_id>", methods=["GET"])
+def get_deployment_rollback_timer(deployment_id):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_rollback_timer_tables(cur)
+                cur.execute("SELECT 1 FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+                if not cur.fetchone():
+                    return jsonify({"success": False, "message": "Deployment record not found."}), 404
+                cur.execute("""
+                    SELECT started_at, stopped_at, accumulated_seconds, is_running
+                    FROM public.deployment_rollback_timers
+                    WHERE deployment_id = %s
+                """, (deployment_id,))
+                row = cur.fetchone()
+        return jsonify({"success": True, "timer": serialize_running_timer(row)})
+    except Exception as e:
+        app.logger.exception("Could not load rollback timer: %s", deployment_id)
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.route("/api/deployment-rollback-timer/<int:deployment_id>", methods=["POST"])
+def update_deployment_rollback_timer(deployment_id):
+    payload = request.get_json(silent=True) or {}
+    action = str(payload.get("action") or "").strip().lower()
+    if action not in ("start", "stop"):
+        return jsonify({"success": False, "message": "Timer action must be start or stop."}), 400
+    conn = None
+    cr_number = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_rollback_timer_tables(cur)
+                cur.execute("SELECT cr_number FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+                dep_row = cur.fetchone()
+                if not dep_row:
+                    return jsonify({"success": False, "message": "Deployment record not found."}), 404
+                cr_number = dep_row[0]
+                cur.execute("""
+                    INSERT INTO public.deployment_rollback_timers (deployment_id)
+                    VALUES (%s) ON CONFLICT (deployment_id) DO NOTHING
+                """, (deployment_id,))
+                cur.execute("""
+                    SELECT started_at, stopped_at, accumulated_seconds, is_running
+                    FROM public.deployment_rollback_timers
+                    WHERE deployment_id = %s FOR UPDATE
+                """, (deployment_id,))
+                row = cur.fetchone()
+                started_at, stopped_at, accumulated_seconds, is_running = row
+                now = datetime.now().astimezone()
+
+                if action == "start":
+                    if is_running:
+                        return jsonify({"success": True, "message": "Rollback timer is already running.",
+                                        "timer": serialize_running_timer(row)})
+                    cur.execute("""
+                        UPDATE public.deployment_rollback_timers
+                        SET started_at = %s, stopped_at = NULL, is_running = TRUE,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE deployment_id = %s
+                        RETURNING started_at, stopped_at, accumulated_seconds, is_running
+                    """, (now, deployment_id))
+                    updated = cur.fetchone()
+                    cur.execute("""
+                        INSERT INTO public.deployment_rollback_timer_history
+                            (deployment_id, cr_number, started_at) VALUES (%s, %s, %s)
+                    """, (deployment_id, cr_number, now))
+                    message = "Rollback timer started. Start date and time recorded."
+                else:
+                    if not is_running or not started_at:
+                        return jsonify({"success": False, "message": "The rollback timer is not currently running."}), 409
+                    elapsed = max(0, int((now - started_at).total_seconds()))
+                    cur.execute("""
+                        UPDATE public.deployment_rollback_timers
+                        SET stopped_at = %s, accumulated_seconds = accumulated_seconds + %s,
+                            is_running = FALSE, updated_at = CURRENT_TIMESTAMP
+                        WHERE deployment_id = %s
+                        RETURNING started_at, stopped_at, accumulated_seconds, is_running
+                    """, (now, elapsed, deployment_id))
+                    updated = cur.fetchone()
+                    cur.execute("""
+                        UPDATE public.deployment_rollback_timer_history
+                        SET stopped_at = %s, duration_seconds = %s
+                        WHERE id = (
+                            SELECT id FROM public.deployment_rollback_timer_history
+                            WHERE deployment_id = %s AND stopped_at IS NULL
+                            ORDER BY id DESC LIMIT 1
+                        )
+                    """, (now, elapsed, deployment_id))
+                    message = "Rollback timer stopped. Stop date and time recorded."
+        write_audit_log("INFO", f"Rollback timer {action} for deployment ID={deployment_id}", cr_number)
+        return jsonify({"success": True, "message": message, "timer": serialize_running_timer(updated)})
+    except Exception as e:
+        app.logger.exception("Could not update rollback timer: %s", deployment_id)
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@app.route("/api/rollback-daily", methods=["GET"])
+def rollback_daily():
+    """Rolled-back deployments of ONE day with their rollback timer state, plus that day's sessions."""
+    date_text = (request.args.get("date") or "").strip()
+    try:
+        selected = date.fromisoformat(date_text) if date_text else date.today()
+    except ValueError:
+        return jsonify({"success": False, "message": "Choose a valid date (YYYY-MM-DD)."}), 400
+    conn = None
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                ensure_rollback_timer_tables(cur)
+                cur.execute("""
+                    SELECT d.id, d.cr_number, d.rfid, d.application_name, d.status,
+                           d.change_type, d.roll_back, d.slots,
+                           t.started_at, t.stopped_at,
+                           COALESCE(t.accumulated_seconds, 0), COALESCE(t.is_running, FALSE)
+                    FROM public.deployment_tracker d
+                    LEFT JOIN public.deployment_rollback_timers t ON t.deployment_id = d.id
+                    WHERE d.deployment_date = %s
+                      AND (LOWER(TRIM(COALESCE(d.roll_back, ''))) = 'yes'
+                           OR LOWER(COALESCE(d.status, '')) LIKE '%%roll%%'
+                           OR t.started_at IS NOT NULL)
+                    ORDER BY d.slot_start NULLS LAST, d.id
+                """, (selected,))
+                rows = cur.fetchall()
+                cur.execute("""
+                    SELECT h.id, h.deployment_id, h.cr_number, d.rfid, d.application_name,
+                           h.started_at, h.stopped_at, h.duration_seconds
+                    FROM public.deployment_rollback_timer_history h
+                    JOIN public.deployment_tracker d ON d.id = h.deployment_id
+                    WHERE d.deployment_date = %s
+                    ORDER BY h.started_at DESC
+                    LIMIT 500
+                """, (selected,))
+                hrows = cur.fetchall()
+                cur.execute("SELECT COUNT(*) FROM public.deployment_rollback_timers WHERE is_running")
+                running_total = int(cur.fetchone()[0] or 0)
+
+        now = datetime.now().astimezone()
+        items = []
+        for (dep_id, cr, rfid, app_name, status, ctype, rb, slots,
+             started_at, stopped_at, acc, is_running) in rows:
+            is_running = bool(is_running)
+            elapsed = int(acc or 0)
+            if is_running and started_at:
+                elapsed += max(0, int((now - started_at).total_seconds()))
+            if is_running:
+                state, label = "running", "ROLLBACK RUNNING"
+            elif started_at:
+                state, label = "completed", "ROLLBACK DONE"
+            else:
+                state, label = "pending", "NOT STARTED"
+            items.append({
+                "deployment_id": dep_id, "cr_number": cr, "rfid": rfid,
+                "application_name": app_name, "status": status, "change_type": ctype,
+                "roll_back": rb, "slots": slots,
+                "started_at": started_at.isoformat() if started_at else None,
+                "stopped_at": stopped_at.isoformat() if stopped_at else None,
+                "has_timer": started_at is not None,
+                "is_running": is_running, "elapsed_seconds": elapsed,
+                "rb_state": state, "rb_label": label,
+            })
+        items.sort(key=lambda i: {"running": 0, "pending": 1, "completed": 2}[i["rb_state"]])
+
+        sessions = []
+        for hid, dep_id, cr, rfid, app_name, started, stopped, dur in hrows:
+            sessions.append({
+                "id": hid, "deployment_id": dep_id, "cr_number": cr, "rfid": rfid,
+                "application_name": app_name,
+                "started_at": started.isoformat() if started else None,
+                "stopped_at": stopped.isoformat() if stopped else None,
+                "is_running": stopped is None,
+                "duration_seconds": int(dur) if dur is not None
+                    else max(0, int((now - started).total_seconds())),
+            })
+        counts = {"running": 0, "completed": 0, "pending": 0}
+        for i in items:
+            counts[i["rb_state"]] += 1
+        return jsonify({
+            "success": True, "date": selected.isoformat(), "count": len(items),
+            "counts": counts, "running_total": running_total,
+            "items": items, "sessions": sessions,
+        })
+    except Exception:
+        app.logger.exception("Could not load daily rollback status")
+        return jsonify({"success": False, "message": "Unable to load rollback status."}), 500
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 @app.route("/api/deployment-by-id/<int:deployment_id>", methods=["PUT"])
 
 def update_devops_deployment(deployment_id):
@@ -2852,6 +3077,149 @@ def deployments_by_date():
             cursor.close()
         if conn:
             conn.close()
+
+# --- CR DETAIL VIEW (patch) ---
+CR_DETAIL_JSON_FIELDS = ("git_links", "team_allocations")
+
+
+def _detail_clean(field, value):
+    """JSON-safe value; decode JSON text stored in git_links / team_allocations."""
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if field in CR_DETAIL_JSON_FIELDS and isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return value
+    if value is None or isinstance(value, (str, int, float, bool, list, dict)):
+        return value
+    return str(value)
+
+
+def _detail_slot_text(start, end):
+    def hhmm(v):
+        try:
+            return datetime.fromisoformat(str(v)).strftime("%H:%M")
+        except (TypeError, ValueError):
+            return None
+    s, e = hhmm(start), hhmm(end)
+    return f"{s} - {e}" if s and e else None
+
+
+@app.route("/api/deployment-detail/<int:deployment_id>", methods=["GET"])
+def deployment_detail(deployment_id):
+    """Full CR detail for the Manager popup.
+
+    original = what the requester submitted in the Release Calendar
+               (rebuilt from the earliest 'old' value of every audited field)
+    current  = latest values (including DevOps edits)
+    history  = every audited change, newest first
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM public.deployment_tracker WHERE id = %s", (deployment_id,))
+        row = cur.fetchone()
+        if row is None:
+            return jsonify({"success": False, "message": "Deployment record not found."}), 404
+        columns = [d[0] for d in cur.description]
+        current = {k: _detail_clean(k, v) for k, v in zip(columns, row)}
+
+        cur.execute(
+            """
+            SELECT id, modified_at, modified_by, action, changes
+            FROM public.deployment_change_history
+            WHERE deployment_id = %s
+            ORDER BY modified_at ASC, id ASC
+            """,
+            (deployment_id,),
+        )
+        events = []
+        for hid, modified_at, modified_by, action, changes in cur.fetchall():
+            if isinstance(changes, str):
+                try:
+                    changes = json.loads(changes)
+                except (TypeError, ValueError):
+                    changes = {}
+            if not isinstance(changes, dict):
+                changes = {}
+            events.append({
+                "id": hid,
+                "modified_at": modified_at.isoformat() if modified_at else None,
+                "modified_by": modified_by,
+                "action": action,
+                "changes": changes,
+            })
+
+        original = dict(current)
+        seen, changed_fields = set(), set()
+        for ev in events:
+            for field, vals in ev["changes"].items():
+                if not isinstance(vals, dict):
+                    continue
+                changed_fields.add(field)
+                if field not in seen and "old" in vals:
+                    original[field] = _detail_clean(field, vals["old"])
+                    seen.add(field)
+
+        original["slot"] = (
+            _detail_slot_text(original.get("slot_start"), original.get("slot_end"))
+            or current.get("slots")
+        )
+        current["slot"] = (
+            _detail_slot_text(current.get("slot_start"), current.get("slot_end"))
+            or current.get("slots")
+        )
+        if "slot_start" in changed_fields or "slot_end" in changed_fields:
+            changed_fields.add("slot")
+
+        history = []
+        for ev in reversed(events):
+            history.append({
+                "id": ev["id"],
+                "modified_at": ev["modified_at"],
+                "modified_by": ev["modified_by"],
+                "action": ev["action"],
+                "changes": [
+                    {
+                        "field": f,
+                        "old": _detail_clean(f, v.get("old")),
+                        "new": _detail_clean(f, v.get("new")),
+                    }
+                    for f, v in ev["changes"].items() if isinstance(v, dict)
+                ],
+            })
+
+        last = history[0] if history else None
+        return jsonify({
+            "success": True,
+            "deployment": {
+                "id": current.get("id"),
+                "cr_number": current.get("cr_number"),
+                "rfid": current.get("rfid"),
+                "application_name": current.get("application_name"),
+                "status": current.get("status"),
+            },
+            "original": original,
+            "current": current,
+            "changed_fields": sorted(changed_fields),
+            "last_modified": (
+                {"by": last["modified_by"], "at": last["modified_at"], "action": last["action"]}
+                if last else None
+            ),
+            "history": history,
+        })
+    except Exception:
+        app.logger.exception("Could not load deployment detail %s", deployment_id)
+        return jsonify({"success": False, "message": "Unable to load deployment details. Check the Flask logs."}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
 
 @app.route("/api/deployment-approval/<int:deployment_id>", methods=["POST"])
 
