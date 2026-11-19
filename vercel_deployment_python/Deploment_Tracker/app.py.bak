@@ -836,6 +836,16 @@ CHANGE_TYPES = [
 
 DEPLOYMENT_TYPES = ["Automation", "Manual"]
 
+# ITSM categories for which Git repository links are optional.
+GIT_OPTIONAL_CATEGORIES = {
+    "cloud", "dwh", "ivr", "linux",
+    "middleware", "network", "nutanix", "storage",
+}
+
+
+def is_git_optional(category):
+    return (category or "").strip().casefold() in GIT_OPTIONAL_CATEGORIES
+
 VERIFIED_BY_OPTIONS = ["DBA TEAM", "MW TEAM", "DevOps Team"]
 
 # ---------------------------------------------------------------------------
@@ -1618,16 +1628,17 @@ def save_deployment(data):
     business_unit = (data.get("business_unit") or "").strip()
     environment = (data.get("environment") or "").strip()
 
-    git_links = request.form.getlist("git_links[]")
-    if not git_links:
+    git_links = [
+        link.strip()
+        for link in request.form.getlist("git_links[]")
+        if link and link.strip()
+    ]
+    if not git_links and not is_git_optional(category):
         raise ValueError("At least one Git link is required.")
 
     for link in git_links:
-
         if not validate_git_link(link):
-            raise ValueError(
-                f"Invalid Git link: {link}"
-            )
+            raise ValueError(f"Invalid Git link: {link}")
     application_name = (
         data.get("application_name") or ""
     ).strip()
@@ -3652,7 +3663,7 @@ def send_deployment_notification(data, rfid):
             f"Change Type: {display(data.get('change_type'))}",
             f"Change Requestor: {requestor}",
             f"Incident Number: {display(data.get('incident_number'))}",
-            f"Git Links: {', '.join(git_links)}",
+            f"Git Links: {', '.join(git_links) or 'Not provided'}",
             f"Status: {PENDING_STATUS}",
             "",
             "This is an automated notification from the Deployment Tracker.",

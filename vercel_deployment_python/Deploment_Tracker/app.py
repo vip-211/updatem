@@ -21,6 +21,10 @@ from dotenv import load_dotenv
 from flask import (Flask, flash, jsonify, redirect, render_template, request, url_for, session, send_file)
 import requests
 import time as time_module
+from mailer import (
+    send_deployment_notification as _mail_deployment,
+    send_status_change_notification as _mail_status,
+)
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -3583,315 +3587,26 @@ def lookup_cr():
         if conn is not None:
             conn.close()
 
+# ---------------------------------------------------------------------------
+# E-mail sending now lives in mailer.py.  These thin wrappers keep the old
+# names and signatures, so no call site in this file has to change.
+# ---------------------------------------------------------------------------
 def send_deployment_notification(data, rfid):
-    """Email all configured recipients after a deployment is saved successfully.
-
-    Returns (sent, reason). Mail failure never rolls back a saved deployment.
-    Configure recipients and SMTP credentials in .env, never in source code.
-    """
-    git_links = data.get("git_links", [])
-
-
-    requestor_email = (data.get("change_requestor") or "").strip()
-    # Read application_name from the submitted deployment data before building
-    # the email subject. This keeps it defined throughout this function.
-    application_name = (data.get("application_name") or "").strip()
-    if not application_name:
-        application_name = "Not provided"
-
-    recipients_raw = os.getenv("DEPLOYMENT_EMAIL_RECIPIENTS", "")
-
-    recipients = [
-        address.strip()
-        for address in re.split(r"[,;\n]+", recipients_raw)
-        if address.strip()
-    ]
-
-    if requestor_email and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", requestor_email):
-        recipients.append(requestor_email)
-
-    recipients = list(set(recipients))
-    
-    if not recipients:
-        app.logger.warning(
-            "Deployment saved, but email was not sent: "
-            "DEPLOYMENT_EMAIL_RECIPIENTS is not configured."
-        )
-        return False, "Email recipients are not configured in .env."
-
-    host = (os.getenv("MAIL_SERVER") or "").strip()
-    username = (os.getenv("MAIL_USERNAME") or "").strip()
-    password = os.getenv("MAIL_PASSWORD", "")
-    from_email = (os.getenv("MAIL_FROM_EMAIL") or username).strip()
-    from_name = (os.getenv("MAIL_FROM_NAME") or "Deployment Tracker").strip()
-    if not host or not from_email:
-        app.logger.warning(
-            "Deployment saved, but email was not sent: SMTP configuration is incomplete."
-        )
-        return False, "SMTP settings are incomplete in .env."
-
-    try:
-        port = int(os.getenv("MAIL_PORT", "587"))
-        use_ssl = os.getenv("MAIL_USE_SSL", "false").strip().lower() in ("1", "true", "yes", "on")
-        use_tls = os.getenv("MAIL_USE_TLS", "true").strip().lower() in ("1", "true", "yes", "on")
-        cr_number = (data.get("cr_number") or "").strip()
-        cr_suffix = re.sub(r"^CR-", "", cr_number, flags=re.IGNORECASE).strip()
-        cr_number = f"CR-{cr_suffix}" if cr_suffix else cr_number
-        requestor = (data.get("change_requestor") or "").strip() or "Unknown user"
-        deployment_date = datetime.strptime(data["deployment_date"], "%Y-%m-%d").date()
-        start_time = datetime.strptime(data["slot_start"], "%H:%M").time()
-        slot_start = datetime.combine(deployment_date, start_time)
-        slot_end = slot_start + timedelta(minutes=30)
-
-        def display(value):
-            value = (value or "").strip()
-            return value if value else "Not provided"
-
-        subject = f"{application_name}-{requestor} scheduled the deployment - {cr_number}"
-        body = "\n".join([
-            f"{requestor} scheduled the deployment.",
-            "",
-            "DEPLOYMENT DETAILS",
-            "------------------",
-            f"Scheduled By: {requestor}",
-            f"CR Number: {cr_number}",
-            f"RFID: {rfid}",
-            f"Deployment Date: {deployment_date.strftime('%d-%m-%Y')}",
-            f"Slot Timing: {slot_start.strftime('%I:%M %p')} - {slot_end.strftime('%I:%M %p')}",
-            f"Application Name: {display(data.get('application_name'))}",
-            f"Deployment Type: {display(data.get('deployment_type'))}",
-            f"Change Type: {display(data.get('change_type'))}",
-            f"Change Requestor: {requestor}",
-            f"Incident Number: {display(data.get('incident_number'))}",
-            f"Git Links: {', '.join(git_links) or 'Not provided'}",
-            f"Status: {PENDING_STATUS}",
-            "",
-            "This is an automated notification from the Deployment Tracker.",
-        ])
-
-        message = EmailMessage()
-        message["Subject"] = subject
-        message["From"] = formataddr((from_name, from_email))
-        message["To"] = ", ".join(recipients)
-        message.set_content(body)
-
-        timeout = int(os.getenv("MAIL_TIMEOUT_SECONDS", "20"))
-        if use_ssl:
-            with smtplib.SMTP_SSL(
-                host, port, timeout=timeout, context=ssl.create_default_context()
-            ) as smtp:
-                if username and password:
-                    smtp.login(username, password)
-                smtp.send_message(message)
-        else:
-            with smtplib.SMTP(host, port, timeout=timeout) as smtp:
-                smtp.ehlo()
-                if use_tls:
-                    smtp.starttls(context=ssl.create_default_context())
-                    smtp.ehlo()
-                if username and password:
-                    smtp.login(username, password)
-                smtp.send_message(message)
-
-        app.logger.info(
-            "Deployment notification sent to %d recipient(s) for CR %s, RFID %s",
-            len(recipients), cr_number, rfid,
-        )
-        return True, None
-    except Exception:
-        app.logger.exception(
-            "Deployment saved, but notification email failed for CR %s",
-            data.get("cr_number", ""),
-        )
-        return False, "The deployment was saved, but the notification email could not be sent. Check the application logs and SMTP settings."
+    return _mail_deployment(
+        data, rfid, pending_status=PENDING_STATUS, logger=app.logger
+    )
 
 
 def send_status_change_notification(record, old_status, new_status):
-    """Notify configured recipients and registered audit users of a status change.
-
-    The message intentionally excludes Modified By email/passcode fields. SMTP
-    errors are logged and never undo a deployment status already committed.
-    """
-    configured_recipients = [
-        address.strip().lower()
-        for address in re.split(r"[,;\n]+", os.getenv("DEPLOYMENT_EMAIL_RECIPIENTS", ""))
-        if address.strip()
-    ]
     try:
-        registered_recipients = [
-            address.strip().lower()
-            for address in get_audit_user_emails()
-            if address and address.strip()
-        ]
+        registered = get_audit_user_emails()
     except Exception:
         app.logger.exception("Could not load registered email recipients for status notification")
-        registered_recipients = []
-    recipients = sorted(set(configured_recipients + registered_recipients))
-    if not recipients:
-        app.logger.warning("Status changed to %s, but no email recipients are configured", new_status)
-        return False, "No email recipients are configured."
-
-    host = (os.getenv("MAIL_SERVER") or "").strip()
-    username = (os.getenv("MAIL_USERNAME") or "").strip()
-    password = os.getenv("MAIL_PASSWORD", "")
-    from_email = (os.getenv("MAIL_FROM_EMAIL") or username).strip()
-    from_name = (os.getenv("MAIL_FROM_NAME") or "Deployment Tracker").strip()
-    if not host or not from_email:
-        app.logger.warning("Status notification email skipped because SMTP settings are incomplete")
-        return False, "SMTP settings are incomplete."
-
-    def display(value):
-        if value is None:
-            return "Not provided"
-        if isinstance(value, (datetime, date, time)):
-            return value.isoformat()
-        value = str(value).strip()
-        return value if value else "Not provided"
-
-    try:
-        deployment_id = record.get("id", "Not provided")
-        cr_number = display(record.get("cr_number"))
-        rfid = display(record.get("rfid"))
-        deployment_date = record.get("deployment_date")
-        slot_start = record.get("slot_start")
-        slot_end = record.get("slot_end")
-        if isinstance(deployment_date, (datetime, date)):
-            date_text = deployment_date.strftime("%d-%m-%Y")
-        else:
-            try:
-                date_text = date.fromisoformat(str(deployment_date)[:10]).strftime("%d-%m-%Y")
-            except (TypeError, ValueError):
-                date_text = display(deployment_date)
-
-        def format_clock(value):
-            if isinstance(value, datetime):
-                value = value.time()
-            if isinstance(value, time):
-                return value.strftime("%I:%M %p")
-            if value is not None:
-                raw = str(value)
-                try:
-                    return datetime.fromisoformat(raw).strftime("%I:%M %p")
-                except ValueError:
-                    try:
-                        return time.fromisoformat(raw).strftime("%I:%M %p")
-                    except ValueError:
-                        return raw
-            return "Not provided"
-
-        changed_at = datetime.now().astimezone().strftime("%d-%m-%Y %I:%M:%S %p %Z")
-        slot_text = f"{format_clock(slot_start)} - {format_clock(slot_end)}"
-        application_name = display(record.get("application_name"))
-        subject = f"Deployment Status Update: {application_name} - {cr_number} - {new_status}"
-
-        # git_links is stored as JSON in PostgreSQL; normalize it for email display.
-        raw_git_links = record.get("git_links")
-        if isinstance(raw_git_links, str):
-            try:
-                parsed_git_links = json.loads(raw_git_links)
-                git_links = parsed_git_links if isinstance(parsed_git_links, list) else [raw_git_links]
-            except (TypeError, ValueError):
-                git_links = [raw_git_links]
-        elif isinstance(raw_git_links, (list, tuple)):
-            git_links = list(raw_git_links)
-        else:
-            git_links = []
-        git_links = [str(link).strip() for link in git_links if str(link).strip()]
-        git_links_text = "\n".join(git_links) if git_links else "Not provided"
-
-        details = [
-            f"Status changed from {old_status} to {new_status}.",
-            f"Status change timestamp: {changed_at}",
-            "",
-            "DEPLOYMENT DETAILS",
-            "------------------",
-            f"CR Number: {cr_number}",
-            f"RFID: {rfid}",
-            f"Deployment Date: {date_text}",
-            f"Slot Timing: {slot_text}",
-            f"Application Name: {display(record.get('application_name'))}",
-            f"Deployment Type: {display(record.get('deployment_type'))}",
-            f"Change Type: {display(record.get('change_type'))}",
-            f"Released By: {display(record.get('released_by'))}",
-            f"Verified and Deployed By: {display(record.get('verified_and_deployed_by'))}",
-            f"Change Requestor: {display(record.get('change_requestor'))}",
-            f"Incident Number: {display(record.get('incident_number'))}",
-            f"Roll Back: {display(record.get('roll_back'))}",
-            f"Status: {new_status}",
-            "Git Repository Links:",
-            *(git_links if git_links else ["Not provided"]),
-            f"Comments: {display(record.get('comments'))}",
-            "",
-            "This is an automated notification from the Deployment Tracker.",
-        ]
-        message = EmailMessage()
-        message["Subject"] = subject
-        message["From"] = formataddr((from_name, from_email))
-        message["To"] = "Undisclosed recipients:;"
-        message.set_content("\n".join(details))
-
-        # Add an HTML alternative so repository URLs are explicitly clickable.
-        import html
-        git_links_html = (
-            "<br>".join(
-                f'<a href="{html.escape(link, quote=True)}">{html.escape(link)}</a>'
-                for link in git_links
-            )
-            if git_links else "Not provided"
-        )
-        html_details = [
-            f"<p>Status changed from <strong>{html.escape(str(old_status))}</strong> "
-            f"to <strong>{html.escape(str(new_status))}</strong>.</p>",
-            "<h3>DEPLOYMENT DETAILS</h3><ul>",
-            f"<li><strong>CR Number:</strong> {html.escape(cr_number)}</li>",
-            f"<li><strong>RFID:</strong> {html.escape(rfid)}</li>",
-            f"<li><strong>Deployment Date:</strong> {html.escape(date_text)}</li>",
-            f"<li><strong>Slot Timing:</strong> {html.escape(slot_text)}</li>",
-            f"<li><strong>Application Name:</strong> {html.escape(display(record.get('application_name')))}</li>",
-            f"<li><strong>Deployment Type:</strong> {html.escape(display(record.get('deployment_type')))}</li>",
-            f"<li><strong>Change Type:</strong> {html.escape(display(record.get('change_type')))}</li>",
-            f"<li><strong>Released By:</strong> {html.escape(display(record.get('released_by')))}</li>",
-            f"<li><strong>Verified and Deployed By:</strong> {html.escape(display(record.get('verified_and_deployed_by')))}</li>",
-            f"<li><strong>Change Requestor:</strong> {html.escape(display(record.get('change_requestor')))}</li>",
-            f"<li><strong>Incident Number:</strong> {html.escape(display(record.get('incident_number')))}</li>",
-            f"<li><strong>Roll Back:</strong> {html.escape(display(record.get('roll_back')))}</li>",
-            f"<li><strong>Status:</strong> {html.escape(str(new_status))}</li>",
-            f"<li><strong>Git Repository Links:</strong><br>{git_links_html}</li>",
-            f"<li><strong>Comments:</strong> {html.escape(display(record.get('comments')))}</li>",
-            "</ul>",
-            "<p>This is an automated notification from the Deployment Tracker.</p>",
-        ]
-        message.add_alternative("\n".join(html_details), subtype="html")
-
-        port = int(os.getenv("MAIL_PORT", "587"))
-        use_ssl = os.getenv("MAIL_USE_SSL", "false").strip().lower() in ("1", "true", "yes", "on")
-        use_tls = os.getenv("MAIL_USE_TLS", "true").strip().lower() in ("1", "true", "yes", "on")
-        timeout = int(os.getenv("MAIL_TIMEOUT_SECONDS", "20"))
-        if use_ssl:
-            with smtplib.SMTP_SSL(host, port, timeout=timeout, context=ssl.create_default_context()) as smtp:
-                if username and password:
-                    smtp.login(username, password)
-                smtp.send_message(message, to_addrs=recipients)
-        else:
-            with smtplib.SMTP(host, port, timeout=timeout) as smtp:
-                smtp.ehlo()
-                if use_tls:
-                    smtp.starttls(context=ssl.create_default_context())
-                    smtp.ehlo()
-                if username and password:
-                    smtp.login(username, password)
-                smtp.send_message(message, to_addrs=recipients)
-
-        app.logger.info(
-            "Status notification sent for %s: %s -> %s to %d recipient(s)",
-            cr_number, old_status, new_status, len(recipients),
-        )
-        return True, None
-    except Exception:
-        app.logger.exception(
-            "Deployment status saved, but notification email failed for CR %s", cr_number
-        )
-        return False, "Email delivery failed."
+        registered = []
+    return _mail_status(
+        record, old_status, new_status,
+        registered_recipients=registered, logger=app.logger,
+    )
 
 
 
