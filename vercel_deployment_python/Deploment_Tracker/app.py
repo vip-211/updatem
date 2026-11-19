@@ -836,6 +836,16 @@ CHANGE_TYPES = [
 
 DEPLOYMENT_TYPES = ["Automation", "Manual"]
 
+# ITSM categories for which Git repository links are optional.
+GIT_OPTIONAL_CATEGORIES = {
+    "cloud", "dwh", "ivr", "linux",
+    "middleware", "network", "nutanix", "storage",
+}
+
+
+def is_git_optional(category):
+    return (category or "").strip().casefold() in GIT_OPTIONAL_CATEGORIES
+
 VERIFIED_BY_OPTIONS = ["DBA TEAM", "MW TEAM", "DevOps Team"]
 
 # ---------------------------------------------------------------------------
@@ -1618,16 +1628,17 @@ def save_deployment(data):
     business_unit = (data.get("business_unit") or "").strip()
     environment = (data.get("environment") or "").strip()
 
-    git_links = request.form.getlist("git_links[]")
-    if not git_links:
+    git_links = [
+        link.strip()
+        for link in request.form.getlist("git_links[]")
+        if link and link.strip()
+    ]
+    if not git_links and not is_git_optional(category):
         raise ValueError("At least one Git link is required.")
 
     for link in git_links:
-
         if not validate_git_link(link):
-            raise ValueError(
-                f"Invalid Git link: {link}"
-            )
+            raise ValueError(f"Invalid Git link: {link}")
     application_name = (
         data.get("application_name") or ""
     ).strip()
@@ -2325,14 +2336,18 @@ def running_daily():
             with conn.cursor() as cur:
                 ensure_running_timer_table(cur)
                 ensure_timer_history_table(cur)
+                ensure_rollback_timer_tables(cur)
                 cur.execute("""
                     SELECT d.id, d.cr_number, d.rfid, d.application_name, d.status,
                            d.change_type, d.roll_back, d.slots,
                            t.started_at, t.stopped_at,
                            COALESCE(t.accumulated_seconds, 0), COALESCE(t.is_running, FALSE),
-                           d.category
+                           d.category,
+                           rt.started_at, rt.stopped_at,
+                           COALESCE(rt.accumulated_seconds, 0), COALESCE(rt.is_running, FALSE)
                     FROM public.deployment_tracker d
                     LEFT JOIN public.deployment_running_timers t ON t.deployment_id = d.id
+                    LEFT JOIN public.deployment_rollback_timers rt ON rt.deployment_id = d.id
                     WHERE d.deployment_date = %s
                     ORDER BY d.slot_start NULLS LAST, d.id
                 """, (selected,))
@@ -2353,24 +2368,44 @@ def running_daily():
         now = datetime.now().astimezone()
         items = []
         for (dep_id, cr, rfid, app_name, status, ctype, rb, slots,
-             started_at, stopped_at, acc, is_running, cr_category) in rows:
+             started_at, stopped_at, acc, is_running, cr_category,
+             rb_started, rb_stopped, rb_acc, rb_running) in rows:
             is_running = bool(is_running)
-            elapsed = int(acc or 0)
-            if is_running and started_at:
-                elapsed += max(0, int((now - started_at).total_seconds()))
-            category, label = running_category(status, ctype, rb, is_running)
+            rb_running = bool(rb_running)
+            rb_has_timer = rb_started is not None
+
+            if rb_has_timer:
+                # Rollback was started: show the rollback timer in the red "rolled back" group.
+                elapsed = int(rb_acc or 0)
+                if rb_running and rb_started:
+                    elapsed += max(0, int((now - rb_started).total_seconds()))
+                category = "failed"
+                label = "ROLLBACK RUNNING" if rb_running else "ROLLED BACK"
+                out_started, out_stopped = rb_started, rb_stopped
+                out_running, out_has_timer = rb_running, True
+            else:
+                elapsed = int(acc or 0)
+                if is_running and started_at:
+                    elapsed += max(0, int((now - started_at).total_seconds()))
+                category, label = running_category(status, ctype, rb, is_running)
+                out_started, out_stopped = started_at, stopped_at
+                out_running, out_has_timer = is_running, started_at is not None
+
             items.append({
                 "deployment_id": dep_id, "cr_number": cr, "rfid": rfid,
                 "application_name": app_name, "status": status, "change_type": ctype,
                 "roll_back": rb, "slots": slots,
-                "started_at": started_at.isoformat() if started_at else None,
-                "stopped_at": stopped_at.isoformat() if stopped_at else None,
-                "has_timer": started_at is not None,
-                "is_running": is_running, "elapsed_seconds": elapsed,
+                "started_at": out_started.isoformat() if out_started else None,
+                "stopped_at": out_stopped.isoformat() if out_stopped else None,
+                "has_timer": out_has_timer,
+                "is_running": out_running, "elapsed_seconds": elapsed,
+                "rollback_timer": rb_has_timer,
+                "rb_running": rb_has_timer and rb_running,
                 "category": category, "category_label": label,
                 "cr_category": (cr_category or "Uncategorized").strip() or "Uncategorized",
             })
-        items.sort(key=lambda i: 0 if i["category"] == "running" else 1)   # stable: slot order kept
+        # running (deployment or rollback) first; stable otherwise
+        items.sort(key=lambda i: 0 if (i["category"] == "running" or i["rb_running"]) else 1)   # stable: slot order kept
 
         sessions = []
         for hid, dep_id, cr, rfid, app_name, started, stopped, dur in hrows:
@@ -3628,7 +3663,7 @@ def send_deployment_notification(data, rfid):
             f"Change Type: {display(data.get('change_type'))}",
             f"Change Requestor: {requestor}",
             f"Incident Number: {display(data.get('incident_number'))}",
-            f"Git Links: {', '.join(git_links)}",
+            f"Git Links: {', '.join(git_links) or 'Not provided'}",
             f"Status: {PENDING_STATUS}",
             "",
             "This is an automated notification from the Deployment Tracker.",

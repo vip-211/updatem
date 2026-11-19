@@ -1318,6 +1318,7 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
 .fab-txt small { display:block; margin-top:2px; font-size:11px; color:#8a96aa; }
 .fab-item .mgr-live-badge { position:absolute; top:-5px; right:-5px; }
 
+.fab-item:nth-of-type(6) .fab-ico { background:#e0e7ff; color:#4338ca; }
 /* popups sit above content; leave room for the floating button */
 .mgr-modal { padding-bottom:3vh; }
 .mgr-modal-box { max-height:94vh; }
@@ -1402,6 +1403,263 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
     .bot-window { right:8px; left:8px; width:auto; bottom:76px; max-width:none; }
 }
 
+
+/* ===== Live Running Status inside Deployment Activity ===== */
+.rs-live { margin-top:18px; padding-top:16px; border-top:1px dashed #d9e0f2; }
+.rs-live-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.rs-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:850; color:#192849; }
+.rs-title small { display:block; margin-top:2px; font-size:10.5px; font-weight:600; color:#8491a8; }
+.rs-live-tag { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:20px; background:#e4fbef; color:#087f5b; font-size:9.5px; font-weight:850; letter-spacing:.5px; }
+.rs-live-tag i { width:7px; height:7px; border-radius:50%; background:#10b981; animation:mgrPulse 1.6s infinite; }
+.rs-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.rs-chip { padding:4px 11px; border-radius:20px; font-size:10.5px; font-weight:800; }
+.rs-chip.run { background:#dcfce7; color:#087443; }
+.rs-chip.stop { background:#e8edff; color:#3656c8; }
+.rs-chip.tot { background:#f0e9ff; color:#6d28d9; }
+.rs-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:11px; }
+.rs-card {
+    position:relative; overflow:hidden; padding:13px 14px 15px; border-radius:16px; color:#fff;
+    transition:transform .18s, box-shadow .18s;
+}
+.rs-card:hover { transform:translateY(-3px); }
+.rs-card::after { content:""; position:absolute; width:90px; height:90px; right:-28px; top:-34px; border-radius:50%; background:#ffffff1f; }
+.rs-card.running { background:linear-gradient(135deg,#059669 0%,#0d9488 55%,#0891b2 100%); box-shadow:0 10px 24px #05966940; }
+.rs-card.stopped { background:linear-gradient(135deg,#6366f1 0%,#7c3aed 100%); box-shadow:0 10px 24px #6366f130; }
+.rs-card-top { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.rs-cr { font-size:14px; font-weight:850; letter-spacing:-.2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rs-pill { flex-shrink:0; padding:2px 8px; border-radius:20px; background:#ffffff2e; font-size:9px; font-weight:850; letter-spacing:.5px; }
+.rs-card.running .rs-pill::before { content:""; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:#bbf7d0; animation:mgrPulse 1.4s infinite; }
+.rs-app { position:relative; z-index:1; margin-top:3px; font-size:11px; opacity:.9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rs-time { position:relative; z-index:1; margin-top:10px; font-size:26px; font-weight:850; letter-spacing:-.5px; font-variant-numeric:tabular-nums; }
+.rs-meta { position:relative; z-index:1; margin-top:2px; font-size:10px; opacity:.85; }
+.rs-bar { position:absolute; left:0; right:0; bottom:0; height:4px; background:#ffffff26; overflow:hidden; }
+.rs-card.running .rs-bar::before { content:""; position:absolute; inset:0; width:40%; background:linear-gradient(90deg,transparent,#fff,transparent); animation:rsSweep 1.8s linear infinite; }
+.rs-card.stopped .rs-bar { background:#ffffff40; }
+@keyframes rsSweep { from { transform:translateX(-100%); } to { transform:translateX(260%); } }
+.rs-empty { padding:20px 14px; border:1px dashed #cfd8fb; border-radius:14px; background:linear-gradient(135deg,#f3f6ff,#f7f0ff); color:#6b7a99; font-size:12px; text-align:center; line-height:1.6; }
+.rs-empty b { display:block; margin-bottom:2px; font-size:13px; color:#3656c8; }
+.rs-more { display:flex; align-items:center; justify-content:center; min-height:96px; border:2px dashed #c7d2fe; border-radius:16px; background:#f5f7ff; color:#4f67f6; font-weight:800; font-size:12px; cursor:pointer; }
+.rs-more:hover { background:#e9edff; }
+
+/* ===== Running Status: special full view ===== */
+.rsv-box { background:#f5f7fc; overflow:auto; }
+.rsv-top { padding:22px 24px 18px; color:#fff; background:radial-gradient(circle at 92% 0%,#8b5cf6 0,transparent 42%),radial-gradient(circle at 5% 0%,#0891b2 0,transparent 36%),linear-gradient(120deg,#111a3d,#243b82 60%,#3449a5); }
+.rsv-top-row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.rsv-top h3 { display:flex; align-items:center; gap:10px; margin:0; font-size:22px; color:#fff; }
+.rsv-top p { margin:6px 0 0; color:#cbd5ff; font-size:12px; }
+.rsv-top .mgr-close { background:#ffffff26; color:#fff; }
+.rsv-top .mgr-close:hover { background:#dc2626; }
+.rsv-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; }
+.rsv-stat { padding:12px 15px; border-radius:15px; background:#ffffff1a; border:1px solid #ffffff2e; backdrop-filter:blur(4px); }
+.rsv-stat span { display:block; font-size:10px; letter-spacing:.7px; font-weight:800; color:#d7defc; }
+.rsv-stat b { display:block; margin-top:4px; font-size:30px; line-height:1.1; font-variant-numeric:tabular-nums; }
+.rsv-stat.run b { color:#6ee7b7; } .rsv-stat.stop b { color:#c4b5fd; } .rsv-stat.tot b { color:#fde68a; }
+.rsv-toolbar { position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:13px 24px; background:#fff; border-bottom:1px solid var(--line); }
+.rsv-seg { display:inline-flex; gap:4px; padding:4px; border-radius:12px; background:#eef2ff; }
+.rsv-seg button { border:0; padding:7px 14px; border-radius:9px; background:transparent; color:#3656c8; font-size:12px; font-weight:800; cursor:pointer; }
+.rsv-seg button.active { background:linear-gradient(135deg,#4f67f6,#7c5cf0); color:#fff; box-shadow:0 4px 10px #4f67f640; }
+.rsv-search input { width:min(300px,100%); min-width:200px; padding:10px 13px; border:1px solid #dce4ef; border-radius:10px; font-size:12px; background:#fff; color:#334155; }
+.rsv-body { padding:20px 24px 26px; }
+.rsv-body .rs-cards { grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+.rsv-body .rs-time { font-size:32px; }
+@media (max-width:640px) { .rsv-top, .rsv-toolbar, .rsv-body { padding-left:14px; padding-right:14px; } .rsv-stat b { font-size:24px; } .rsv-search, .rsv-search input { width:100%; } }
+
+/* ===== Running Status panel (replaces Deployment Type) ===== */
+.rsp-panel { display:flex; flex-direction:column; background:linear-gradient(160deg,#fff 0%,#f6f8ff 100%); }
+.rsp-head-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.rsp-live { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; background:#e4fbef; color:#087f5b; font-size:9.5px; font-weight:850; letter-spacing:.5px; }
+.rsp-live i { width:7px; height:7px; border-radius:50%; background:#10b981; animation:mgrPulse 1.6s infinite; }
+.rsp-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-bottom:14px; }
+.rsp-stat { padding:10px 8px; border-radius:13px; text-align:center; }
+.rsp-stat b { display:block; font-size:24px; line-height:1.1; font-variant-numeric:tabular-nums; }
+.rsp-stat span { display:block; margin-top:3px; font-size:9px; letter-spacing:.6px; font-weight:800; }
+.rsp-stat.run { background:linear-gradient(135deg,#d1fae5,#ccfbf1); color:#047857; }
+.rsp-stat.stop { background:linear-gradient(135deg,#e0e7ff,#ede9fe); color:#4338ca; }
+.rsp-stat.tot { background:linear-gradient(135deg,#fef3c7,#ffedd5); color:#b45309; }
+.rsp-list { display:grid; gap:9px; align-content:start; flex:1; max-height:330px; overflow:auto; padding:2px; }
+.rsp-row { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 13px 14px; border-radius:14px; color:#fff; transition:transform .18s; }
+.rsp-row:hover { transform:translateX(3px); }
+.rsp-row::after { content:""; position:absolute; width:80px; height:80px; right:-26px; top:-30px; border-radius:50%; background:#ffffff1f; }
+.rsp-row.running { background:linear-gradient(135deg,#059669,#0d9488 55%,#0891b2); box-shadow:0 8px 20px #05966935; }
+.rsp-row.stopped { background:linear-gradient(135deg,#6366f1,#7c3aed); box-shadow:0 8px 20px #6366f128; }
+.rsp-row.stopped.ok { background:linear-gradient(135deg,#2563eb,#0891b2); box-shadow:0 8px 20px #2563eb28; }
+.rsp-row.stopped.failed { background:linear-gradient(135deg,#e11d48,#f97316); box-shadow:0 8px 20px #e11d4828; }
+.rsp-main { position:relative; z-index:1; min-width:0; }
+.rsp-cr { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:850; }
+.rsp-pill { padding:1px 7px; border-radius:20px; background:#ffffff2e; font-size:8.5px; font-weight:850; letter-spacing:.5px; }
+.rsp-row.running .rsp-pill::before { content:""; display:inline-block; width:6px; height:6px; margin-right:4px; border-radius:50%; background:#bbf7d0; animation:mgrPulse 1.4s infinite; }
+.rsp-app { margin-top:2px; font-size:10.5px; opacity:.92; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rsp-meta { margin-top:1px; font-size:9.5px; opacity:.8; }
+.rsp-time { position:relative; z-index:1; flex-shrink:0; font-size:21px; font-weight:850; letter-spacing:-.4px; font-variant-numeric:tabular-nums; }
+.rsp-bar { position:absolute; left:0; right:0; bottom:0; height:4px; background:#ffffff26; overflow:hidden; }
+.rsp-row.running .rsp-bar::before { content:""; position:absolute; inset:0; width:40%; background:linear-gradient(90deg,transparent,#fff,transparent); animation:rspSweep 1.8s linear infinite; }
+@keyframes rspSweep { from { transform:translateX(-100%); } to { transform:translateX(260%); } }
+.rsp-empty { padding:24px 12px; border:1px dashed #cfd8fb; border-radius:14px; background:linear-gradient(135deg,#f3f6ff,#f7f0ff); color:#6b7a99; font-size:12px; text-align:center; line-height:1.6; }
+.rsp-empty b { display:block; margin-bottom:2px; font-size:13px; color:#3656c8; }
+.rsp-more { padding:9px; border:2px dashed #c7d2fe; border-radius:12px; background:#f5f7ff; color:#4f67f6; font-size:12px; font-weight:800; cursor:pointer; }
+.rsp-more:hover { background:#e9edff; }
+
+/* ===== Running Status wide layout ===== */
+.rsp-stats { max-width:640px; }
+.rsp-list { grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); max-height:none; overflow:visible; gap:12px; }
+.rsp-time { font-size:24px; }
+.rsp-empty, .rsp-more { grid-column:1/-1; }
+@media (min-width:1251px) {
+    .gridcharts .rsp-panel { grid-column:1 / -1; grid-row:1; }
+    .gridcharts > .panel:first-child:not(.rsp-panel) { grid-column:1 / 3; grid-row:2; }
+    .gridcharts > .panel:has(#statusBars) { grid-column:3; grid-row:2 / 4; }
+    .gridcharts > .team-deployment-panel { grid-column:1; grid-row:3; }
+    .gridcharts > .panel:has(#typeDonut) { grid-column:2; grid-row:3; }
+}
+@media (max-width:1250px) {
+    .gridcharts .rsp-panel { grid-column:1 / -1; order:-1; }
+}
+
+/* ===== Running Status: daily view, colour code ===== */
+/* amber = running, green = completed, grey = planned, blue = forward fix, red = failed / rolled back */
+.rsp-row.cs-running, .rs-card.cs-running { background:linear-gradient(135deg,#d97706 0%,#f59e0b 60%,#fbbf24 100%); box-shadow:0 8px 20px #f59e0b45; }
+.rsp-row.cs-completed, .rs-card.cs-completed { background:linear-gradient(135deg,#047857 0%,#10b981 100%); box-shadow:0 8px 20px #10b98138; }
+.rsp-row.cs-planned, .rs-card.cs-planned { background:linear-gradient(135deg,#64748b 0%,#94a3b8 100%); box-shadow:0 8px 20px #64748b30; }
+.rsp-row.cs-forward, .rs-card.cs-forward { background:linear-gradient(135deg,#1d4ed8 0%,#3b82f6 100%); box-shadow:0 8px 20px #3b82f640; }
+.rsp-row.cs-failed, .rs-card.cs-failed { background:linear-gradient(135deg,#b91c1c 0%,#f43f5e 100%); box-shadow:0 8px 20px #e11d4838; }
+.rsp-row.running .rsp-pill::before, .rs-card.running .rs-pill::before { background:#fff7d6; }
+.rs-fwd { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:20px; background:#1d4ed8; border:1px solid #ffffff90; color:#fff; font-size:8.5px; font-weight:850; letter-spacing:.5px; }
+.rsp-cr .rs-fwd { margin-left:0; }
+.rsp-meta { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rsp-slot, .rs-slot { opacity:.95; }
+
+/* daily navigation (dashboard panel) */
+.rsp-daynav { display:inline-flex; align-items:center; gap:6px; }
+.rsp-daynav input[type=date] { width:auto; min-width:0; padding:6px 9px; border:1px solid #dce4ef; border-radius:8px; background:#fff; color:#334155; font-size:11px; }
+.rsp-today { padding:6px 11px; }
+.rsp-day { margin:-6px 0 12px; font-size:12px; font-weight:800; color:#3656c8; }
+
+/* colour counters (click to filter) */
+.rsp-stats { grid-template-columns:repeat(6,minmax(0,1fr)); max-width:none; gap:8px; }
+.rsp-stat { border:0; cursor:pointer; font:inherit; transition:transform .15s, box-shadow .15s; }
+.rsp-stat:hover { transform:translateY(-2px); }
+.rsp-stat.active { box-shadow:0 0 0 2px currentColor; }
+.rsp-stat span { line-height:1.25; }
+.rsp-stat.t-all { background:linear-gradient(135deg,#e0e7ff,#ede9fe); color:#4338ca; }
+.rsp-stat.t-running { background:linear-gradient(135deg,#fef3c7,#fde68a); color:#b45309; }
+.rsp-stat.t-completed { background:linear-gradient(135deg,#d1fae5,#a7f3d0); color:#047857; }
+.rsp-stat.t-planned { background:linear-gradient(135deg,#e5e7eb,#f1f5f9); color:#475569; }
+.rsp-stat.t-forward { background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1d4ed8; }
+.rsp-stat.t-failed { background:linear-gradient(135deg,#fee2e2,#fecdd3); color:#b91c1c; }
+@media (max-width:760px) { .rsp-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+
+/* full view header counters + day navigation */
+.rsv-stats { grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+.rsv-stat span { line-height:1.25; }
+.rsv-stat.t-running b { color:#fcd34d; } .rsv-stat.t-completed b { color:#6ee7b7; } .rsv-stat.t-planned b { color:#cbd5e1; }
+.rsv-stat.t-forward b { color:#93c5fd; } .rsv-stat.t-failed b { color:#fda4af; }
+@media (max-width:760px) { .rsv-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.rsv-daynav { display:inline-flex; align-items:center; gap:8px; }
+.rsv-arrow { width:38px; height:38px; border:0; border-radius:12px; background:linear-gradient(135deg,#4f67f6,#7c5cf0); color:#fff; font-size:22px; line-height:1; cursor:pointer; box-shadow:0 4px 12px #4f67f640; }
+.rsv-arrow:hover { transform:translateY(-2px); }
+.rsv-daybox { display:grid; gap:3px; min-width:180px; text-align:center; }
+.rsv-daybox b { font-size:13px; color:#172554; }
+.rsv-daybox input { padding:5px 8px; border:1px solid #dce4ef; border-radius:8px; font-size:11px; color:#334155; background:#fff; }
+.rsv-today { padding:9px 13px; border:0; border-radius:10px; background:#edf1ff; color:#354fd2; font-size:12px; font-weight:800; cursor:pointer; }
+.rsv-today:hover { background:#dfe6ff; }
+.rs-hpill { display:inline-flex; padding:4px 10px; border-radius:7px; font-size:10px; font-weight:800; }
+.rs-hpill.amber { background:#fef3c7; color:#b45309; }
+.rs-hpill.grey { background:#e5e7eb; color:#475569; }
+/* ===== Running status by deployment category (dynamic columns) ===== */
+.cat-table-wrap { overflow:auto; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.cat-table { width:100%; min-width:0; border-collapse:separate; border-spacing:0; table-layout:fixed; }
+.cat-table th { padding:14px; text-align:left; white-space:normal; background:linear-gradient(135deg,#243b82,#4f67f6) !important; color:#fff !important; font-size:12px; letter-spacing:.3px; text-transform:none; }
+.cat-table th small { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:20px; background:#ffffff30; font-size:10px; }
+.cat-table td { padding:8px; vertical-align:top; white-space:normal; border-bottom:1px solid #edf1f6; background:#fff !important; }
+.cat-table tbody tr:hover td { background:#fff !important; }
+.cat-cell { position:relative; padding:10px 12px; border-radius:12px; color:#fff; display:grid; gap:2px; }
+.cat-cell .cc-top { display:flex; justify-content:space-between; align-items:center; gap:6px; font-weight:850; font-size:13px; }
+.cat-cell .cc-pill { padding:1px 7px; border-radius:20px; background:#ffffff2e; font-size:8.5px; font-weight:850; letter-spacing:.4px; }
+.cat-cell .cc-app { font-size:11px; opacity:.92; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cat-cell .cc-time { font-size:18px; font-weight:850; font-variant-numeric:tabular-nums; }
+.cat-cell .cc-meta { font-size:9.5px; opacity:.85; }
+.cat-cell.cs-running { background:linear-gradient(135deg,#d97706,#fbbf24); }
+.cat-cell.cs-completed { background:linear-gradient(135deg,#047857,#10b981); }
+.cat-cell.cs-planned { background:linear-gradient(135deg,#64748b,#94a3b8); }
+.cat-cell.cs-forward { background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
+.cat-cell.cs-failed { background:linear-gradient(135deg,#b91c1c,#f43f5e); }
+
+/* ===== Rollback status (manager "Rolled Back" view) ===== */
+.rs-card.cs-rb-running { background:linear-gradient(135deg,#be123c 0%,#ea580c 100%); box-shadow:0 8px 20px #ea580c40; }
+.rs-card.cs-rb-completed { background:linear-gradient(135deg,#6d28d9 0%,#a78bfa 100%); box-shadow:0 8px 20px #7c3aed35; }
+.rs-card.cs-rb-pending { background:linear-gradient(135deg,#64748b 0%,#94a3b8 100%); box-shadow:0 8px 20px #64748b30; }
+.rb-section { margin:24px 0 10px; font-size:13px; font-weight:850; color:#172554; }
+
+/* ===== Running Status panel: tidy toolbar + hideable counters ===== */
+.rsp-stats[hidden] { display:none !important; }
+.rsp-panel .panelhead { align-items:center; margin-bottom:12px; }
+.rsp-head-right { gap:10px; row-gap:8px; justify-content:flex-end; }
+.rsp-head-right .btn { padding:9px 13px; }
+.rsp-daynav { padding-right:12px; border-right:1px solid #e3e9f7; }
+.rsp-bar-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 12px; padding:8px 12px; border-radius:12px; background:#f3f6ff; }
+.rsp-bar-row .rsp-day { margin:0; }
+.rsp-statsbtn { padding:6px 12px; border:1px solid #cfd8fb; border-radius:20px; background:#fff; color:#3656c8; font-size:11px; font-weight:800; cursor:pointer; box-shadow:none; transition:.15s; }
+.rsp-statsbtn:hover { background:#4f67f6; border-color:#4f67f6; color:#fff; }
+.rsp-stats { margin-bottom:14px; }
+.rsp-stat { padding:8px 6px; }
+.rsp-stat b { font-size:20px; }
+@media (max-width:760px) { .rsp-daynav { border-right:0; padding-right:0; } }
+
+/* ===== CR detail popup (opened from any Running Status CR card) ===== */
+[data-dep-id] { cursor:pointer; }
+[data-dep-id]:focus-visible { outline:3px solid #ffffffcc; outline-offset:2px; }
+.crd-overlay { position:fixed; inset:0; z-index:1200; display:flex; align-items:flex-start; justify-content:center;
+    padding:3vh 16px; background:#0b1230bf; backdrop-filter:blur(3px); overflow:auto; }
+.crd-overlay[hidden] { display:none !important; }
+.crd-box { width:min(1180px,100%); max-height:94vh; overflow:auto; background:#f5f7fc; border-radius:20px;
+    box-shadow:0 30px 80px #0007; animation:mgrIn .18s ease; }
+.crd-top { position:sticky; top:0; z-index:3; display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap;
+    padding:20px 24px; color:#fff;
+    background:radial-gradient(circle at 92% 0%,#8b5cf6 0,transparent 42%),radial-gradient(circle at 5% 0%,#0891b2 0,transparent 36%),linear-gradient(120deg,#111a3d,#243b82 60%,#3449a5); }
+.crd-top h3 { margin:0; font-size:22px; letter-spacing:-.4px; color:#fff; }
+.crd-top p { margin:7px 0 0; color:#cbd5ff; font-size:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.crd-top-actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.crd-top .mgr-close { background:#ffffff26; color:#fff; }
+.crd-top .mgr-close:hover { background:#dc2626; }
+.crd-count { display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:#ffffff30; font-size:10px; font-weight:800; }
+.crd-body { padding:20px 24px 26px; }
+.crd-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+@media (max-width:900px) { .crd-grid { grid-template-columns:1fr; } .crd-top, .crd-body { padding-left:14px; padding-right:14px; } }
+.crd-panel { overflow:hidden; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 6px 22px #1b2d590a; }
+.crd-ph { padding:15px 18px; }
+.crd-ph h4 { margin:0; font-size:14px; font-weight:850; }
+.crd-ph small { display:block; margin-top:4px; font-size:11px; font-weight:600; opacity:.85; line-height:1.45; }
+.crd-panel.rel .crd-ph { background:linear-gradient(120deg,#e9edff,#f3eeff); color:#3656c8; }
+.crd-panel.dev .crd-ph { background:linear-gradient(120deg,#dcfce7,#dff8fc); color:#047857; }
+.crd-kv { display:grid; grid-template-columns:150px minmax(0,1fr); gap:4px 12px; padding:10px 18px; border-top:1px solid #edf1f6; font-size:12px; }
+.crd-kv > span { color:#8a96aa; font-weight:700; font-size:11px; letter-spacing:.2px; }
+.crd-kv > div { color:#243050; font-weight:600; overflow-wrap:anywhere; }
+.crd-kv a { color:#3656c8; font-weight:700; text-decoration:none; }
+.crd-kv a:hover { text-decoration:underline; }
+.crd-kv.crd-changed { background:#fffbeb; box-shadow:inset 3px 0 0 #f59e0b; }
+@media (max-width:520px) { .crd-kv { grid-template-columns:1fr; } }
+.crd-was { display:block; margin-top:4px; color:#a16207; font-size:10.5px; font-weight:600; }
+.crd-empty { color:#a0aabd; }
+.crd-pre { white-space:pre-wrap; }
+.crd-chip { display:inline-block; margin:0 4px 4px 0; padding:3px 9px; border-radius:20px; background:#edf1ff; color:#3656c8; font-size:11px; font-weight:700; }
+.crd-chip b { color:#172554; }
+.crd-foot { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:13px 18px; border-top:1px solid #edf1f6; background:#fafbff; font-size:11px; color:#64748b; }
+.crd-foot .btn { padding:8px 12px; }
+.crd-loading, .crd-emptybox { padding:46px 20px; text-align:center; color:#8a96aa; font-size:13px; line-height:1.6; }
+.crd-emptybox b { display:block; margin-bottom:3px; font-size:14px; color:#3656c8; }
+.crd-timeline { display:grid; gap:14px; }
+.crd-ev { overflow:hidden; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 4px 16px #1b2d5909; }
+.crd-ev-head { display:flex; align-items:center; gap:12px; padding:13px 16px; background:linear-gradient(90deg,#fbfcff,#f5f7ff); border-bottom:1px solid #edf1f6; }
+.crd-avatar { flex-shrink:0; width:36px; height:36px; display:grid; place-items:center; border-radius:50%; color:#fff; font-size:12px; font-weight:800; background:linear-gradient(135deg,#4f67f6,#7c5cf0); }
+.crd-ev-head b { display:block; font-size:13px; color:#172554; overflow-wrap:anywhere; }
+.crd-ev-head small { display:block; margin-top:2px; font-size:11px; color:#8a96aa; }
+.crd-action { margin-left:auto; padding:4px 10px; border-radius:7px; background:#e8edff; color:#3656c8; font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; }
+.crd-ev table { width:100%; min-width:0; table-layout:fixed; font-size:12px; }
+.crd-ev th, .crd-ev td { padding:10px 14px; white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
+.crd-ev th { position:static; }
+.crd-ev td.crd-old { background:#fff5f5; }
+.crd-ev td.crd-new { background:#f0fdf4; }
+.crd-ev td:first-child { font-weight:750; color:#475569; width:24%; }
 </style>
 </head>
 
@@ -1449,6 +1707,8 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
             <span class="fab-ico">●<span class="mgr-live-badge" id="liveBadge" hidden>0</span></span><span class="fab-txt"><b>Jenkins Live Room</b><small>CRs running right now</small></span></button>
         <button class="fab-item" type="button" role="menuitem" id="toggleJenkinsDiff" data-open-modal="jenkinsDiffModal" aria-haspopup="dialog" aria-expanded="false">
             <span class="fab-ico">⇄</span><span class="fab-txt"><b>Jenkins Build Diff</b><small>Compare two builds</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" data-open-modal="runningStatusModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">⏱<span class="mgr-live-badge" id="rsBadge" hidden>0</span></span><span class="fab-txt"><b>Running Status</b><small>Live timers and Start/Stop history</small></span></button>
     </div>
     <button class="fab-main" type="button" id="fabMain" aria-haspopup="menu" aria-expanded="false" aria-controls="fabMenu" aria-label="Open views menu">
         <span class="fab-main-ico" aria-hidden="true">☰</span><span class="fab-main-lbl">Views</span>
@@ -1529,22 +1789,38 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
             </div>
         </div>
 
-        <div class="panel">
+        <div class="panel rsp-panel">
             <div class="panelhead">
                 <div>
-                    <h3>Deployment Type</h3>
-                    <div class="sub">Automation versus manual deployment</div>
+                    <h3>Running Status</h3>
+                    <div class="sub" id="rspSub">Connecting…</div>
                 </div>
-            </div>
-            <div class="donutwrap">
-                <div class="donut" id="typeDonut">
-                    <div class="donutcenter">
-                        <strong id="typeTotal">0</strong>
-                        <span>deployments</span>
+                <div class="rsp-head-right">
+                    <div class="rsp-daynav" aria-label="Choose the day">
+                        <button type="button" class="week-nav" id="rspPrev" aria-label="Previous day" title="Previous day">‹</button>
+                        <button type="button" class="week-nav rsp-today" id="rspToday" title="Go to today">Today</button>
+                        <input type="date" id="rspDate" aria-label="Choose a day">
+                        <button type="button" class="week-nav" id="rspNext" aria-label="Next day" title="Next day">›</button>
                     </div>
+                    <span class="rsp-live"><i></i>LIVE</span>
+                    <button class="btn light" type="button" id="rspTableToggle">▦ By Category</button>
+                    <button class="btn light" type="button" id="rspRollbackBtn" data-open-modal="runningStatusModal">↶ Rolled Back <span class="mgr-live-badge" id="rbBadge" hidden>0</span></button>
+                    <button class="btn light" type="button" data-open-modal="runningStatusModal">Full view ↗</button>
                 </div>
-                <div class="donutlegend" id="typeLegend"></div>
             </div>
+            <div class="rsp-bar-row">
+                <div class="rsp-day" id="rspDayLabel"></div>
+                <button type="button" class="rsp-statsbtn" id="rspStatsToggle" aria-expanded="true" title="Show or hide the colour counters">◎ Hide counts</button>
+            </div>
+            <div class="rsp-stats">
+                <button type="button" class="rsp-stat t-all active" data-rsp-cat="all"><b>0</b><span>ALL</span></button>
+                <button type="button" class="rsp-stat t-running" data-rsp-cat="running"><b>0</b><span>RUNNING</span></button>
+                <button type="button" class="rsp-stat t-completed" data-rsp-cat="completed"><b>0</b><span>COMPLETED</span></button>
+                <button type="button" class="rsp-stat t-planned" data-rsp-cat="planned"><b>0</b><span>PLANNED</span></button>
+                <button type="button" class="rsp-stat t-forward" data-rsp-cat="forward"><b>0</b><span>FORWARD FIX</span></button>
+                <button type="button" class="rsp-stat t-failed" data-rsp-cat="failed"><b>0</b><span>FAILED / ROLLED BACK</span></button>
+            </div>
+            <div class="rsp-list" id="rspList"><div class="rsp-empty">Loading running status…</div></div>
         </div>
 
         <div class="panel">
@@ -1586,6 +1862,24 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
                     Add team names and deployment counts in Governance Tracker.
                 </div>
             {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Deployment Type</h3>
+                    <div class="sub">Automation versus manual deployment</div>
+                </div>
+            </div>
+            <div class="donutwrap">
+                <div class="donut" id="typeDonut">
+                    <div class="donutcenter">
+                        <strong id="typeTotal">0</strong>
+                        <span>deployments</span>
+                    </div>
+                </div>
+                <div class="donutlegend" id="typeLegend"></div>
+            </div>
         </div>
 
     </section>
@@ -1942,6 +2236,47 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
                 <div id="diffResult" class="diff-result" aria-live="polite"></div>
             </section>
         </div>
+    </div>
+
+    <!-- ===== Running Status view (daily, colour-coded) ===== -->
+    <div class="mgr-modal" id="runningStatusModal" data-modal hidden>
+    <div class="mgr-modal-box rsv-box" role="dialog" aria-modal="true" aria-label="Running Status">
+        <header class="rsv-top">
+            <div class="rsv-top-row">
+                <div>
+                    <h3><span aria-hidden="true">⏱</span> Running Status <span class="rs-live-tag"><i></i>LIVE</span></h3>
+                    <p id="rsvSub">Connecting…</p>
+                </div>
+                <button class="mgr-close" type="button" data-close-modal aria-label="Close Running Status">✕</button>
+            </div>
+            <div class="rsv-stats">
+                <div class="rsv-stat t-running"><span>RUNNING</span><b id="rsvN-running">0</b></div>
+                <div class="rsv-stat t-completed"><span>COMPLETED</span><b id="rsvN-completed">0</b></div>
+                <div class="rsv-stat t-planned"><span>PLANNED</span><b id="rsvN-planned">0</b></div>
+                <div class="rsv-stat t-forward"><span>FORWARD FIX</span><b id="rsvN-forward">0</b></div>
+                <div class="rsv-stat t-failed"><span>FAILED / ROLLED BACK</span><b id="rsvN-failed">0</b></div>
+            </div>
+        </header>
+        <div class="rsv-toolbar">
+            <div class="rsv-daynav" aria-label="Choose the day">
+                <button type="button" class="rsv-arrow" id="rsvPrev" aria-label="Previous day" title="Previous day">‹</button>
+                <div class="rsv-daybox"><b id="rsvDayLabel"></b><input type="date" id="rsvDate" aria-label="Choose a day"></div>
+                <button type="button" class="rsv-arrow" id="rsvNext" aria-label="Next day" title="Next day">›</button>
+                <button type="button" class="rsv-today" id="rsvToday">Today</button>
+            </div>
+            <div class="rsv-seg" id="rsvViews"><button type="button" class="active" data-rsv-view="live">Live</button><button type="button" data-rsv-view="category">By Category</button><button type="button" data-rsv-view="rollback">↶ Rolled Back</button><button type="button" data-rsv-view="history">History</button></div>
+            <div class="rsv-seg" id="rsvFilters">
+                <button type="button" class="active" data-rsv-filter="all">All</button>
+                <button type="button" data-rsv-filter="running">Running</button>
+                <button type="button" data-rsv-filter="completed">Completed</button>
+                <button type="button" data-rsv-filter="planned">Planned</button>
+                <button type="button" data-rsv-filter="forward">Forward Fix</button>
+                <button type="button" data-rsv-filter="failed">Failed</button>
+            </div>
+            <div class="rsv-search"><input id="rsvSearch" type="search" placeholder="Search CR number or application..." autocomplete="off" aria-label="Search running status"></div>
+        </div>
+        <div class="rsv-body" id="rsvBody"><div class="rs-empty">Loading…</div></div>
+    </div>
     </div>
 
 </main>
@@ -2995,6 +3330,581 @@ document.querySelectorAll('.team-deployment-fill[data-percent]').forEach(bar => 
 window.addEventListener('resize', redraw);
 </script>
 
+
+<script>
+window.rsCategoryTable = function (items, o) {
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const groups = new Map();
+    items.forEach(i => {
+        const k = i.cr_category || 'Uncategorized';
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(i);
+    });
+    const cats = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+    if (!cats.length) return '';
+    const rows = Math.max(...cats.map(c => groups.get(c).length));
+    const cell = t => {
+        const slot = String(t.slots || '').split('-')[0].trim() || '—';
+        const time = t.has_timer
+            ? '<div class="cc-time" ' + o.idAttr + '="' + esc(t.deployment_id) + '">' + o.fmtD(o.secs(t)) + '</div>'
+            : '<div class="cc-time">' + esc(slot) + '</div>';
+        return '<div class="cat-cell cs-' + t.category + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
+            '<div class="cc-top"><span>' + esc(t.cr_number || '—') + '</span><span class="cc-pill">' + esc(t.category_label) + '</span></div>' +
+            '<div class="cc-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
+            time + '<div class="cc-meta">' + esc(t.status || 'No status') + '</div></div>';
+    };
+    let h = '<div class="cat-table-wrap"><table class="cat-table"><thead><tr>' +
+        cats.map(c => '<th>' + esc(c) + '<small>' + groups.get(c).length + '</small></th>').join('') +
+        '</tr></thead><tbody>';
+    for (let r = 0; r < rows; r++) {
+        h += '<tr>' + cats.map(c => { const t = groups.get(c)[r]; return '<td>' + (t ? cell(t) : '') + '</td>'; }).join('') + '</tr>';
+    }
+    return h + '</tbody></table></div>';
+};
+</script>
+
+<script>
+(function runningStatusView() {
+    const $ = id => document.getElementById(id);
+    const modal = $('runningStatusModal');
+    if (!modal) return;
+    const body = $('rsvBody'), sub = $('rsvSub'), search = $('rsvSearch'), badge = $('rsBadge'), dateInput = $('rsvDate');
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const p2 = n => String(n).padStart(2, '0');
+    const fmtD = s => { s = Math.max(0, Math.floor(s)); return p2(Math.floor(s / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60); };
+    const ymd = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+    const parseDay = s => { const a = String(s).split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); };
+    const shiftDay = (s, n) => { const d = parseDay(s); d.setDate(d.getDate() + n); return ymd(d); };
+    const dayText = s => parseDay(s).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) + (s === ymd(new Date()) ? ' · Today' : '');
+    function fmtShort(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return new Date().toDateString() === d.toDateString() ? t : d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + t;
+    }
+    const isFwd = t => /forward/i.test(String(t.change_type || ''));
+    const slotStart = t => String(t.slots || '').split('-')[0].trim() || '—';
+
+    let day = window.__rsDay || ymd(new Date());
+    window.__rsDay = day;
+    let view = 'live', filter = 'all', items = [], sessions = [], fetchedAt = Date.now(), ticks = 0, seq = 0;
+    let rbItems = [], rbSessions = [], rbFetchedAt = Date.now();
+    const sinceFetch = () => (Date.now() - fetchedAt) / 1000;
+    const liveSecs = t => t.elapsed_seconds + (t.is_running ? sinceFetch() : 0);
+    const histSecs = h => h.duration_seconds + (h.is_running ? sinceFetch() : 0);
+    const fmtT = iso => iso ? new Date(iso).toLocaleString() : '—';
+    const rbSecs = t => t.elapsed_seconds + (t.is_running ? (Date.now() - rbFetchedAt) / 1000 : 0);
+    const rbHistSecs = h => h.duration_seconds + (h.is_running ? (Date.now() - rbFetchedAt) / 1000 : 0);
+
+    function rbCard(t) {
+        const c = t.rb_state;
+        let timeHtml, meta;
+        if (t.has_timer) {
+            timeHtml = '<div class="rs-time" data-rb-id="' + esc(t.deployment_id) + '">' + fmtD(rbSecs(t)) + '</div>';
+            meta = t.is_running ? 'Rollback started ' + fmtShort(t.started_at) : 'Rollback stopped ' + fmtShort(t.stopped_at);
+        } else {
+            timeHtml = '<div class="rs-time rs-slot">' + esc(slotStart(t)) + '</div>';
+            meta = 'Rollback not started · slot ' + (t.slots || '—');
+        }
+        return '<div class="rs-card cs-rb-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
+            '<div class="rs-card-top"><span class="rs-cr" title="' + esc(t.cr_number) + '">' + esc(t.cr_number || '—') + '</span><span class="rs-pill">' + esc(t.rb_label) + '</span></div>' +
+            '<div class="rs-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
+            timeHtml + '<div class="rs-meta">' + esc(meta) + '</div>' +
+            '<div class="rs-foot">RFID ' + esc(t.rfid || '—') + ' · ' + esc(t.status || 'No status') + '</div>' +
+            '<div class="rs-bar"></div></div>';
+    }
+
+    function rollbackHtml() {
+        const q = search.value.trim().toLowerCase();
+        const match = r => !q || String(r.cr_number || '').toLowerCase().includes(q) || String(r.application_name || '').toLowerCase().includes(q);
+        const rows = rbItems.filter(match), hist = rbSessions.filter(match);
+        const n = { running: 0, completed: 0, pending: 0 };
+        rbItems.forEach(i => { n[i.rb_state] = (n[i.rb_state] || 0) + 1; });
+        let h = '<div class="rs-chips" style="margin-bottom:14px"><span class="rs-chip run">Rollback running: ' + n.running +
+            '</span><span class="rs-chip stop">Rollback done: ' + n.completed + '</span><span class="rs-chip tot">Not started: ' + n.pending + '</span></div>';
+        h += rows.length
+            ? '<div class="rs-cards">' + rows.map(rbCard).join('') + '</div>'
+            : '<div class="rs-empty"><b>' + (rbItems.length ? 'No matches' : 'No rolled-back deployments on this day') + '</b>' +
+              'A deployment appears here when Roll Back = Yes, its status is Rolled, or its rollback timer was started.</div>';
+        if (hist.length) {
+            h += '<div class="rb-section">ROLLBACK START / STOP HISTORY</div><div class="tablewrap"><table style="min-width:900px"><thead><tr><th>SR No.</th><th>CR Number</th><th>RFID</th><th>Application</th><th>Started At</th><th>Stopped At</th><th>Duration</th><th>Status</th></tr></thead><tbody>' +
+                hist.map((r, i) => '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                    '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                    '</td><td data-rbh-id="' + esc(r.id) + '">' + fmtD(rbHistSecs(r)) + '</td><td>' +
+                    (r.is_running ? '<span class="rs-hpill amber">● Rollback running</span>' : '<span class="rs-hpill grey">■ Stopped</span>') + '</td></tr>').join('') +
+                '</tbody></table></div>';
+        }
+        return h;
+    }
+
+    setInterval(() => {
+        if (modal.hidden || document.hidden || view !== 'rollback') return;
+        rbItems.forEach(t => { if (!t.is_running) return;
+            const el = body.querySelector('[data-rb-id="' + t.deployment_id + '"]'); if (el) el.textContent = fmtD(rbSecs(t)); });
+        rbSessions.forEach(h => { if (!h.is_running) return;
+            const el = body.querySelector('[data-rbh-id="' + h.id + '"]'); if (el) el.textContent = fmtD(rbHistSecs(h)); });
+    }, 1000);
+
+    function passes(r) {
+        if (filter !== 'all' && r.category !== undefined && r.category !== filter) return false;
+        const q = search.value.trim().toLowerCase();
+        return !q || String(r.cr_number || '').toLowerCase().includes(q) || String(r.application_name || '').toLowerCase().includes(q);
+    }
+
+    function cardHtml(t) {
+        const c = t.category;
+        const fwdChip = (isFwd(t) && c !== 'forward') ? '<span class="rs-fwd">FORWARD FIX</span>' : '';
+        let timeHtml, meta;
+        if (t.has_timer) {
+            timeHtml = '<div class="rs-time" data-rs-id="' + esc(t.deployment_id) + '">' + fmtD(liveSecs(t)) + '</div>';
+            meta = t.is_running ? 'Started ' + fmtShort(t.started_at) : 'Stopped ' + fmtShort(t.stopped_at);
+        } else {
+            timeHtml = '<div class="rs-time rs-slot">' + esc(slotStart(t)) + '</div>';
+            meta = 'Planned slot ' + (t.slots || '—');
+        }
+        return '<div class="rs-card cs-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
+            '<div class="rs-card-top"><span class="rs-cr" title="' + esc(t.cr_number) + '">' + esc(t.cr_number || '—') + '</span><span class="rs-pill">' + esc(t.category_label) + '</span></div>' +
+            '<div class="rs-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
+            timeHtml + '<div class="rs-meta">' + esc(meta) + '</div>' +
+            '<div class="rs-foot">RFID ' + esc(t.rfid || '—') + ' · ' + esc(t.status || 'No status') + ' ' + fwdChip + '</div>' +
+            '<div class="rs-bar"></div></div>';
+    }
+
+    function render() {
+        const counts = { running: 0, completed: 0, planned: 0, forward: 0, failed: 0 };
+        items.forEach(i => { counts[i.category] = (counts[i.category] || 0) + 1; });
+        Object.keys(counts).forEach(k => { const el = $('rsvN-' + k); if (el) el.textContent = counts[k]; });
+        $('rsvDayLabel').textContent = dayText(day);
+        dateInput.value = day;
+        document.querySelectorAll('[data-rsv-view]').forEach(b => b.classList.toggle('active', b.dataset.rsvView === view));
+        document.querySelectorAll('[data-rsv-filter]').forEach(b => b.classList.toggle('active', b.dataset.rsvFilter === filter));
+        if (view === 'category') {
+            const rows = items.filter(passes);
+            body.innerHTML = rows.length
+                ? window.rsCategoryTable(rows, { idAttr: 'data-rs-id', secs: liveSecs, fmtD })
+                : '<div class="rs-empty"><b>' + (items.length ? 'No matches' : 'No deployments scheduled for this day') + '</b>Use the arrows to look at another day.</div>';
+        } else if (view === 'live') {
+            const rows = items.filter(passes);
+            body.innerHTML = rows.length
+                ? '<div class="rs-cards">' + rows.map(cardHtml).join('') + '</div>'
+                : '<div class="rs-empty"><b>' + (items.length ? 'No matches' : 'No deployments scheduled for this day') + '</b>' +
+                  (items.length ? 'Try a different colour filter or search.' : 'Use the arrows to look at another day.') + '</div>';
+        } else if (view === 'rollback') {
+            body.innerHTML = rollbackHtml();
+        } else {
+            const rows = sessions.filter(r => { const q = search.value.trim().toLowerCase();
+                return !q || String(r.cr_number || '').toLowerCase().includes(q) || String(r.application_name || '').toLowerCase().includes(q); });
+            body.innerHTML = rows.length
+                ? '<div class="tablewrap"><table style="min-width:900px"><thead><tr><th>SR No.</th><th>CR Number</th><th>RFID</th><th>Application</th><th>Started At</th><th>Stopped At</th><th>Duration</th><th>Status</th></tr></thead><tbody>' +
+                  rows.map((r, i) => '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                    '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                    '</td><td data-hist-id="' + esc(r.id) + '">' + fmtD(histSecs(r)) + '</td><td>' +
+                    (r.is_running ? '<span class="rs-hpill amber">● Running</span>' : '<span class="rs-hpill grey">■ Stopped</span>') + '</td></tr>').join('') +
+                  '</tbody></table></div>'
+                : '<div class="rs-empty"><b>No Start/Stop sessions on this day</b>Sessions are recorded from the moment Start is clicked.</div>';
+        }
+    }
+
+    async function load() {
+        if (document.hidden) return;
+        const my = ++seq;
+        try {
+            const resp = await fetch('/api/running-daily?date=' + encodeURIComponent(day), { cache: 'no-store' });
+            let data;
+            try { data = await resp.json(); } catch (_) { throw new Error('HTTP ' + resp.status + ', not JSON (route missing? restart Flask)'); }
+            if (my !== seq) return;
+            if (!data.success) throw new Error(data.message || 'failed');
+            items = data.items || []; sessions = data.sessions || [];
+            try {
+                const rr = await fetch('/api/rollback-daily?date=' + encodeURIComponent(day), { cache: 'no-store' });
+                const rd = await rr.json();
+                if (my !== seq) return;
+                if (rd.success) {
+                    rbItems = rd.items || []; rbSessions = rd.sessions || []; rbFetchedAt = Date.now();
+                    const rbb = document.getElementById('rbBadge');
+                    if (rbb) { rbb.textContent = rd.running_total || 0; rbb.hidden = !rd.running_total; }
+                }
+            } catch (_) { /* rollback API not available yet */ }
+            fetchedAt = Date.now();
+            if (badge) { badge.textContent = data.running_total || 0; badge.hidden = !data.running_total; }
+            sub.textContent = 'Updated ' + new Date().toLocaleTimeString() + ' · refreshes every 5 seconds';
+            render();
+        } catch (e) {
+            if (my === seq) sub.textContent = 'Could not refresh: ' + (e && e.message ? e.message : e) + ' - test http://127.0.0.1:5050/api/running-daily';
+        }
+    }
+
+    function setDay(d, fromEvent) {
+        if (!d) return;
+        day = d; window.__rsDay = d;
+        if (!fromEvent) document.dispatchEvent(new CustomEvent('rs:day', { detail: d }));
+        items = []; sessions = []; render(); load();
+    }
+    $('rsvPrev').addEventListener('click', () => setDay(shiftDay(day, -1)));
+    $('rsvNext').addEventListener('click', () => setDay(shiftDay(day, 1)));
+    $('rsvToday').addEventListener('click', () => setDay(ymd(new Date())));
+    dateInput.addEventListener('change', () => setDay(dateInput.value));
+    document.addEventListener('rs:day', e => { if (e.detail !== day) setDay(e.detail, true); });
+    document.querySelectorAll('[data-rsv-view]').forEach(b => b.addEventListener('click', () => { view = b.dataset.rsvView; render(); }));
+    document.querySelectorAll('[data-rsv-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.rsvFilter; render(); }));
+    search.addEventListener('input', render);
+    modal.addEventListener('modal:open', () => { view = window.__rsOpenRollback ? 'rollback' : 'live'; window.__rsOpenRollback = false; render(); load(); });
+    const rbBtn = document.getElementById('rspRollbackBtn');
+    if (rbBtn) rbBtn.addEventListener('click', () => { window.__rsOpenRollback = true; });
+
+    setInterval(() => {
+        if (modal.hidden || document.hidden) return;
+        items.forEach(t => { if (!t.is_running) return;
+            const el = body.querySelector('[data-rs-id="' + t.deployment_id + '"]'); if (el) el.textContent = fmtD(liveSecs(t)); });
+        sessions.forEach(h => { if (!h.is_running) return;
+            const el = body.querySelector('[data-hist-id="' + h.id + '"]'); if (el) el.textContent = fmtD(histSecs(h)); });
+    }, 1000);
+    setInterval(() => { ticks++; if (!modal.hidden || ticks % 4 === 0) load(); }, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+    render(); load();
+})();
+</script>
+
+<script>
+(function runningStatusPanel() {
+    const $ = id => document.getElementById(id);
+    const list = $('rspList');
+    if (!list) return;
+    const sub = $('rspSub'), dayLabel = $('rspDayLabel'), dateInput = $('rspDate');
+    const MAX = 8;
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const p2 = n => String(n).padStart(2, '0');
+    const fmtD = s => { s = Math.max(0, Math.floor(s)); return p2(Math.floor(s / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60); };
+    const ymd = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+    const parseDay = s => { const a = String(s).split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); };
+    const shiftDay = (s, n) => { const d = parseDay(s); d.setDate(d.getDate() + n); return ymd(d); };
+    const dayText = s => parseDay(s).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) + (s === ymd(new Date()) ? ' · Today' : '');
+    function fmtShort(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return new Date().toDateString() === d.toDateString() ? t : d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + t;
+    }
+    const isFwd = t => /forward/i.test(String(t.change_type || ''));
+    const slotStart = t => String(t.slots || '').split('-')[0].trim() || '—';
+
+    let day = window.__rsDay || ymd(new Date());
+    window.__rsDay = day;
+    let items = [], other = 0, fetchedAt = Date.now(), cat = 'all', seq = 0;
+    let tableMode = false;
+    const secs = t => t.elapsed_seconds + (t.is_running ? (Date.now() - fetchedAt) / 1000 : 0);
+
+    function rowHtml(t) {
+        const c = t.category;
+        const fwdChip = (isFwd(t) && c !== 'forward') ? '<span class="rs-fwd">FORWARD FIX</span>' : '';
+        let timeHtml, meta;
+        if (t.has_timer) {
+            timeHtml = '<div class="rsp-time" data-rsp-id="' + esc(t.deployment_id) + '">' + fmtD(secs(t)) + '</div>';
+            meta = (t.is_running ? 'Started ' + fmtShort(t.started_at) : 'Stopped ' + fmtShort(t.stopped_at)) + ' · ' + (t.status || '');
+        } else {
+            timeHtml = '<div class="rsp-time rsp-slot">' + esc(slotStart(t)) + '</div>';
+            meta = 'Slot ' + (t.slots || '—') + ' · ' + (t.status || '');
+        }
+        return '<div class="rsp-row cs-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details"><div class="rsp-main">' +
+            '<div class="rsp-cr">' + esc(t.cr_number || '—') + '<span class="rsp-pill">' + esc(t.category_label) + '</span>' + fwdChip + '</div>' +
+            '<div class="rsp-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
+            '<div class="rsp-meta">' + esc(meta) + '</div></div>' + timeHtml + '<div class="rsp-bar"></div></div>';
+    }
+
+    function render() {
+        const counts = { all: items.length, running: 0, completed: 0, planned: 0, forward: 0, failed: 0 };
+        items.forEach(i => { counts[i.category] = (counts[i.category] || 0) + 1; });
+        document.querySelectorAll('[data-rsp-cat]').forEach(b => {
+            b.querySelector('b').textContent = counts[b.dataset.rspCat] || 0;
+            b.classList.toggle('active', b.dataset.rspCat === cat);
+        });
+        dayLabel.textContent = dayText(day);
+        dateInput.value = day;
+        const rows = items.filter(i => cat === 'all' || i.category === cat);
+        if (!rows.length) {
+            list.innerHTML = '<div class="rsp-empty"><b>' + (items.length ? 'Nothing in this colour group' : 'No deployments scheduled for this day') + '</b>' +
+                (items.length ? 'Click the highlighted counter again to see all.' : 'Use the arrows to look at another day.') + '</div>';
+            return;
+        }
+        if (tableMode) {
+            list.style.display = 'block';
+            list.innerHTML = window.rsCategoryTable(rows, { idAttr: 'data-rsp-id', secs, fmtD });
+            return;
+        }
+        list.style.display = '';
+        list.innerHTML = rows.slice(0, MAX).map(rowHtml).join('') + (rows.length > MAX
+            ? '<button type="button" class="rsp-more" data-open-modal="runningStatusModal">+' + (rows.length - MAX) + ' more · View all</button>' : '');
+    }
+
+    async function load() {
+        if (document.hidden) return;
+        const my = ++seq;
+        try {
+            const resp = await fetch('/api/running-daily?date=' + encodeURIComponent(day), { cache: 'no-store' });
+            let data;
+            try { data = await resp.json(); } catch (_) { throw new Error('HTTP ' + resp.status + ', not JSON (route missing? restart Flask)'); }
+            if (my !== seq) return;
+            if (!data.success) throw new Error(data.message || 'failed');
+            items = data.items || [];
+            other = Math.max(0, (data.running_total || 0) - (data.counts ? data.counts.running : 0));
+            fetchedAt = Date.now();
+            sub.textContent = 'Updated ' + new Date().toLocaleTimeString() + ' · every 5s' + (other ? ' · ' + other + ' more running on other days' : '');
+            render();
+        } catch (e) {
+            if (my === seq) sub.textContent = 'Could not refresh: ' + (e && e.message ? e.message : e) + ' - test http://127.0.0.1:5050/api/running-daily';
+        }
+    }
+
+    function setDay(d, fromEvent) {
+        if (!d) return;
+        day = d; window.__rsDay = d;
+        if (!fromEvent) document.dispatchEvent(new CustomEvent('rs:day', { detail: d }));
+        items = []; render(); load();
+    }
+    $('rspTableToggle').addEventListener('click', e => {
+        tableMode = !tableMode;
+        e.currentTarget.textContent = tableMode ? '▤ Cards' : '▦ By Category';
+        render();
+    });
+    $('rspPrev').addEventListener('click', () => setDay(shiftDay(day, -1)));
+    $('rspNext').addEventListener('click', () => setDay(shiftDay(day, 1)));
+    const statsBox = document.querySelector('.rsp-stats'), statsBtn = $('rspStatsToggle');
+    function setStatsHidden(hide) {
+        statsBox.hidden = hide;
+        statsBtn.setAttribute('aria-expanded', String(!hide));
+        statsBtn.textContent = hide ? '◉ Show counts' : '◎ Hide counts';
+        try { localStorage.setItem('rspStatsHidden', hide ? '1' : '0'); } catch (_) { /* storage unavailable */ }
+        if (hide && cat !== 'all') { cat = 'all'; render(); }
+    }
+    statsBtn.addEventListener('click', () => setStatsHidden(!statsBox.hidden));
+    let startHidden = false;
+    try { startHidden = localStorage.getItem('rspStatsHidden') === '1'; } catch (_) { /* ignore */ }
+    if (startHidden) setStatsHidden(true);
+    $('rspToday').addEventListener('click', () => setDay(ymd(new Date())));
+    dateInput.addEventListener('change', () => setDay(dateInput.value));
+    document.addEventListener('rs:day', e => { if (e.detail !== day) setDay(e.detail, true); });
+    document.querySelectorAll('[data-rsp-cat]').forEach(b => b.addEventListener('click', () => {
+        cat = (cat === b.dataset.rspCat) ? 'all' : b.dataset.rspCat; render();
+    }));
+
+    setInterval(() => {
+        if (document.hidden) return;
+        items.forEach(t => { if (!t.is_running) return;
+            const el = list.querySelector('[data-rsp-id="' + t.deployment_id + '"]'); if (el) el.textContent = fmtD(secs(t)); });
+    }, 1000);
+    setInterval(load, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+    render(); load();
+})();
+</script>
+
+
+    <!-- ===== CR detail popup (Release Calendar + DevOps latest + Change History) ===== -->
+    <div class="crd-overlay" id="crDetailModal" hidden>
+        <div class="crd-box" role="dialog" aria-modal="true" aria-label="CR details">
+            <header class="crd-top">
+                <div>
+                    <h3 id="crdTitle">CR details</h3>
+                    <p id="crdSub">Loading…</p>
+                </div>
+                <div class="crd-top-actions">
+                    <button class="btn ghost" type="button" id="crdHistoryBtn" data-crd-toggle>⟲ Change History <span class="crd-count" id="crdHistCount">0</span></button>
+                    <button class="mgr-close" type="button" id="crdClose" aria-label="Close CR details">✕</button>
+                </div>
+            </header>
+            <div class="crd-body" id="crdBody"><div class="crd-loading">Loading details…</div></div>
+        </div>
+    </div>
+
+
+<script>
+(function crDetailView() {
+    const $ = id => document.getElementById(id);
+    const overlay = $('crDetailModal');
+    if (!overlay) return;
+    const body = $('crdBody'), title = $('crdTitle'), sub = $('crdSub'), histBtn = $('crdHistoryBtn'), histCount = $('crdHistCount');
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const RELEASE = [
+        ['cr_number','CR Number'], ['rfid','RFID'], ['application_name','Application'], ['category','Category'],
+        ['business_unit','Business Unit'], ['environment','Environment'], ['change_type','Change Type'],
+        ['deployment_type','Deployment Type'], ['deployment_count','Deployment Count'], ['change_requestor','Change Requestor'],
+        ['deployment_date','Deployment Date'], ['slot','Slot'], ['git_links','Git Links'],
+        ['incident_number','Incident Number'], ['roll_back','Roll Back'], ['status','Initial Status']
+    ];
+    const DEVOPS = [
+        ['status','Status'], ['deployment_date','Deployment Date'], ['slot','Slot'], ['application_name','Application'],
+        ['deployment_count','Deployment Count'], ['team_allocations','Team Allocation'], ['deployment_type','Deployment Type'],
+        ['change_type','Change Type'], ['released_by','Released By'], ['verified_and_deployed_by','Verified & Deployed By'],
+        ['change_requestor','Change Requestor'], ['incident_number','Incident Number'], ['roll_back','Roll Back'],
+        ['git_links','Git Links'], ['comments','Comments']
+    ];
+    const LABELS = {};
+    RELEASE.concat(DEVOPS).forEach(p => { LABELS[p[0]] = p[1]; });
+    LABELS.slot_start = 'Slot Start'; LABELS.slot_end = 'Slot End'; LABELS.slots = 'Slot';
+
+    let data = null, view = 'detail', seq = 0, lastFocus = null;
+
+    function parse(v) {
+        if (typeof v === 'string') {
+            const t = v.trim();
+            if (t[0] === '[' || t[0] === '{') { try { return JSON.parse(t); } catch (_) { /* keep text */ } }
+        }
+        return v;
+    }
+
+    function valHtml(key, raw) {
+        const v = parse(raw);
+        if (v === null || v === undefined || v === '') return '<span class="crd-empty">—</span>';
+        if (key === 'git_links') {
+            const arr = Array.isArray(v) ? v : [v];
+            if (!arr.length) return '<span class="crd-empty">—</span>';
+            return arr.map(l => {
+                const s = String(l);
+                return /^https?:\/\//i.test(s)
+                    ? '<a href="' + esc(s) + '" target="_blank" rel="noopener noreferrer">' + esc(s) + ' ↗</a>'
+                    : esc(s);
+            }).join('<br>');
+        }
+        if (key === 'team_allocations' && Array.isArray(v)) {
+            if (!v.length) return '<span class="crd-empty">—</span>';
+            return v.map(a => '<span class="crd-chip">' + esc(a && a.team) + ': <b>' + esc(a && a.count) + '</b></span>').join('');
+        }
+        if (key === 'slot_start' || key === 'slot_end') return esc(String(v).replace('T', ' ').slice(0, 16));
+        if (key === 'status') return '<span class="pill ' + esc(String(v).toLowerCase().replace(/\s+/g, '-')) + '">' + esc(v) + '</span>';
+        if (key === 'comments') return '<span class="crd-pre">' + esc(v) + '</span>';
+        if (Array.isArray(v)) return esc(v.join(', '));
+        if (typeof v === 'object') return esc(JSON.stringify(v));
+        return esc(v);
+    }
+
+    function fmtWhen(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? String(iso).replace('T', ' ') : d.toLocaleString();
+    }
+    function initials(name) {
+        const parts = String(name || '?').split(/[^A-Za-z0-9]+/).filter(Boolean);
+        return ((parts[0] || '?')[0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+
+    function isChanged(k) {
+        const keys = k === 'slot' ? ['slot', 'slot_start', 'slot_end'] : [k];
+        if (!keys.some(x => data.changed_fields.includes(x))) return false;
+        return JSON.stringify(parse(data.original[k])) !== JSON.stringify(parse(data.current[k]));
+    }
+
+    function rows(list, src, compare) {
+        return list.map(pair => {
+            const k = pair[0], label = pair[1];
+            const changed = compare && isChanged(k);
+            return '<div class="crd-kv' + (changed ? ' crd-changed' : '') + '"><span>' + esc(label) + '</span><div>' + valHtml(k, src[k]) +
+                (changed ? '<small class="crd-was">Submitted as: ' + valHtml(k, data.original[k]) + '</small>' : '') + '</div></div>';
+        }).join('');
+    }
+
+    function detailHtml() {
+        const n = data.history.length, lm = data.last_modified;
+        const changedCount = data.changed_fields.filter(f => f !== 'slot_start' && f !== 'slot_end').length;
+        const foot = lm
+            ? 'Last modified by <b>' + esc(lm.by || 'Not provided') + '</b> · ' + esc(fmtWhen(lm.at)) + ' · ' + changedCount + ' field' + (changedCount === 1 ? '' : 's') + ' changed'
+            : 'No DevOps edits yet. These are the original details.';
+        return '<div class="crd-grid">' +
+            '<section class="crd-panel rel"><div class="crd-ph"><h4>📝 Release Calendar</h4><small>Details entered by the requester when the deployment was scheduled (rebuilt from the audit trail).</small></div>' +
+                rows(RELEASE, data.original, false) + '</section>' +
+            '<section class="crd-panel dev"><div class="crd-ph"><h4>🛠 DevOps Workspace</h4><small>Latest modified details. Highlighted rows were changed after submission.</small></div>' +
+                rows(DEVOPS, data.current, true) +
+                '<div class="crd-foot"><span>' + foot + '</span>' +
+                '<button class="btn light" type="button" data-crd-toggle>⟲ View change history (' + n + ')</button></div></section>' +
+            '</div>';
+    }
+
+    function historyHtml() {
+        const h = data.history;
+        if (!h.length) {
+            return '<div class="crd-emptybox"><b>No changes recorded</b>This deployment still matches what the requester submitted in the Release Calendar.</div>';
+        }
+        return '<div class="crd-timeline">' + h.map(ev =>
+            '<article class="crd-ev"><div class="crd-ev-head"><span class="crd-avatar">' + esc(initials(ev.modified_by)) + '</span>' +
+            '<div><b>' + esc(ev.modified_by || 'Not provided') + '</b><small>' + esc(fmtWhen(ev.modified_at)) + '</small></div>' +
+            '<span class="crd-action">' + esc(ev.action || 'Updated') + '</span></div>' +
+            '<div class="tablewrap"><table><thead><tr><th>Field</th><th>Previous value</th><th>New value</th></tr></thead><tbody>' +
+            ev.changes.map(c =>
+                '<tr><td>' + esc(LABELS[c.field] || String(c.field).replace(/_/g, ' ')) + '</td>' +
+                '<td class="crd-old">' + valHtml(c.field, c.old) + '</td><td class="crd-new">' + valHtml(c.field, c.new) + '</td></tr>').join('') +
+            '</tbody></table></div></article>').join('') + '</div>';
+    }
+
+    function render() {
+        if (!data) return;
+        const d = data.deployment, cur = data.current;
+        title.textContent = d.cr_number || 'CR details';
+        sub.innerHTML = esc(d.application_name || 'Application not set') + ' · RFID ' + esc(d.rfid || '—') +
+            ' · ' + esc(cur.deployment_date || '—') + ' ' + esc(cur.slot || '') + ' ' + valHtml('status', d.status);
+        histCount.textContent = data.history.length;
+        histBtn.firstChild.nodeValue = view === 'history' ? '← Back to details ' : '⟲ Change History ';
+        body.innerHTML = view === 'history' ? historyHtml() : detailHtml();
+        body.scrollTop = 0;
+        const box = overlay.querySelector('.crd-box');
+        if (box) box.scrollTop = 0;
+    }
+
+    async function openDetail(id, trigger) {
+        const my = ++seq;
+        lastFocus = trigger || null;
+        data = null; view = 'detail';
+        title.textContent = 'CR details'; sub.textContent = 'Loading…'; histCount.textContent = '0';
+        histBtn.firstChild.nodeValue = '⟲ Change History ';
+        body.innerHTML = '<div class="crd-loading">Loading details…</div>';
+        overlay.hidden = false;
+        document.body.classList.add('mgr-modal-open');
+        try {
+            const resp = await fetch('/api/deployment-detail/' + encodeURIComponent(id), { cache: 'no-store' });
+            let json;
+            try { json = await resp.json(); } catch (_) { throw new Error('HTTP ' + resp.status + ', not JSON (restart Flask so the new route loads)'); }
+            if (my !== seq) return;
+            if (!json.success) throw new Error(json.message || 'Request failed');
+            data = json; render();
+        } catch (e) {
+            if (my !== seq) return;
+            sub.textContent = 'Could not load';
+            body.innerHTML = '<div class="crd-emptybox"><b>Could not load details</b>' + esc(e && e.message ? e.message : e) + '</div>';
+        }
+    }
+
+    function closeDetail() {
+        seq++;
+        overlay.hidden = true;
+        if (!document.querySelector('[data-modal]:not([hidden])')) document.body.classList.remove('mgr-modal-open');
+        if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+    }
+
+    document.addEventListener('click', e => {
+        if (overlay.contains(e.target)) {
+            if (e.target === overlay || e.target.closest('#crdClose')) { closeDetail(); return; }
+            if (e.target.closest('[data-crd-toggle]') && data) { view = view === 'history' ? 'detail' : 'history'; render(); }
+            return;
+        }
+        const card = e.target.closest('[data-dep-id]');
+        if (card) openDetail(card.dataset.depId, card);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !overlay.hidden) { e.stopImmediatePropagation(); closeDetail(); return; }
+        if ((e.key === 'Enter' || e.key === ' ') && !overlay.contains(e.target)) {
+            const card = e.target.closest && e.target.closest('[data-dep-id]');
+            if (card) { e.preventDefault(); openDetail(card.dataset.depId, card); }
+        }
+    }, true);
+})();
+</script>
 
 <!-- ===== Page Assistant (answers only from data on this page; no AI model) ===== -->
 <button class="bot-launcher" id="botLauncher" type="button" aria-label="Open page assistant" aria-expanded="false" aria-controls="botWindow" title="Ask about this page">

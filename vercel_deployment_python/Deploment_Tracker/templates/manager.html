@@ -1584,6 +1584,12 @@ input[type="search"]:focus, input[type="date"]:focus, select:focus { border-colo
 .cat-cell.cs-forward { background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
 .cat-cell.cs-failed { background:linear-gradient(135deg,#b91c1c,#f43f5e); }
 
+/* Running rollback = stronger red/orange than a finished one */
+.rsp-row.cs-failed.running, .rs-card.cs-failed.running {
+    background: linear-gradient(135deg,#be123c 0%,#ea580c 100%);
+    box-shadow: 0 8px 20px #ea580c40;
+}
+
 /* ===== Rollback status (manager "Rolled Back" view) ===== */
 .rs-card.cs-rb-running { background:linear-gradient(135deg,#be123c 0%,#ea580c 100%); box-shadow:0 8px 20px #ea580c40; }
 .rs-card.cs-rb-completed { background:linear-gradient(135deg,#6d28d9 0%,#a78bfa 100%); box-shadow:0 8px 20px #7c3aed35; }
@@ -3460,12 +3466,12 @@ window.rsCategoryTable = function (items, o) {
         let timeHtml, meta;
         if (t.has_timer) {
             timeHtml = '<div class="rs-time" data-rs-id="' + esc(t.deployment_id) + '">' + fmtD(liveSecs(t)) + '</div>';
-            meta = t.is_running ? 'Started ' + fmtShort(t.started_at) : 'Stopped ' + fmtShort(t.stopped_at);
+            meta = t.is_running ? (t.rollback_timer ? 'Rollback started ' : 'Started ') + fmtShort(t.started_at) : (t.rollback_timer ? 'Rollback stopped ' : 'Stopped ') + fmtShort(t.stopped_at);
         } else {
             timeHtml = '<div class="rs-time rs-slot">' + esc(slotStart(t)) + '</div>';
             meta = 'Planned slot ' + (t.slots || '—');
         }
-        return '<div class="rs-card cs-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
+        return '<div class="rs-card cs-' + c + ((c === 'running' || t.rb_running) ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details">' +
             '<div class="rs-card-top"><span class="rs-cr" title="' + esc(t.cr_number) + '">' + esc(t.cr_number || '—') + '</span><span class="rs-pill">' + esc(t.category_label) + '</span></div>' +
             '<div class="rs-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
             timeHtml + '<div class="rs-meta">' + esc(meta) + '</div>' +
@@ -3606,12 +3612,12 @@ window.rsCategoryTable = function (items, o) {
         let timeHtml, meta;
         if (t.has_timer) {
             timeHtml = '<div class="rsp-time" data-rsp-id="' + esc(t.deployment_id) + '">' + fmtD(secs(t)) + '</div>';
-            meta = (t.is_running ? 'Started ' + fmtShort(t.started_at) : 'Stopped ' + fmtShort(t.stopped_at)) + ' · ' + (t.status || '');
+            meta = (t.is_running ? (t.rollback_timer ? 'Rollback started ' : 'Started ') + fmtShort(t.started_at) : (t.rollback_timer ? 'Rollback stopped ' : 'Stopped ') + fmtShort(t.stopped_at)) + ' · ' + (t.status || '');
         } else {
             timeHtml = '<div class="rsp-time rsp-slot">' + esc(slotStart(t)) + '</div>';
             meta = 'Slot ' + (t.slots || '—') + ' · ' + (t.status || '');
         }
-        return '<div class="rsp-row cs-' + c + (c === 'running' ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details"><div class="rsp-main">' +
+        return '<div class="rsp-row cs-' + c + ((c === 'running' || t.rb_running) ? ' running' : '') + '" data-dep-id="' + esc(t.deployment_id) + '" role="button" tabindex="0" title="Click for full details"><div class="rsp-main">' +
             '<div class="rsp-cr">' + esc(t.cr_number || '—') + '<span class="rsp-pill">' + esc(t.category_label) + '</span>' + fwdChip + '</div>' +
             '<div class="rsp-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
             '<div class="rsp-meta">' + esc(meta) + '</div></div>' + timeHtml + '<div class="rsp-bar"></div></div>';
