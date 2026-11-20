@@ -1,0 +1,2852 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+ 
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Release Calendar </title>
+
+    
+<style>
+*{box-sizing:border-box}
+:root{font-family:Arial,sans-serif;color:#172554;background:#f1f5fb}
+body{margin:0;padding:0;background:#f1f5fb;color:#172554;font-family:Arial,sans-serif;font-size:12px}
+.topbar{height:38px;width:100%;display:flex;align-items:center;justify-content:center;position:relative;padding:0 16px;background:linear-gradient(105deg,#30365f 0%,#5b526f 58%,#876678 100%);box-shadow:0 2px 7px #0f172a24;color:#fff}
+.brand{position:absolute;left:0;top:0;height:36px;min-width:120px;padding:4px 18px 4px 27px;display:flex;align-items:center;background:#fff;color:#18316e;border-radius:0 28px 28px 0;font-weight:800;font-size:12px;letter-spacing:.2px}
+.brand small{display:block;font-size:6px;font-weight:500;color:#475569;letter-spacing:0}
+.header-title{text-align:center;line-height:1.15}
+.header-title h1{margin:0;font-size:13px;font-weight:800;color:#fff;letter-spacing:.1px}
+.header-title p{margin:2px 0 0;font-size:7px;color:#fff;font-weight:500}
+.container{width:min(640px,calc(100% - 24px));margin:12px auto 28px;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none}
+.message{padding:9px 11px;margin:0 0 9px;border-radius:7px;font-weight:600;font-size:11px}
+.message.success{color:#166534;background:#dcfce7;border:1px solid #86efac}
+.message.error{color:#991b1b;background:#fee2e2;border:1px solid #fca5a5}
+.calendar-launch-row{grid-column:1;grid-row:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;padding:8px 10px;min-height:81px;border:1px solid #d7e0f0;border-radius:8px 8px 0 0;background:#fff;position:relative}
+.calendar-launch-row:before{content:"▦  Select Deployment Date";position:absolute;left:0;right:0;top:0;height:31px;display:flex;align-items:center;padding:0 11px;background:linear-gradient(100deg,#1e3472,#2457d6);border-radius:7px 7px 0 0;color:#fff;font-size:9px;font-weight:700}
+.calendar-launch-button{display:inline-flex;align-items:center;gap:6px;margin-top:27px;padding:6px 10px;border:1px solid #bfd0f4;border-radius:5px;background:#eff6ff;color:#1d4ed8;font-size:9px;font-weight:700;cursor:pointer}
+.calendar-launch-button:hover{background:#dbeafe}
+.selected-date-summary{margin-top:27px;color:#64748b;font-size:8px}
+.calendar-modal{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:18px}
+.calendar-modal[hidden]{display:none!important}
+.calendar-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.48)}
+.calendar-dialog{position:relative;z-index:1;width:min(100%,850px);max-height:min(90vh,760px);overflow:auto;padding:16px;border-radius:14px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.24)}
+.calendar-dialog-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.calendar-dialog-top h2{margin:0;color:#172554;font-size:18px}
+.calendar-close-button{width:34px;height:34px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#334155;cursor:pointer;font-size:21px}
+.month-calendar{width:100%;max-width:1050px;margin:0 auto 16px;padding:14px;border:1px solid #dbe4f0;border-radius:10px;background:#fff}
+.month-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.month-calendar-title{font-size:16px;font-weight:700;color:#172554}
+.month-calendar-nav{display:flex;gap:6px}
+.month-calendar-nav button{border:1px solid #cbd5e1;border-radius:7px;padding:6px 10px;background:#f8fafc;color:#1d4ed8;cursor:pointer;font-weight:700}
+.month-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.month-calendar-weekday{padding:3px 2px;text-align:center;color:#64748b;font-size:11px;font-weight:700}
+.calendar-day,.calendar-empty{min-height:40px;border-radius:7px}
+.calendar-empty{background:transparent}
+.calendar-day{border:1px solid #dbe4f0;background:#fff;color:#1e293b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px;cursor:pointer;font:inherit}
+.calendar-day:hover:not(:disabled){border-color:#2563eb;background:#eff6ff}
+.calendar-day .day-number{font-size:12px;font-weight:700}
+.calendar-day .day-caption{font-size:8px;color:#64748b}
+.calendar-day.today{box-shadow:inset 0 0 0 1px #2563eb}
+.calendar-day.selected{background:#2457d6;border-color:#2457d6;color:#fff}
+.calendar-day.selected .day-caption{color:#e0e7ff}
+.calendar-day:disabled{cursor:not-allowed;color:#cbd5e1;background:#f8fafc;border-color:#edf0f5}
+.calendar-help{margin:8px 0 0;color:#64748b;font-size:11px}
+.calendar-dialog .month-calendar{max-width:none;margin:0;padding:10px}
+.page-layout{display:grid;grid-template-columns:minmax(0,1fr) 160px;grid-template-rows:auto auto;gap:10px;align-items:start}
+.slot-picker-field{grid-column:2;grid-row:1;padding:8px 9px 10px;border:1px solid #d7e0f0;border-radius:8px;background:#fff;position:relative;min-width:0;min-height:136px}
+.slot-picker-field:before{content:"◉  Select Deployment Slot";display:flex;align-items:center;height:31px;margin:-8px -9px 8px;padding:0 10px;background:linear-gradient(100deg,#1e3472,#2457d6);border-radius:7px 7px 0 0;color:#fff;font-size:9px;font-weight:700}
+.slot-picker-field>label{display:none}
+.form-grid{grid-column:1;grid-row:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 10px;min-width:0;padding:10px;border:1px solid #d7e0f0;border-radius:8px;background:#fff;position:relative}
+.form-grid:before{content:"  Deployment Details";grid-column:1/-1;display:flex;align-items:center;height:31px;margin:-10px -10px 1px;padding:0 11px;background:linear-gradient(100deg,#1e3472,#2457d6);border-radius:7px 7px 0 0;color:#fff;font-size:9px;font-weight:700}
+.field,.form-group{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.full,.form-actions{grid-column:1/-1}
+label{font-size:8px;font-weight:700;color:#172554}
+input,select,textarea{width:100%;min-width:0;height:22px;padding:4px 7px;border:1px solid #c8d5ee;border-radius:4px;background:#f8fafc;color:#202938;font:8px Arial,sans-serif}
+input:focus,select:focus,textarea:focus{outline:2px solid #2457d6;outline-offset:1px}
+input[readonly]{background:#f1f5f9;color:#64748b}
+textarea{height:50px;min-height:50px;resize:vertical}
+.hint{color:#64748b;font-size:7px;line-height:1.4}
+.required{color:#dc2626}
+.cr-input-group{display:flex;width:100%}
+.cr-prefix{display:flex;align-items:center;padding:0 8px;background:#eff6ff;color:#1d4ed8;border:1px solid #cbd5e1;border-right:0;border-radius:4px 0 0 4px;font-weight:700;font-size:8px}
+.cr-input-group input{flex:1;min-width:0;border-radius:0 4px 4px 0}
+.cr-message{min-height:10px;font-size:7px;line-height:1.3}
+.cr-message.success{color:#15803d}
+.cr-message.error{color:#b91c1c}
+.git-link-row{display:flex;gap:6px;margin-bottom:6px}
+.git-link-row input{flex:1}
+.btn-success,.btn-danger{border:0;width:25px;min-width:25px;cursor:pointer;border-radius:4px;font-weight:bold;font-size:14px}
+.btn-success{background:#16a34a;color:white}
+.btn-danger{background:#dc2626;color:white}
+.slot-legend{display:flex;flex-wrap:wrap;gap:6px 9px;margin:8px 0;color:#475569;font-size:7px}
+.slot-legend span{display:inline-flex;align-items:center;gap:4px}
+.legend-dot{width:6px;height:6px;display:inline-block;border-radius:50%}
+.legend-dot.available{background:#16a34a}.legend-dot.pending{background:#f59e0b}.legend-dot.booked{background:#dc2626}.legend-dot.blocked{background:#9ca3af}
+.slot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.slot-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:42px;padding:5px 2px;margin:0;border:1px solid transparent;border-radius:6px;font-size:8px;font-weight:700;transition:transform .15s,box-shadow .15s}
+.slot-time{font-size:8px}.slot-state{font-size:7px;font-weight:600}
+.slot-tile.available{color:#166534;background:#dcfce7;border-color:#86efac;cursor:pointer}
+.slot-tile.available:hover{transform:translateY(-1px);box-shadow:0 3px 8px #16a34a22}
+.slot-tile.pending{color:#92400e;background:#fef3c7;border-color:#fcd34d;cursor:not-allowed}
+.slot-tile.booked{color:#991b1b;background:#fee2e2;border-color:#fca5a5;cursor:not-allowed}
+.slot-tile.blocked{color:#7f1d1d;background:#e5e7eb;border-color:#9ca3af;cursor:not-allowed}
+.slot-tile.selected{outline:2px solid #2563eb;outline-offset:1px}
+.slot-tile:disabled{opacity:1}
+.slot-day-message{display:none;margin:0 0 7px;padding:7px;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;background:#fef2f2;font-size:8px;line-height:1.4;white-space:pre-wrap}
+.slot-day-message.visible{display:block}
+.slot-capacity-summary{margin:0 0 7px;color:#475569;font-size:7px;line-height:1.4}
+.slot-loading{grid-column:1/-1;padding:10px 5px;border-radius:6px;background:#f1f5f9;color:#64748b;text-align:center;font-size:8px}
+.slot-selection{margin:8px 0 0;color:#1d4ed8;font-size:8px;font-weight:700}
+.save-panel{grid-column:2;grid-row:2;padding:0 9px 9px;border:1px solid #d7e0f0;border-radius:8px;background:#fff;min-width:0}
+.save-panel h2{display:flex;align-items:center;height:31px;margin:0 -9px 9px;padding:0 10px;background:linear-gradient(100deg,#1e3472,#2457d6);border-radius:7px 7px 0 0;color:#fff;font-size:9px}
+.save-checklist{margin:0;padding:0 0 0 12px;color:#475569;font-size:8px;line-height:1.9;list-style:"✓  "}
+.submit-button{width:100%;margin-top:8px;padding:7px 8px;border:0;border-radius:6px;background:#2457d6;color:#fff;font-size:9px;font-weight:700;cursor:pointer}
+.submit-button:hover{background:#1946b7}
+.submit-button:disabled{background:#94a3b8;cursor:not-allowed}
+@media(max-width:650px){.container{width:min(100% - 20px,480px)}.page-layout{grid-template-columns:minmax(0,1fr) 145px}.brand{min-width:92px;padding-left:12px;font-size:10px}}
+@media(max-width:520px){body{font-size:12px}.topbar{justify-content:flex-end}.header-title{margin-left:90px}.page-layout{grid-template-columns:1fr;grid-template-rows:auto}.calendar-launch-row,.slot-picker-field,.form-grid,.save-panel{grid-column:1;grid-row:auto}.slot-picker-field{position:static}.slot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.form-grid{grid-template-columns:1fr}.field.full,.form-actions{grid-column:1}.save-panel{margin-top:0}.month-calendar{padding:10px}.month-calendar-grid{gap:3px}.calendar-day,.calendar-empty{min-height:34px}}
+
+/* Responsive layout enhancements */
+@media (min-width: 1100px) {
+  .container { width: min(960px, calc(100% - 40px)); }
+  .page-layout { grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; }
+  .slot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  body { padding: 0; }
+  .container { width: min(760px, calc(100% - 28px)); margin: 14px auto 24px; }
+  .page-layout { grid-template-columns: minmax(0, 1fr) 190px; gap: 10px; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .topbar { min-height: 52px; height: auto; padding: 7px 10px; }
+  .brand { height: 42px; min-width: 88px; padding: 4px 10px; font-size: 10px; }
+  .header-title { margin-left: 84px; padding: 2px 0; }
+  .header-title h1 { font-size: 12px; }
+  .header-title p { font-size: 7px; }
+  .container { width: calc(100% - 20px); margin: 12px auto 20px; }
+  .page-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 10px; }
+  .calendar-launch-row, .slot-picker-field, .form-grid, .save-panel {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
+  .calendar-launch-row { min-height: 82px; }
+  .slot-picker-field { position: static; }
+  .slot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .save-panel { margin: 0; }
+  input, select, textarea { font-size: 12px; min-height: 36px; }
+  textarea { min-height: 76px; }
+  .cr-prefix { font-size: 11px; }
+  .submit-button { min-height: 40px; font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .topbar { justify-content: flex-end; padding: 7px 8px; }
+  .brand { min-width: 78px; font-size: 9px; }
+  .brand small { font-size: 5px; }
+  .header-title { margin-left: 74px; }
+  .header-title h1 { font-size: 11px; }
+  .header-title p { max-width: 210px; font-size: 6px; }
+  .container { width: calc(100% - 16px); margin-top: 9px; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 9px; }
+  .form-grid:before { margin: -9px -9px 1px; }
+  .field.full, .form-actions { grid-column: 1; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .slot-tile { min-height: 48px; }
+  .slot-legend { gap: 7px 10px; font-size: 8px; }
+  .calendar-launch-row { align-items: flex-start; }
+  .selected-date-summary { max-width: 100%; }
+  .calendar-dialog { padding: 10px; }
+  .month-calendar { padding: 8px; }
+  .month-calendar-nav button { padding: 5px 7px; font-size: 11px; }
+  .calendar-day, .calendar-empty { min-height: 36px; }
+  .message { font-size: 10px; }
+}
+@media (max-width: 350px) {
+  .brand { min-width: 68px; padding-left: 7px; }
+  .header-title { margin-left: 64px; }
+  .header-title h1 { font-size: 10px; }
+  .header-title p { display: none; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .month-calendar-nav { gap: 3px; }
+  .month-calendar-nav button { padding: 4px 5px; }
+}
+
+
+/* Desktop/tablet spacing and width correction */
+body {
+  min-height: 100vh;
+  padding: 0;
+}
+.container {
+  width: calc(100% - 48px);
+  max-width: 1320px;
+  margin: 8px auto 28px;
+}
+.topbar {
+  width: 100%;
+}
+.page-layout {
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-rows: auto auto;
+  gap: 14px;
+  align-items: start;
+}
+.calendar-launch-row {
+  min-height: 92px;
+}
+.slot-picker-field {
+  min-height: 150px;
+}
+.form-grid {
+  gap: 13px 16px;
+  padding: 13px;
+}
+.form-grid:before {
+  margin: -13px -13px 4px;
+}
+input, select {
+  height: 34px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+textarea {
+  min-height: 76px;
+  font-size: 12px;
+}
+label {
+  font-size: 11px;
+}
+.hint, .cr-message {
+  font-size: 9px;
+}
+.slot-legend, .slot-capacity-summary, .slot-selection {
+  font-size: 9px;
+}
+.slot-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.slot-tile {
+  min-height: 54px;
+}
+.slot-time { font-size: 10px; }
+.slot-state { font-size: 8px; }
+.save-panel {
+  padding: 0 12px 12px;
+}
+.save-panel h2 {
+  margin-left: -12px;
+  margin-right: -12px;
+}
+.save-checklist { font-size: 10px; }
+.submit-button {
+  min-height: 36px;
+  font-size: 11px;
+}
+@media (max-width: 900px) {
+  .container { width: calc(100% - 32px); }
+  .page-layout { grid-template-columns: minmax(0, 1fr) 230px; gap: 10px; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .container { width: calc(100% - 20px); margin: 10px auto 20px; }
+  .page-layout { grid-template-columns: minmax(0, 1fr); }
+  .calendar-launch-row, .slot-picker-field, .form-grid, .save-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .slot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .container { width: calc(100% - 16px); }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+
+/* Thicker page header */
+.topbar {
+  height: 64px;
+  min-height: 64px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.brand {
+  height: 60px;
+  min-width: 150px;
+  padding: 7px 22px 7px 30px;
+  font-size: 14px;
+}
+.brand small {
+  font-size: 7px;
+}
+.header-title h1 {
+  font-size: 17px;
+}
+.header-title p {
+  margin-top: 4px;
+  font-size: 9px;
+}
+@media (max-width: 680px) {
+  .topbar {
+    min-height: 58px;
+    height: auto;
+    padding: 7px 10px;
+  }
+  .brand {
+    height: 54px;
+    min-width: 108px;
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+  .brand small { font-size: 6px; }
+  .header-title h1 { font-size: 14px; }
+  .header-title p { font-size: 7px; }
+}
+@media (max-width: 380px) {
+  .topbar { min-height: 54px; }
+  .brand {
+    height: 50px;
+    min-width: 82px;
+    padding-left: 8px;
+    font-size: 9px;
+  }
+  .header-title h1 { font-size: 12px; }
+  .header-title p { display: none; }
+}
+
+
+/* Keep the header flush with the top edge of the viewport */
+html, body {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+.container {
+  margin-top: 0 !important;
+}
+.topbar {
+  margin-top: 0 !important;
+  top: 0;
+}
+
+
+/* Full-bleed page: remove left/right outer gutters */
+body {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100%;
+}
+.container {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.topbar {
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 0;
+}
+/* Keep a small readable inset for the form content, not the header */
+.page-layout {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+.message {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+@media (max-width: 680px) {
+  .page-layout {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+  .message {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+}
+
+
+.btn-success:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* Remove remaining horizontal gutters around the page content */
+html, body {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow-x: hidden;
+}
+.container {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.page-layout {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.message {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+/* Cards keep only their own internal padding; no outer page gutters */
+@media (max-width: 680px) {
+  .page-layout {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .message {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+
+/* Adaptive full-bleed header: always spans the viewport at every zoom level */
+html, body {
+  width: 100%;
+  min-width: 0;
+}
+.topbar {
+  display: flex;
+  box-sizing: border-box;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-left: clamp(8px, 2vw, 28px);
+  padding-right: clamp(8px, 2vw, 28px);
+  flex-wrap: nowrap;
+}
+.header-title {
+  min-width: 0;
+  max-width: 100%;
+}
+.header-title h1,
+.header-title p {
+  overflow-wrap: anywhere;
+}
+.brand {
+  flex: 0 0 auto;
+}
+@media (max-width: 680px) {
+  .topbar {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+
+.brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.brand-logo {
+  display: block;
+  width: clamp(150px, 25vw, 220px);
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+}
+@media (max-width: 680px) {
+  .brand-logo {
+    width: clamp(105px, 28vw, 150px);
+  }
+}
+
+/* Deployment details and slot selector side by side */
+.page-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-rows: auto auto auto;
+    gap: 14px;
+    align-items: start;
+}
+
+.calendar-launch-row {
+    grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+.form-grid {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+}
+
+.slot-picker-field {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+}
+
+.save-panel {
+    grid-column: 1 / -1;
+    grid-row: 3;
+}
+
+@media (max-width: 900px) {
+    .page-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+        gap: 10px;
+    }
+}
+
+@media (max-width: 680px) {
+    .page-layout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+    }
+
+    .calendar-launch-row,
+    .form-grid,
+    .slot-picker-field,
+    .save-panel {
+        grid-column: 1;
+        grid-row: auto;
+        width: 100%;
+    }
+}
+
+
+/* Slot selection opens as a focused full-screen step after a deployment date is chosen. */
+.slot-selection-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    width: min(760px, calc(100% - 32px));
+    max-height: min(88vh, 760px);
+    min-height: 0;
+    overflow-y: auto;
+    margin: auto;
+    padding: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(15,23,42,.28);
+}
+.slot-selection-modal.slot-modal-open { display: block; }
+.slot-selection-modal:before {
+    margin: -16px -16px 14px;
+    padding: 0 16px;
+    height: 42px;
+    font-size: 13px;
+}
+.slot-selection-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2099;
+    background: rgba(15,23,42,.58);
+}
+.slot-selection-backdrop.slot-modal-open { display: block; }
+.form-grid .calendar-launch-row {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 76px;
+}
+.form-grid .calendar-launch-row:before { height: 31px; }
+.form-grid .calendar-launch-button,
+.form-grid .selected-date-summary { margin-top: 27px; }
+@media (max-width: 680px) {
+    .slot-selection-modal {
+        width: calc(100% - 16px);
+        max-height: 90vh;
+        padding: 12px;
+    }
+    .slot-selection-modal:before { margin: -12px -12px 12px; }
+}
+
+
+/* Date picker sits directly before RFID; remove its separate section heading. */
+.form-grid .calendar-launch-row {
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 0;
+    min-width: 0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px;
+    margin: 0;
+    border: 1px solid #d7e0f0;
+    border-radius: 6px;
+    background: #fff;
+}
+.form-grid .calendar-launch-row:before {
+    content: none !important;
+    display: none !important;
+}
+.form-grid .calendar-launch-button,
+.form-grid .selected-date-summary {
+    margin-top: 0;
+}
+.form-grid .calendar-launch-button {
+    min-height: 34px;
+}
+.form-grid .selected-date-summary {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+    .form-grid .calendar-launch-row {
+        grid-column: 1;
+        min-height: 0;
+    }
+}
+
+
+
+/* ===== Visual polish: centered, larger headings; existing palette preserved ===== */
+.header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(70%, 760px);
+    margin: 0 !important;
+    text-align: center;
+}
+.header-title h1 {
+    width: 100%;
+    text-align: center;
+    font-size: clamp(21px, 2vw, 27px) !important;
+    line-height: 1.2;
+    letter-spacing: .35px;
+}
+.header-title p {
+    text-align: center;
+    font-size: 11px !important;
+    margin-top: 5px;
+}
+.calendar-dialog-top {
+    justify-content: center;
+    position: relative;
+    min-height: 42px;
+}
+.calendar-dialog-top h2 {
+    flex: 1;
+    text-align: center;
+    font-size: 22px !important;
+    font-weight: 800;
+    text-transform: none;
+}
+.calendar-close-button {
+    position: absolute;
+    right: 0;
+}
+.month-calendar-title {
+    font-size: 18px;
+    font-weight: 800;
+    text-align: center;
+}
+.month-calendar-header > div:first-child {
+    flex: 1;
+    text-align: center;
+}
+.calendar-launch-row:before,
+.slot-picker-field:before,
+.form-grid:before,
+.save-panel h2 {
+    justify-content: center;
+    text-align: center;
+    font-size: 14px !important;
+    font-weight: 800;
+    letter-spacing: .25px;
+}
+.save-panel h2 {
+    display: flex;
+}
+.calendar-launch-row,
+.slot-picker-field,
+.form-grid,
+.save-panel,
+.month-calendar,
+.calendar-dialog {
+    border-radius: 12px;
+    box-shadow: 0 5px 18px rgba(15,23,42,.08);
+}
+.calendar-launch-row,
+.slot-picker-field,
+.form-grid,
+.save-panel {
+    border: 1px solid #d7e0f0;
+}
+.form-grid {
+    gap: 16px 18px;
+    padding: 16px;
+}
+.form-grid:before {
+    margin: -16px -16px 5px;
+    height: 42px;
+    border-radius: 11px 11px 0 0;
+}
+.calendar-launch-row {
+    min-height: 100px;
+    padding: 12px 14px;
+}
+.calendar-launch-row:before {
+    height: 40px;
+    font-size: 14px;
+    border-radius: 11px 11px 0 0;
+}
+.calendar-launch-button {
+    margin-top: 34px;
+    padding: 9px 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.calendar-launch-button:hover,
+.submit-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(15,23,42,.14);
+}
+.selected-date-summary {
+    margin-top: 34px;
+    font-size: 11px;
+}
+.slot-picker-field {
+    padding: 12px;
+}
+.slot-picker-field:before {
+    height: 42px;
+    margin: -12px -12px 12px;
+    border-radius: 11px 11px 0 0;
+}
+label {
+    font-size: 12px;
+    font-weight: 750;
+}
+input, select, textarea {
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    transition: box-shadow .18s ease, border-color .18s ease;
+}
+textarea {
+    min-height: 86px;
+}
+input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.hint, .cr-message {
+    font-size: 10px;
+}
+.slot-grid {
+    gap: 8px;
+}
+.slot-tile {
+    min-height: 62px;
+    border-radius: 9px;
+    font-size: 11px;
+}
+.slot-time { font-size: 12px; }
+.slot-state { font-size: 10px; }
+.slot-legend,
+.slot-capacity-summary,
+.slot-selection {
+    font-size: 10px;
+}
+.save-panel {
+    padding: 0 16px 16px;
+}
+.save-panel h2 {
+    height: 42px;
+    margin: 0 -16px 14px;
+    border-radius: 11px 11px 0 0;
+}
+.save-checklist {
+    font-size: 11px;
+    line-height: 2;
+}
+.submit-button {
+    min-height: 42px;
+    margin-top: 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.message {
+    border-radius: 9px;
+    padding: 12px 15px;
+    font-size: 12px;
+}
+.month-calendar {
+    padding: 16px;
+}
+.calendar-day, .calendar-empty {
+    min-height: 48px;
+    border-radius: 9px;
+}
+.calendar-day .day-number { font-size: 14px; }
+.calendar-day .day-caption { font-size: 10px; }
+.calendar-help { text-align: center; font-size: 12px; }
+.slot-selection-modal:before {
+    height: 44px;
+    font-size: 15px;
+    text-align: center;
+    justify-content: center;
+}
+@media (max-width: 680px) {
+    .header-title {
+        position: static;
+        transform: none;
+        width: auto;
+        flex: 1 1 auto;
+        margin-left: 0 !important;
+        padding-left: 8px;
+    }
+    .header-title h1 { font-size: 18px !important; }
+    .header-title p { font-size: 9px !important; }
+    .calendar-dialog-top h2 { font-size: 19px !important; }
+    .form-grid { padding: 13px; }
+    .form-grid:before { margin: -13px -13px 4px; }
+    .calendar-launch-row:before,
+    .slot-picker-field:before,
+    .form-grid:before,
+    .save-panel h2 { font-size: 13px !important; }
+}
+@media (max-width: 480px) {
+    .header-title h1 { font-size: 16px !important; }
+    .header-title p { font-size: 8px !important; }
+    .form-grid { gap: 12px; }
+    .slot-tile { min-height: 54px; }
+}
+
+
+
+/* Full-width deployment form: use the complete available page area */
+.page-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+    gap: 16px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+.page-layout > .calendar-launch-row {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+}
+.page-layout > .form-grid {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 18px 20px !important;
+    padding: 20px !important;
+}
+.page-layout > .save-panel {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    width: 100% !important;
+}
+.page-layout > .slot-picker-field.slot-selection-modal {
+    /* Keep slot selection as the existing date-triggered modal */
+    position: fixed !important;
+}
+@media (max-width: 900px) {
+    .page-layout > .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+@media (max-width: 600px) {
+    .page-layout {
+        gap: 12px !important;
+    }
+    .page-layout > .form-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        padding: 14px !important;
+    }
+}
+
+
+/* =====================================================================
+   VISUAL ENHANCEMENTS (CSS ONLY)
+   - Header (.topbar, .brand, .header-title) colours / fonts: NOT touched
+   - Section heading bars (blue gradient + white text): colours kept
+   - Font family (Arial): kept
+   ===================================================================== */
+
+:root {
+  --blue-900: #1e3472;
+  --blue-600: #2457d6;
+  --blue-700: #1946b7;
+  --ink: #172554;
+  --muted: #64748b;
+  --line: #d7e0f0;
+  --surface: #ffffff;
+  --soft: #f4f7fd;
+  --radius: 14px;
+  --shadow-sm: 0 2px 8px rgba(23, 37, 84, .06);
+  --shadow-md: 0 10px 30px rgba(23, 37, 84, .10);
+  --shadow-lg: 0 30px 80px rgba(15, 23, 42, .30);
+}
+
+/* ---------- Page background ---------- */
+body {
+  background:
+    radial-gradient(900px 420px at 8% -5%, rgba(36, 87, 214, .10), transparent 60%),
+    radial-gradient(800px 380px at 100% 0%, rgba(135, 102, 120, .10), transparent 60%),
+    linear-gradient(180deg, #f1f5fb 0%, #e9eff9 100%) !important;
+  background-attachment: fixed !important;
+}
+
+.topbar { box-shadow: 0 6px 22px rgba(15, 23, 42, .22); }
+
+.page-layout {
+  padding: 22px 28px 40px !important;
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+}
+@media (max-width: 680px) {
+  .page-layout { padding: 14px 12px 28px !important; }
+}
+
+/* Flash messages */
+.message {
+  max-width: 1280px;
+  margin: 16px auto 0 !important;
+  width: calc(100% - 56px);
+  border-left-width: 5px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Entrance animation ---------- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(18px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.page-layout > .form-grid  { animation: riseIn .55s cubic-bezier(.2,.7,.2,1) both; }
+.page-layout > .save-panel { animation: riseIn .55s .12s cubic-bezier(.2,.7,.2,1) both; }
+
+/* ---------- Cards ---------- */
+.page-layout > .form-grid,
+.page-layout > .save-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Card heading bars (same colours, nicer finish) */
+.form-grid:before,
+.save-panel h2,
+.slot-picker-field:before {
+  background: linear-gradient(100deg, var(--blue-900), var(--blue-600)) !important;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .12);
+}
+
+/* Fix: header bar now spans the card fully (padding = 22px) */
+.page-layout > .form-grid {
+  padding: 22px !important;
+  gap: 20px 22px !important;
+}
+.page-layout > .form-grid:before {
+  margin: -22px -22px 4px !important;
+  height: 48px !important;
+  border-radius: 13px 13px 0 0 !important;
+}
+.save-panel h2 {
+  height: 48px !important;
+  border-radius: 13px 13px 0 0 !important;
+}
+
+/* ---------- Labels & inputs ---------- */
+label {
+  color: var(--ink);
+  letter-spacing: .15px;
+}
+.required { font-weight: 800; }
+
+input, select, textarea {
+  background: #fbfcff !important;
+  border: 1.5px solid #cdd9f0 !important;
+  border-radius: 9px !important;
+  color: #1e293b;
+  min-height: 42px;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+input:hover:not([readonly]), select:hover, textarea:hover {
+  border-color: #9db6ea !important;
+  background: #fff !important;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--blue-600) !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 4px rgba(36, 87, 214, .14) !important;
+}
+input::placeholder { color: #94a3b8; }
+input[readonly] {
+  background: repeating-linear-gradient(135deg, #f1f5f9, #f1f5f9 8px, #eaf0f7 8px, #eaf0f7 16px) !important;
+  color: var(--muted);
+  cursor: not-allowed;
+  border-style: dashed !important;
+}
+
+/* Custom dropdown arrow */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px !important;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%232457d6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+}
+
+/* Number input: tidy spinners */
+input[type=number] { appearance: textfield; -moz-appearance: textfield; }
+
+/* CR prefix group */
+.cr-input-group { border-radius: 9px; transition: box-shadow .18s ease; }
+.cr-input-group:focus-within { box-shadow: 0 0 0 4px rgba(36, 87, 214, .14); border-radius: 9px; }
+.cr-input-group:focus-within input,
+.cr-input-group:focus-within .cr-prefix { border-color: var(--blue-600) !important; }
+.cr-input-group input { border-radius: 0 9px 9px 0 !important; box-shadow: none !important; }
+.cr-prefix {
+  background: linear-gradient(180deg, #eaf1ff, #dbe7ff);
+  border: 1.5px solid #cdd9f0;
+  border-right: 0;
+  border-radius: 9px 0 0 9px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--blue-600);
+  letter-spacing: .4px;
+}
+.cr-message { min-height: 14px; font-weight: 700; }
+.cr-message.success::before,
+.cr-message.error::before { margin-right: 4px; }
+
+.hint { color: var(--muted); line-height: 1.5; }
+
+/* ---------- Date picker tile (inside form) ---------- */
+.form-grid .calendar-launch-row {
+  background: linear-gradient(180deg, #f7faff, #eef4ff) !important;
+  border: 1.5px dashed #9db6ea !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  padding: 14px !important;
+  gap: 9px !important;
+  transition: border-color .2s ease, background .2s ease;
+}
+
+.form-grid .calendar-launch-row:hover {
+  border-color: var(--blue-600) !important;
+  background: linear-gradient(180deg, #f2f7ff, #e6efff) !important;
+}
+.calendar-launch-button {
+  background: linear-gradient(100deg, var(--blue-900), var(--blue-600)) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  padding: 10px 16px !important;
+  font-size: 12px !important;
+  box-shadow: 0 6px 14px rgba(36, 87, 214, .30);
+}
+.calendar-launch-button:hover {
+  box-shadow: 0 10px 20px rgba(36, 87, 214, .38) !important;
+  filter: brightness(1.06);
+}
+.calendar-launch-button:active { transform: translateY(0) scale(.98) !important; }
+.selected-date-summary {
+  color: var(--ink) !important;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px !important;
+}
+
+/* ---------- Git links ---------- */
+.git-link-row { gap: 8px; margin-bottom: 8px; }
+.git-link-row:last-child { margin-bottom: 0; }
+.btn-success, .btn-danger {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px;
+  border-radius: 9px !important;
+  font-size: 20px !important;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.btn-success { background: linear-gradient(135deg, #22c55e, #15803d) !important; box-shadow: 0 5px 12px rgba(22, 163, 74, .30); }
+.btn-danger  { background: linear-gradient(135deg, #f87171, #dc2626) !important; box-shadow: 0 5px 12px rgba(220, 38, 38, .28); }
+.btn-success:hover:not(:disabled), .btn-danger:hover { transform: translateY(-2px); filter: brightness(1.07); }
+.btn-success:disabled { box-shadow: none; filter: grayscale(.4); }
+
+/* Screen-reader-only helper (was missing, so "(required)" text showed on screen) */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Save panel ---------- */
+.page-layout > .save-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 28px;
+  align-items: center;
+  padding: 0 22px 22px !important;
+}
+.save-panel h2 { grid-column: 1 / -1; margin: 0 -22px 18px !important; }
+
+.save-checklist {
+  list-style: none !important;
+  padding: 0 !important;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 22px;
+  line-height: 1.5 !important;
+  font-size: 12px !important;
+  color: #334155 !important;
+}
+.save-checklist li {
+  position: relative;
+  padding: 8px 10px 8px 38px;
+  background: var(--soft);
+  border: 1px solid #e3eaf8;
+  border-radius: 10px;
+}
+.save-checklist li::before {
+  content: "✓";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.submit-button {
+  width: auto !important;
+  min-width: 230px;
+  margin-top: 0 !important;
+  padding: 0 28px !important;
+  min-height: 52px !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  letter-spacing: .3px;
+  background: linear-gradient(100deg, var(--blue-900), var(--blue-600)) !important;
+  box-shadow: 0 10px 24px rgba(36, 87, 214, .38);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease !important;
+}
+.submit-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-2px) !important;
+  box-shadow: 0 16px 32px rgba(36, 87, 214, .45) !important;
+}
+.submit-button:active:not(:disabled) { transform: translateY(0) scale(.99) !important; }
+.submit-button:disabled { box-shadow: none; }
+
+@media (max-width: 800px) {
+  .page-layout > .save-panel { grid-template-columns: 1fr; row-gap: 14px; }
+  .save-checklist { grid-template-columns: 1fr; }
+  .submit-button { width: 100% !important; }
+}
+
+/* ---------- Modals (calendar + slot) ---------- */
+.calendar-modal-backdrop,
+.slot-selection-backdrop {
+  background: rgba(15, 23, 42, .55) !important;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: fadeIn .25s ease both;
+}
+
+.calendar-dialog {
+  border-radius: 18px !important;
+  box-shadow: var(--shadow-lg) !important;
+  animation: popIn .32s cubic-bezier(.2,.8,.2,1) both;
+  border: 1px solid #e3eaf8;
+}
+.calendar-dialog-top h2 { color: var(--ink); }
+.calendar-close-button {
+  border-radius: 50% !important;
+  background: #f1f5f9 !important;
+  transition: background .15s ease, transform .15s ease, color .15s ease;
+}
+.calendar-close-button:hover { background: #fee2e2 !important; color: #b91c1c !important; transform: rotate(90deg); }
+
+.month-calendar { background: #fbfcff; border-color: #e3eaf8 !important; box-shadow: none !important; }
+.month-calendar-nav button {
+  border-radius: 9px !important;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.month-calendar-nav button:hover { background: #eaf1ff !important; border-color: var(--blue-600) !important; transform: translateY(-1px); }
+.month-calendar-weekday { text-transform: uppercase; letter-spacing: .6px; font-size: 10px !important; color: #7b8aa5; }
+
+.calendar-day {
+  background: #fff;
+  border: 1.5px solid #e3eaf8 !important;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
+}
+.calendar-day:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(36, 87, 214, .18);
+  border-color: var(--blue-600) !important;
+  background: #eff5ff;
+}
+.calendar-day.today { box-shadow: inset 0 0 0 2px var(--blue-600) !important; }
+.calendar-day.today .day-caption { color: var(--blue-600); font-weight: 700; }
+.calendar-day.selected {
+  background: linear-gradient(135deg, var(--blue-900), var(--blue-600)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 8px 18px rgba(36, 87, 214, .40) !important;
+}
+.calendar-day:disabled {
+  background: repeating-linear-gradient(135deg, #f8fafc, #f8fafc 6px, #f1f5f9 6px, #f1f5f9 12px) !important;
+  border-color: #edf0f5 !important;
+  color: #cbd5e1;
+}
+.calendar-help { color: var(--muted); line-height: 1.5; }
+
+/* Slot modal: truly centred, sized to content, animated */
+.slot-selection-modal {
+  height: fit-content !important;
+  border-radius: 18px !important;
+  border: 1px solid #e3eaf8 !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 20px !important;
+  background: #fff;
+}
+.slot-selection-modal.slot-modal-open { animation: popIn .32s cubic-bezier(.2,.8,.2,1) both; }
+.slot-selection-modal:before {
+  margin: -20px -20px 16px !important;
+  height: 50px !important;
+  border-radius: 17px 17px 0 0 !important;
+  font-size: 15px !important;
+}
+.slot-selection-modal > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+/* Legend as pills */
+.slot-legend { gap: 8px !important; margin: 10px 0 14px !important; }
+.slot-legend span {
+  padding: 4px 11px;
+  background: var(--soft);
+  border: 1px solid #e3eaf8;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #475569;
+}
+.legend-dot { width: 9px !important; height: 9px !important; box-shadow: 0 0 0 3px rgba(0, 0, 0, .05); }
+
+.slot-capacity-summary {
+  padding: 8px 12px;
+  background: #eff5ff;
+  border: 1px solid #dbe7ff;
+  border-radius: 9px;
+  color: #1e3a8a !important;
+  font-weight: 600;
+}
+.slot-day-message { border-radius: 10px; border-left: 5px solid #dc2626; }
+
+/* Slot tiles */
+.slot-grid { gap: 10px !important; }
+.slot-tile {
+  position: relative;
+  border-width: 1.5px !important;
+  border-radius: 12px !important;
+  min-height: 66px !important;
+  box-shadow: var(--shadow-sm);
+}
+.slot-tile.available { background: linear-gradient(180deg, #ecfdf3, #d3f8e0) !important; }
+.slot-tile.available:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 22px rgba(22, 163, 74, .28) !important;
+  border-color: #22c55e !important;
+}
+.slot-tile.pending { background: linear-gradient(180deg, #fffbeb, #fdefc2) !important; }
+.slot-tile.booked  { background: linear-gradient(180deg, #fff1f1, #fddcdc) !important; }
+.slot-tile.blocked { background: repeating-linear-gradient(135deg, #eceef1, #eceef1 8px, #e2e5e9 8px, #e2e5e9 16px) !important; }
+.slot-tile:disabled { opacity: .88 !important; box-shadow: none; }
+.slot-tile.selected {
+  outline: none !important;
+  border-color: var(--blue-600) !important;
+  background: linear-gradient(180deg, #e8f0ff, #cfe0ff) !important;
+  color: var(--blue-900) !important;
+  box-shadow: 0 0 0 3px rgba(36, 87, 214, .25), 0 10px 20px rgba(36, 87, 214, .25) !important;
+}
+.slot-tile.selected::after {
+  content: "✓";
+  position: absolute;
+  top: -8px; right: -8px;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--blue-600);
+  color: #fff;
+  font-size: 12px;
+  box-shadow: 0 4px 10px rgba(36, 87, 214, .45);
+}
+
+.slot-selection {
+  padding: 10px 14px;
+  background: linear-gradient(100deg, #eff5ff, #e3edff);
+  border-left: 4px solid var(--blue-600);
+  border-radius: 9px;
+  font-size: 12px !important;
+}
+.slot-loading { border-radius: 10px; padding: 18px 8px; }
+
+/* ---------- Scrollbars ---------- */
+* { scrollbar-width: thin; scrollbar-color: #b6c5e6 transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: #b6c5e6; border-radius: 99px; }
+*::-webkit-scrollbar-thumb:hover { background: #8fa6d8; }
+
+/* ---------- Accessibility / motion ---------- */
+:focus-visible { outline: 3px solid rgba(36, 87, 214, .45); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+
+/* Slot availability preview inside the deployment-date card */
+.form-grid .calendar-launch-row {
+    align-items: flex-start;
+}
+.date-slot-summary {
+    display: none;
+    width: 100%;
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #334155;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.date-slot-summary.visible { display: block; }
+.date-slot-counts {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+}
+.date-slot-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.date-slot-count.available { color: #166534; background: #dcfce7; }
+.date-slot-count.pending { color: #92400e; background: #fef3c7; }
+.date-slot-count.booked { color: #991b1b; background: #fee2e2; }
+.date-slot-count.blocked { color: #475569; background: #e2e8f0; }
+.date-slot-times { color: #475569; overflow-wrap: anywhere; }
+.date-slot-times strong { color: #172554; }
+.date-slot-selected {
+    color: #1d4ed8;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 12px;
+}
+.date-slot-placeholder { color: #64748b; }
+@media (max-width: 480px) {
+    .date-slot-summary { font-size: 10px; padding: 8px; }
+    .date-slot-counts { gap: 4px; }
+    .date-slot-count { padding: 4px 7px; }
+}
+
+</style>
+
+
+</head>
+
+<body>
+
+    <div class="container">
+        <header class="topbar">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='images/rbl_logo.png') }}"
+                     alt="RBL BANK - Apno ka Bank"
+                     class="brand-logo">
+            </div>
+            <div class="header-title">
+                <h1> Release Calendar</h1>
+                <p>Register a change request &amp; schedule its deployment</p>
+            </div>
+        </header>
+        
+
+        
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% for category, message in messages %}
+
+        <div class="message {{ category }}" role="alert">{{ message }}</div>
+
+        {% endfor %}
+
+        {% endwith %}
+
+        <div class="calendar-modal" id="calendarModal" hidden>
+            <div class="calendar-modal-backdrop" data-close-calendar="true"></div>
+            <div class="calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="calendarDialogHeading">
+
+                <div class="calendar-dialog-top">
+                    <h2 id="calendarDialogHeading">Choose deployment date</h2>
+
+                    <button type="button" class="calendar-close-button" id="closeCalendarButton"
+                        aria-label="Close calendar">×</button>
+                </div>
+
+                <section class="month-calendar" aria-label="Choose deployment date">
+                    <div class="month-calendar-header">
+
+                        <div>
+                            <div class="month-calendar-title" id="calendarMonthTitle">Choose a deployment date</div>
+                            <div class="hint">Select a date to load its available 30-minute slots.</div>
+                        </div>
+
+                        <div class="month-calendar-nav">
+                            <button type="button" id="calendarPrevMonth" aria-label="Previous month">‹</button>
+                            <button type="button" id="calendarToday">This month</button>
+                            <button type="button" id="calendarNextMonth" aria-label="Next month">›</button>
+                        </div>
+                    </div>
+
+                    <div class="month-calendar-grid" id="monthCalendarGrid" role="group" aria-label="Calendar dates">
+                    </div>
+
+                    <p class="calendar-help" id="calendarHelp">Choose a Change Type, then select a future date. 
+                         Emergency CR: any day; other types: weekdays.</p>
+
+                </section>
+
+            </div>
+
+        </div>
+
+        <form method="POST" action="{{ url_for('Release_Calender') }}" autocomplete="off" id="deploymentForm">
+
+            <div class="page-layout">
+
+
+                <div class="slot-selection-backdrop" id="slotSelectionBackdrop"></div>
+                <section class="slot-picker-field slot-selection-modal" id="slotSelectionModal" role="dialog" aria-modal="true" aria-label="Select deployment slot">
+
+                    <label>30-Minute Deployment Slots <span class="required">*</span></label>
+                    <div id="slotDayMessage" class="slot-day-message" role="status" aria-live="polite"></div>
+                    <p id="slotCapacitySummary" class="slot-capacity-summary">Capacity information will appear after
+                        choosing a date.</p>
+
+                    <div class="slot-legend">
+                        <span><i class="legend-dot available"></i> Available</span>
+                        <span><i class="legend-dot pending"></i> Pending</span>
+                        <span><i class="legend-dot booked"></i> Booked</span>
+                        <span><i class="legend-dot blocked"></i> Blocked</span>
+                    </div>
+
+                    <div id="slotGrid" class="slot-grid" role="group" aria-label="Deployment time slots">
+                        <div class="slot-loading">Choose a deployment date to load slots.</div>
+                    </div>
+
+                    <p class="hint" id="slotTimeHelp">
+                        Each tile represents 30 minutes, from 6:30 PM to 11:00 PM. Orange and red slots cannot be
+                        selected.
+                    </p>
+
+                    <input type="hidden" id="slot_start" name="slot_start" value="{{ data.get('slot_start', '') }}"
+                        required>
+
+                    <p class="slot-selection" id="slotSelection" aria-live="polite">
+                        No slot selected.
+                    </p>
+
+                </section>
+
+                    <div class="form-grid">
+
+
+                        <div class="field">
+
+                            <label for="cr_suffix">CR Number <span class="required">*</span></label>
+    
+                            <div class="cr-input-group">
+    
+                                <span class="cr-prefix" aria-hidden="true">CR-</span>
+    
+                                <input type="text" id="cr_suffix" inputmode="numeric" pattern="[0-9]+" maxlength="47"
+                                    placeholder="Enter CR number" required>
+                            </div>
+    
+                            <input type="hidden" id="cr_number" name="cr_number" value="{{ data.get('cr_number', '') }}">
+    
+                            <span id="cr-message" class="cr-message" aria-live="polite"></span>
+    
+                        </div>
+    
+    
+    
+                        <div class="field">
+    
+                            <label for="rfid">RFID</label>
+    
+                            <input type="text" id="rfid" placeholder="Generated automatically after saving" readonly>
+    
+                            <span class="hint">
+                                Existing CRs reuse their RFID. New CRs receive an 8-digit RFID after saving.
+                            </span>
+    
+                        </div>
+    
+
+
+                        <div class="field">
+                            <label for="change_type">Change Type <span class="required">*</span></label>
+                            <select id="change_type" name="change_type" required>
+                                <option value="">Select change type</option>
+    
+                                {% for item in change_types %}
+    
+                                <option value="{{ item }}" {% if data.get('change_type')==item %}selected{% endif %}>
+                                    {{ item }}
+                                </option>
+    
+                                {% endfor %}
+    
+                            </select>
+    
+                        </div>
+    
+
+                    <div class="calendar-launch-row">
+            <button type="button" class="calendar-launch-button" id="openCalendarButton" aria-haspopup="dialog"
+                aria-controls="calendarModal">
+                 Select deployment date
+            </button>
+            <span class="selected-date-summary" id="selectedDateSummary" aria-live="polite">No date selected</span>
+            <div class="date-slot-summary" id="dateSlotSummary" aria-live="polite">
+                <span class="date-slot-placeholder">Slot details will appear after selecting a deployment date.</span>
+            </div>
+        </div>
+
+                    <input type="hidden" id="deployment_date" name="deployment_date"
+                        value="{{ data.get('deployment_date', '') }}">
+
+                    <div class="field">
+                        <label for="application_name">Application Name <span class="required">*</span></label>
+                        <input type="text" id="application_name" name="application_name" maxlength="150"
+                            value="{{ data.get('application_name', '') }}" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="category">Category</label>
+                        <input type="text"
+                               id="category"
+                               name="category"
+                               placeholder=""
+                               readonly>
+                    </div>
+                    
+                    <div class="field">
+                        <label for="impacted_application">Impacted Application</label>
+                        <input type="text"
+                               id="impacted_application"
+                               name="impacted_application"
+                               placeholder=""
+                               readonly>
+                    </div>
+
+
+
+
+                    <div class="field">
+                        <label for="deployment_count">
+                            Deployment Count <span class="required">*</span>
+                        </label>
+                    
+                        <input
+                            type="number"
+                            id="deployment_count"
+                            name="deployment_count"
+                            min="1"
+                            max="5"
+                            step="1"
+                            placeholder="Enter deployment count"
+                            value="{{ data.get('deployment_count', '1') }}"
+                            required
+                        >
+                    
+                        <span class="hint">
+                            Allowed CR: 1 to 5
+                        </span>
+                    </div>
+
+                    <div class="field">
+
+                        <label for="deployment_type">Deployment Type <span class="required">*</span></label>
+
+                        <select id="deployment_type" name="deployment_type" required>
+                            <option value="">Select type</option>
+                            {% for item in deployment_types %}
+                            <option value="{{ item }}" {% if data.get('deployment_type')==item %}selected{% endif %}>
+                                {{ item }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>App Id</label>
+                        <input type="text"
+                               id="business_unit"
+                               name="business_unit"
+                               readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>oneQ Reference</label>
+                        <input type="text"
+                               id="environment"
+                               name="environment"
+                               readonly>
+                    </div>
+
+
+
+                    <div class="field">
+                        <label for="change_requestor">Change Requestor <span class="required">*</span></label>
+                        <input type="text" id="change_requestor" name="change_requestor"
+                            placeholder="Business Owner Name" maxlength="150"
+                            value="{{ data.get('change_requestor', '') }}" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="incident_number">Incident Number</label>
+                        <input type="text" id="incident_number" name="incident_number" maxlength="50"
+                            value="{{ data.get('incident_number', '') }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Git Links <span id="gitRequiredStar" aria-hidden="true" style="color:#dc2626;font-weight:700;">*</span><span class="sr-only" id="gitRequiredSr"> (required)</span></label>
+                        <span class="hint" id="gitLinkHint"></span>
+                    
+                        <div id="git-links-container">
+                            <div class="git-link-row">
+                                <input
+                                    type="url"
+                                    name="git_links[]"
+                                    class="form-control git-link"
+                                    pattern="https?://.+" title="Enter a valid Git repository URL ending in .git"
+                                    placeholder="https://apnagit.rblbank.com/RBL/release.git"
+                                    required
+                                >
+                                <button
+                                    type="button"
+                                    class="btn btn-success git-link-add"
+                                    onclick="addGitLink()">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+                <aside class="save-panel">
+                    <h2>🖉  Save Release</h2>
+                    <ul class="save-checklist">
+                        <li>Select Change Type, then enter CR Number</li>
+                        <li>Select deployment date and an available slot</li>
+                        <li>Fill in all required fields</li>
+                        <li>CR Number is validated automatically</li>
+                    </ul>
+                    <button type="submit" class="submit-button" id="saveButton">Save Release</button>
+                </aside>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const crInput = document.getElementById("cr_number");
+
+            const crSuffix = document.getElementById("cr_suffix");
+
+            const rfidInput = document.getElementById("rfid");
+
+            const crMessage = document.getElementById("cr-message");
+
+            const form = document.getElementById("deploymentForm");
+
+            const saveButton = document.getElementById("saveButton");
+
+            const dateInput = document.getElementById("deployment_date");
+
+            const slotInput = document.getElementById("slot_start");
+
+            const changeTypeInput = document.getElementById("change_type");
+
+            const slotGrid = document.getElementById("slotGrid");
+            const slotSelectionModal = document.getElementById("slotSelectionModal");
+            const slotSelectionBackdrop = document.getElementById("slotSelectionBackdrop");
+
+            function openSlotSelection() {
+                if (!dateInput.value) return;
+                slotSelectionModal.classList.add("slot-modal-open");
+                slotSelectionBackdrop.classList.add("slot-modal-open");
+                document.body.style.overflow = "hidden";
+            }
+
+            function closeSlotSelection() {
+                slotSelectionModal.classList.remove("slot-modal-open");
+                slotSelectionBackdrop.classList.remove("slot-modal-open");
+                document.body.style.overflow = "";
+            }
+
+            slotSelectionBackdrop.addEventListener("click", closeSlotSelection);
+
+
+            const slotSelection = document.getElementById("slotSelection");
+
+            const slotTimeHelp = document.getElementById("slotTimeHelp");
+            const slotDayMessage = document.getElementById("slotDayMessage");
+            const slotCapacitySummary = document.getElementById("slotCapacitySummary");
+
+            // Git links are optional for these ITSM categories.
+            const GIT_OPTIONAL_CATEGORIES = ["cloud", "dwh", "ivr", "linux", "middleware", "network", "nutanix", "storage"];
+            let gitOptional = false;
+
+            function isGitOptional(category) {
+                return GIT_OPTIONAL_CATEGORIES.includes(String(category || "").trim().toLowerCase());
+            }
+
+            function applyGitRequirement() {
+                const required = !gitOptional;
+                document.querySelectorAll("#git-links-container .git-link").forEach(function (input) {
+                    input.required = required;
+                    if (!required) input.setCustomValidity("");
+                });
+                const star = document.getElementById("gitRequiredStar");
+                const sr = document.getElementById("gitRequiredSr");
+                const hint = document.getElementById("gitLinkHint");
+                if (star) star.style.display = required ? "" : "none";
+                if (sr) sr.textContent = required ? " (required)" : " (optional)";
+                if (hint) hint.textContent = required ? "" : "Git links are optional for this category.";
+            }
+
+
+            // Git repository URLs must be valid HTTP(S) URLs whose path ends in .git.
+            function validateGitLink(input) {
+                const value = input.value.trim();
+                if (!value && gitOptional) { input.setCustomValidity(""); return true; }
+
+                if (!value) {
+                    input.setCustomValidity("Git link is required.");
+                    return false;
+                }
+
+                try {
+                    const parsed = new URL(value);
+                    const isHttp = parsed.protocol === "http:" || parsed.protocol === "https:";
+                    const endsWithGit = /\.git$/i.test(parsed.pathname);
+                    const valid = isHttp && Boolean(parsed.hostname) && endsWithGit;
+                    input.setCustomValidity(
+                        valid ? "" : "Enter a valid Git repository URL ending exactly with .git."
+                    );
+                    return valid;
+                } catch (_) {
+                    input.setCustomValidity("Enter a valid Git repository URL ending exactly with .git.");
+                    return false;
+                }
+            }
+
+            form.addEventListener("input", function (event) {
+                if (event.target && event.target.classList.contains("git-link")) {
+                    validateGitLink(event.target);
+                }
+            });
+
+            form.addEventListener("change", function (event) {
+                if (event.target && event.target.classList.contains("git-link")) {
+                    validateGitLink(event.target);
+                }
+            });
+
+            
+            const deploymentCountInput = document.getElementById("deployment_count");
+            deploymentCountInput.addEventListener("input", updateGitAddButton);
+            deploymentCountInput.addEventListener("change", updateGitAddButton);
+
+            updateGitAddButton();
+            
+
+            const validateCrUrl = "/api/validate-cr";
+
+            const slotStatusUrl = "{{ url_for('slot_status') }}";
+
+            let lookupTimer = null;
+
+            let requestController = null;
+
+            let requestSequence = 0;
+
+            let isChecking = false;
+
+            let lookupFailed = false;
+
+            let selectedSlot = slotInput.value || "";
+            let allowedCabDates = [];
+
+            function normalizeCR(value) {
+                const suffix = value.trim().replace(/^CR-/i, "");
+                if (!/^\d*$/.test(suffix)) return null;
+                return suffix ? "CR-" + suffix : "";
+            }
+
+            function syncCRNumber() {
+                const normalized = normalizeCR(crSuffix.value);
+
+                if (normalized === null) {
+                    crSuffix.setCustomValidity("Enter digits only after the CR- prefix.");
+                    crInput.value = "";
+                    return false;
+                }
+
+                crSuffix.setCustomValidity("");
+                crInput.value = normalized;
+                return normalized !== "";
+
+            }
+
+            function clearRFID() {
+                rfidInput.value = "";
+            }
+
+            function showMessage(text, type) {
+                crMessage.textContent = text;
+
+                crMessage.className = "cr-message";
+
+                if (type) crMessage.classList.add(type);
+
+            }
+
+            async function checkCRNumber() {
+    const crNumber = crInput.value.trim();
+
+    if (!crNumber || crNumber.length < 5) {
+        lookupFailed = true;
+        clearRFID();
+        return;
+    }
+
+    const validationRequestId = ++requestSequence;
+
+    try {
+        isChecking = true;
+        lookupFailed = false;
+
+        showMessage("Validating CR Number...", "");
+
+        const response = await fetch(
+            validateCrUrl + "?cr_number=" + encodeURIComponent(crNumber),
+            {
+                headers: {
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+        const result = await response.json();
+
+        // Ignore outdated responses
+        if (validationRequestId !== requestSequence) return;
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "CR Validation failed");
+        }
+
+        if (!result.cab_dates || !result.cab_dates.length) {
+            throw new Error(
+                "The ITSM API did not return any valid CAB dates."
+            );
+        }
+
+        // Populate ITSM information
+        document.getElementById("business_unit").value =
+            result.business_unit || "";
+
+        document.getElementById("environment").value =
+            result.environment || "";
+
+        document.getElementById("change_requestor").value =
+            result.change_requestor || "";
+
+        document.getElementById("application_name").value =
+            result.application_name || "";
+
+        document.getElementById("category").value =
+            result.category || "";
+
+        document.getElementById("impacted_application").value =
+            result.impacted_application || "";
+
+        // Update change type
+        if (result.change_type) {
+            const dropdown = document.getElementById("change_type");
+
+            Array.from(dropdown.options).forEach(option => {
+                if (
+                    option.text.trim().toLowerCase() ===
+                    result.change_type.trim().toLowerCase()
+                ) {
+                    dropdown.value = option.value;
+                }
+            });
+        }
+
+        // Load CAB dates
+        allowedCabDates = result.cab_dates.map(d => d.trim());
+
+        // Git links are optional for certain ITSM categories.
+        gitOptional = isGitOptional(result.category);
+        applyGitRequirement();
+
+        const currentDate = dateInput.value;
+
+        if (
+            currentDate &&
+            !allowedCabDates.includes(currentDate)
+        ) {
+            dateInput.value = "";
+            slotInput.value = "";
+            selectedSlot = "";
+        }
+
+        const firstCabDate = new Date(
+            allowedCabDates[0] + "T12:00:00"
+        );
+
+        calendarMonth = new Date(
+            firstCabDate.getFullYear(),
+            firstCabDate.getMonth(),
+            1
+        );
+
+        renderMonthCalendar();
+        updateCalendarLauncher();
+
+        showMessage(
+            "CR Approved. Available CAB dates: " +
+            allowedCabDates.join(", "),
+            "success"
+        );
+
+        // Load RFID
+        if (result.exists) {
+            rfidInput.value = result.rfid || "";
+        } else {
+            clearRFID();
+        }
+
+        lookupFailed = false;
+
+        loadSlots();
+
+    } catch (error) {
+
+        if (validationRequestId !== requestSequence) return;
+
+        lookupFailed = true;
+        gitOptional = false; applyGitRequirement();
+        allowedCabDates = [];
+
+        dateInput.value = "";
+        slotInput.value = "";
+        selectedSlot = "";
+
+        document.getElementById("category").value = "";
+        document.getElementById("impacted_application").value = "";
+        document.getElementById("application_name").value = "";
+        document.getElementById("business_unit").value = "";
+        document.getElementById("environment").value = "";
+        document.getElementById("change_requestor").value = "";
+
+        renderMonthCalendar();
+        updateCalendarLauncher();
+
+        clearRFID();
+
+        showMessage(error.message, "error");
+
+    } finally {
+
+        if (validationRequestId === requestSequence) {
+            isChecking = false;
+        }
+    }
+}
+crSuffix.addEventListener("input", function () {
+
+document.getElementById("category").value = "";
+document.getElementById("impacted_application").value = "";
+document.getElementById("application_name").value = "";
+document.getElementById("business_unit").value = "";
+document.getElementById("environment").value = "";
+document.getElementById("change_requestor").value = "";
+
+const normalized = normalizeCR(crSuffix.value);
+
+if (normalized === null) {
+    crSuffix.setCustomValidity(
+        "Enter digits only after the CR- prefix."
+    );
+    crInput.value = "";
+    return;
+}
+
+crSuffix.setCustomValidity("");
+
+crSuffix.value = normalized.replace(/^CR-/, "");
+crInput.value = normalized;
+
+clearTimeout(lookupTimer);
+
+if (requestController) {
+    requestController.abort();
+}
+
+requestSequence++;
+
+isChecking = false;
+lookupFailed = false;
+gitOptional = false; applyGitRequirement();
+allowedCabDates = [];
+
+dateInput.value = "";
+slotInput.value = "";
+selectedSlot = "";
+
+renderMonthCalendar();
+updateCalendarLauncher();
+loadSlots();
+
+clearRFID();
+
+showMessage(
+    "Validate the CR number to fetch its CAB date.",
+    ""
+);
+
+lookupTimer = setTimeout(checkCRNumber, 350);
+});
+            crSuffix.addEventListener("change", function () {
+
+                clearTimeout(lookupTimer);
+
+                if (syncCRNumber()) checkCRNumber();
+
+            });
+
+            function formatSlotTime(value) {
+                const [hourText, minute] = value.split(":");
+                const hour = Number(hourText);
+                const suffix = hour >= 12 ? "PM" : "AM";
+                return `${((hour + 11) % 12) + 1}:${minute} ${suffix}`;
+            }
+
+            const dateSlotSummary = document.getElementById("dateSlotSummary");
+
+            function updateDateSlotSummary(slots, isBlocked, selectedStart) {
+                if (!dateSlotSummary) return;
+
+                if (!dateInput.value) {
+                    dateSlotSummary.classList.remove("visible");
+                    dateSlotSummary.innerHTML =
+                        '<span class="date-slot-placeholder">Slot details will appear after selecting a deployment date.</span>';
+                    return;
+                }
+
+                const slotList = Array.isArray(slots) ? slots : [];
+                const counts = { available: 0, pending: 0, booked: 0, blocked: 0 };
+
+                slotList.forEach(function (slot) {
+                    const state = isBlocked ? "blocked" : String(slot.state || "").toLowerCase();
+                    if (Object.prototype.hasOwnProperty.call(counts, state)) {
+                        counts[state] += 1;
+                    } else {
+                        counts.booked += 1;
+                    }
+                });
+
+                const availableTimes = isBlocked ? [] : slotList
+                    .filter(slot => String(slot.state || "").toLowerCase() === "available")
+                    .map(slot => formatSlotTime(slot.start));
+
+                const selected = slotList.find(slot => slot.start === selectedStart);
+                const selectedText = selected
+                    ? '<div class="date-slot-selected">Selected slot: ' +
+                        formatSlotTime(selected.start) + ' – ' + formatSlotTime(selected.end) + '</div>'
+                    : "";
+
+                    dateSlotSummary.innerHTML =
+                        selectedText +
+                        '<div class="date-slot-counts">' +
+                            '<span class="date-slot-count available">🟢 Available: ' + counts.available + '</span>' +
+                            '<span class="date-slot-count booked">🔴 Booked: ' + counts.booked + '</span>' +
+                        '</div>';
+
+                dateSlotSummary.classList.add("visible");
+            }
+
+            async function loadSlots() {
+
+                if (!dateInput.value) {
+                    slotDayMessage.classList.remove("visible");
+                    slotDayMessage.textContent = "";
+                    slotCapacitySummary.textContent = "Capacity information will appear after choosing a date.";
+
+                    slotGrid.innerHTML =
+
+                        '<div class="slot-loading">Choose a deployment date to load slots.</div>';
+
+                    slotInput.value = "";
+
+                    selectedSlot = "";
+
+                    slotSelection.textContent = "No slot selected.";
+                    updateDateSlotSummary([], false, "");
+
+                    return;
+
+                }
+
+                slotGrid.innerHTML =
+
+                    '<div class="slot-loading">Loading availability...</div>';
+
+                try {
+                    const response = await fetch(
+                        slotStatusUrl + "?date=" + encodeURIComponent(dateInput.value)
+                        + "&change_type=" + encodeURIComponent(changeTypeInput.value || "")
+                        + "&cr_number=" + encodeURIComponent(crInput.value || ""),
+
+                        {
+
+                            headers: { "Accept": "application/json" },
+                            cache: "no-store"
+
+                        }
+
+                    );
+
+                    if (!response.ok) {
+                        const body = await response.text();
+                        let message = "Could not load slot availability.";
+
+                        try {
+                            const parsed = JSON.parse(body);
+
+                            if (parsed.error) message = parsed.error;
+
+                        } catch (_) { }
+                        throw new Error(message);
+                    }
+
+                    const result = await response.json();
+                    updateDateSlotSummary(result.slots || [], Boolean(result.blocked), selectedSlot);
+
+                    slotGrid.innerHTML = "";
+                    slotDayMessage.classList.remove("visible");
+                    slotDayMessage.textContent = "";
+                    if (result.blocked) {
+                        slotDayMessage.textContent = "BLOCKED DATE: " + dateInput.value +
+                            "\nReason: " + (result.block_message || "No reason was provided.");
+                        slotDayMessage.classList.add("visible");
+                    }
+                    const capacity = Number(result.max_cr_per_slot || 1);
+                    const totalBooked = (result.slots || []).reduce((sum, slot) =>
+                        sum + Number(slot.booked_count || 0), 0);
+                    const totalCapacity = (result.slots || []).length * capacity;
+                    slotCapacitySummary.textContent = result.blocked
+                        ? "This date is blocked. All deployment slots are unavailable."
+                        : "Capacity: " + capacity + " CR(s) per 30-minute slot. Booked: " +
+                        totalBooked + " of " + totalCapacity + " total capacity.";
+
+                    if (changeTypeInput.value === "Emergency CR") {
+                        slotTimeHelp.textContent = "Emergency CR: 30-minute slots are available throughout the day and night. Orange and red slots cannot be selected.";
+                        slotSelection.textContent = "Emergency CR: choose any available 30-minute time, day or night.";
+
+                    } else {
+                        slotTimeHelp.textContent = "Each tile represents 30 minutes, from 6:30 PM to 11:00 PM. Orange and red slots cannot be selected.";
+                        slotSelection.textContent = "No slot selected.";
+                    }
+
+                    result.slots.forEach(function (slot) {
+                        const tile = document.createElement("button");
+                        tile.type = "button";
+                        tile.className = "slot-tile " + slot.state;
+                        tile.dataset.start = slot.start;
+
+                        const booked = Number(slot.booked_count || 0);
+                        const limit = Number(slot.capacity || capacity);
+                        const remaining = Math.max(0, limit - booked);
+
+                        const label = slot.state === "blocked"
+                            ? "Blocked"
+                            : slot.state === "available"
+                                ? `${remaining} of ${limit} available`
+                                : slot.state === "pending"
+                                    ? "Pending"
+                                    : `Full (${booked}/${limit})`;
+                        const timeLabel = document.createElement("span");
+
+                        timeLabel.className = "slot-time";
+
+                        timeLabel.textContent = formatSlotTime(slot.start);
+
+                        const stateLabel = document.createElement("span");
+
+                        stateLabel.className = "slot-state";
+
+                        stateLabel.textContent = label;
+
+                        tile.append(timeLabel, stateLabel);
+
+                        const canSelect = slot.state === "available" && !result.blocked;
+
+                        tile.disabled = !canSelect;
+                        if (slot.state === "blocked" || result.blocked) {
+                            tile.classList.add("blocked");
+                            tile.title = "Blocked: " + (result.block_message || "This date is blocked by the Super Manager.");
+                        } else {
+                            tile.title = slot.status || "Available";
+                        }
+
+                        tile.setAttribute(
+                            "aria-label",
+                            formatSlotTime(slot.start) + " to " +
+                            formatSlotTime(slot.end) + ", " + label + (result.block_message ? ", " + result.block_message : "")
+                        );
+
+                        if (canSelect) {
+                            tile.addEventListener("click", function () {
+                                selectedSlot = slot.start;
+                                slotInput.value = slot.start;
+                                slotGrid.querySelectorAll(".slot-tile").forEach(function (item) {
+                                    item.classList.remove("selected");
+                                });
+
+                                tile.classList.add("selected");
+
+                                slotSelection.textContent =
+                                    "Selected: " + formatSlotTime(slot.start) +
+                                    " - " + formatSlotTime(slot.end);
+                                updateDateSlotSummary(result.slots || [], Boolean(result.blocked), selectedSlot);
+                                closeSlotSelection();
+
+                            });
+
+                        }
+
+                        if (slot.start === selectedSlot && canSelect) {
+                            tile.classList.add("selected");
+                        }
+                        slotGrid.appendChild(tile);
+                    });
+
+                    const selected = result.slots.find(function (slot) {
+                        return slot.start === selectedSlot;
+                    });
+
+                    if (result.blocked || !selected || selected.state !== "available") {
+                        selectedSlot = "";
+                        slotInput.value = "";
+                        slotSelection.textContent = "Choose a green slot to continue.";
+
+                    } else {
+                        slotInput.value = selectedSlot;
+                        slotSelection.textContent =
+                            "Selected: " + formatSlotTime(selected.start) +
+                            " - " + formatSlotTime(selected.end);
+                    }
+                    updateDateSlotSummary(result.slots || [], Boolean(result.blocked), selectedSlot);
+
+                } catch (error) {
+                    slotGrid.innerHTML =
+                        '<div class="slot-loading">Could not load slots. Refresh or try again.</div>';
+                    slotInput.value = "";
+                    selectedSlot = "";
+                    slotSelection.textContent = "Slot availability could not be verified.";
+                    if (dateSlotSummary) {
+                        dateSlotSummary.innerHTML = '<span class="date-slot-placeholder">Unable to load slot details. Please try again.</span>';
+                        dateSlotSummary.classList.add("visible");
+                    }
+                    console.error("Slot availability error:", error);
+                }
+
+            }
+            const calendarTitle = document.getElementById("calendarMonthTitle");
+
+            const calendarGrid = document.getElementById("monthCalendarGrid");
+
+            const previousMonthButton = document.getElementById("calendarPrevMonth");
+
+            const nextMonthButton = document.getElementById("calendarNextMonth");
+
+            const thisMonthButton = document.getElementById("calendarToday");
+
+            const calendarHelp = document.getElementById("calendarHelp");
+
+            const calendarModal = document.getElementById("calendarModal");
+
+            const openCalendarButton = document.getElementById("openCalendarButton");
+
+            const closeCalendarButton = document.getElementById("closeCalendarButton");
+
+            const selectedDateSummary = document.getElementById("selectedDateSummary");
+
+            function updateCalendarLauncher() {
+
+                if (dateInput.value) {
+                    const chosen = new Date(dateInput.value + "T12:00:00");
+                    selectedDateSummary.textContent = "Selected: " + chosen.toLocaleDateString(undefined, {
+                        weekday: "short", day: "numeric", month: "short", year: "numeric"
+                    });
+
+                    openCalendarButton.textContent = "📅 Select deployment date";
+
+                } else {
+                    selectedDateSummary.textContent = "No date selected";
+                    openCalendarButton.textContent = "📅 Select deployment date";
+                }
+
+            }
+
+            
+
+            function openCalendar() {
+                if (!allowedCabDates.length) {
+                    calendarHelp.textContent = "Enter a valid CR number first. CAB dates will be fetched from the ITSM API.";
+                    calendarHelp.style.color = "#b91c1c";
+                    return;
+                }
+                renderMonthCalendar();
+                calendarModal.hidden = false;
+                document.body.style.overflow = "hidden";
+                closeCalendarButton.focus();
+            }
+            function getDeploymentCount() {
+                const countInput = document.getElementById("deployment_count");
+                const count = Number.parseInt(countInput.value, 10);
+                return Number.isInteger(count) && count >= 1 && count <= 5 ? count : 0;
+            }
+
+            function updateGitAddButton() {
+                const container = document.getElementById("git-links-container");
+                const addButton = container.querySelector(".git-link-add");
+                const maxCount = getDeploymentCount();
+                if (addButton) {
+                    addButton.disabled = !maxCount ||
+                        container.querySelectorAll(".git-link-row").length >= maxCount;
+                    addButton.title = addButton.disabled
+                        ? "Git link count cannot exceed Deployment Count"
+                        : "Add Git repository link";
+                }
+            }
+
+            function addGitLink() {
+                const container = document.getElementById("git-links-container");
+                const maxCount = getDeploymentCount();
+                const currentCount = container.querySelectorAll(".git-link-row").length;
+
+                if (!maxCount) {
+                    document.getElementById("deployment_count").reportValidity();
+                    return;
+                }
+                if (currentCount >= maxCount) {
+                    updateGitAddButton();
+                    return;
+                }
+
+                const row = document.createElement("div");
+                row.className = "git-link-row";
+                row.innerHTML = `
+                    <input
+                        type="url"
+                        name="git_links[]"
+                        class="form-control git-link"
+                        pattern="https?://.+"
+                        title="Enter a valid Git repository URL ending in .git"
+                        placeholder="https://apnagit.rblbank.com/RBL/release.git"
+                        required>
+                    <button
+                        type="button"
+                        class="btn btn-danger"
+                        onclick="removeGitLink(this)"
+                        aria-label="Remove Git link">-</button>
+                `;
+                container.appendChild(row);
+                applyGitRequirement();
+                updateGitAddButton();
+            }
+
+            function removeGitLink(button) {
+                const container = document.getElementById("git-links-container");
+                const rows = container.querySelectorAll(".git-link-row");
+                if (rows.length <= 1) return;
+                button.closest(".git-link-row").remove();
+                updateGitAddButton();
+            }
+
+            function validateGitLinkCount() {
+                if (gitOptional) return true;
+                const container = document.getElementById("git-links-container");
+                const expected = getDeploymentCount();
+                const actual = container.querySelectorAll(".git-link-row").length;
+
+                if (!expected || actual !== expected) {
+                    showMessage(
+                        "Deployment Count is " + (expected || "invalid") +
+                        ". Please provide exactly " + (expected || "the selected number of") +
+                        " Git repository link(s). Currently entered: " + actual + ".",
+                        "error"
+                    );
+                    return false;
+                }
+                return true;
+            }
+
+            window.addGitLink = addGitLink;
+            window.removeGitLink = removeGitLink;
+            function closeCalendar() {
+                calendarModal.hidden = true;
+                document.body.style.overflow = "";
+                openCalendarButton.focus();
+            }
+
+            openCalendarButton.addEventListener("click", openCalendar);
+
+            closeCalendarButton.addEventListener("click", closeCalendar);
+
+            calendarModal.addEventListener("click", function (event) {
+
+                if (event.target && event.target.dataset.closeCalendar === "true") {
+                    closeCalendar();
+                }
+
+            });
+
+            document.addEventListener("keydown", function (event) {
+
+                if (event.key === "Escape" && !calendarModal.hidden) closeCalendar();
+
+            });
+
+            const todayLocal = new Date();
+
+            todayLocal.setHours(0, 0, 0, 0);
+
+            let calendarMonth = dateInput.value
+
+                ? new Date(dateInput.value + "T12:00:00")
+
+                : new Date(todayLocal.getFullYear(), todayLocal.getMonth(), 1);
+
+            calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+
+            function dateToISO(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+            }
+
+            function isDateAllowedForChangeType(date, changeType) {
+                return allowedCabDates.includes(dateToISO(date));
+            }
+
+            function renderMonthCalendar() {
+                calendarTitle.textContent = calendarMonth.toLocaleDateString(undefined, {
+                    month: "long", year: "numeric"
+                });
+
+                calendarGrid.innerHTML = "";
+
+                ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach(function (day) {
+                    const heading = document.createElement("div");
+                    heading.className = "month-calendar-weekday";
+                    heading.textContent = day;
+                    calendarGrid.appendChild(heading);
+                });
+
+                const year = calendarMonth.getFullYear();
+
+                const month = calendarMonth.getMonth();
+
+                const firstDay = new Date(year, month, 1);
+
+                const offset = (firstDay.getDay() + 6) % 7; // Monday-first calendar
+
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                for (let i = 0; i < offset; i++) {
+                    const empty = document.createElement("div");
+                    empty.className = "calendar-empty";
+                    empty.setAttribute("aria-hidden", "true");
+                    calendarGrid.appendChild(empty);
+                }
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, month, day);
+                    date.setHours(0, 0, 0, 0);
+                    const iso = dateToISO(date);
+                    const isPast = date < todayLocal;
+                    const allowedForType = isDateAllowedForChangeType(date, changeTypeInput.value);
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "calendar-day";
+                    button.dataset.date = iso;
+                    button.setAttribute("aria-label", date.toLocaleDateString(undefined, {
+                        weekday: "long", year: "numeric", month: "long", day: "numeric"
+                    }));
+
+                    if (iso === dateToISO(todayLocal)) button.classList.add("today");
+
+                    if (dateInput.value === iso) {
+                        button.classList.add("selected");
+                        button.setAttribute("aria-pressed", "true");
+                    } else {
+
+                        button.setAttribute("aria-pressed", "false");
+
+                    }
+
+                    const number = document.createElement("span");
+
+                    number.className = "day-number";
+
+                    number.textContent = String(day);
+
+                    button.appendChild(number);
+
+                    const caption = document.createElement("span");
+
+
+                    caption.textContent = iso === dateToISO(todayLocal) ? "Today" : "";
+
+                    button.appendChild(caption);
+
+                    // Apply date restrictions for the selected Change Type.
+
+                    button.disabled = !allowedForType;
+
+                    if (button.disabled) {
+
+                        if (!allowedCabDates.length) {
+                            button.title = "Validate a CR number to fetch the allowed CAB date.";
+                        } else {
+                            button.title = "Only CAB dates returned by ITSM can be booked.";
+                        }
+
+                    }
+
+                    button.addEventListener("click", function () {
+                        if (!allowedCabDates.includes(iso)) return;
+                        dateInput.value = iso;
+                        dateInput.dispatchEvent(new Event("change", { bubbles: true }));
+                        renderMonthCalendar();
+                        updateCalendarLauncher();
+                        closeCalendar();
+                        loadSlots();
+                        openSlotSelection();
+                        calendarHelp.style.color = "";
+
+                        calendarHelp.textContent = "Selected " + date.toLocaleDateString(undefined, {
+                            weekday: "short", day: "numeric", month: "short", year: "numeric"
+                        }) + ". Choose a green slot below.";
+
+                        document.getElementById("slotGrid").scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+                    });
+
+                    calendarGrid.appendChild(button);
+
+                }
+
+            }
+
+            previousMonthButton.addEventListener("click", function () {
+                calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+                renderMonthCalendar();
+            });
+
+            nextMonthButton.addEventListener("click", function () {
+                calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+                renderMonthCalendar();
+            });
+
+            thisMonthButton.addEventListener("click", function () {
+                calendarMonth = new Date(todayLocal.getFullYear(), todayLocal.getMonth(), 1);
+                renderMonthCalendar();
+            });
+
+            changeTypeInput.addEventListener("change", function () {
+                selectedSlot = "";
+                slotInput.value = "";
+                renderMonthCalendar();
+
+                if (dateInput.value) {
+                    const selectedDate = new Date(dateInput.value + "T12:00:00");
+
+                    if (!isDateAllowedForChangeType(selectedDate, changeTypeInput.value)) {
+                        dateInput.value = "";
+                        updateCalendarLauncher();
+                        slotGrid.innerHTML = '<div class="slot-loading">Choose an allowed date to load slots.</div>';
+                        slotSelection.textContent = "No slot selected.";
+                        calendarHelp.style.color = "#b91c1c";
+                        // calendarHelp.textContent = changeTypeInput.value === "Normal CR"
+                        //     ? "Normal CR deployments are allowed only on Tuesdays and Fridays. Choose another date."
+                        //     : "This change type allows weekday bookings only. Choose another date.";
+                        // return;
+                    }
+                }
+                loadSlots();
+            });
+
+            dateInput.addEventListener("change", function () {
+                selectedSlot = "";
+                slotInput.value = "";
+
+                if (!allowedCabDates.includes(dateInput.value)) {
+                    dateInput.value = "";
+                    updateCalendarLauncher();
+                    renderMonthCalendar();
+                    slotGrid.innerHTML =
+                    '<div class="slot-loading">Only CAB dates returned by the ITSM API can be booked.</div>';
+                    slotSelection.textContent = "No slot selected.";
+                    return;
+                }
+
+                if (dateInput.value) {
+                    const changedDate = new Date(dateInput.value + "T12:00:00");
+                    calendarMonth = new Date(changedDate.getFullYear(), changedDate.getMonth(), 1);
+                }
+
+                renderMonthCalendar();
+
+                updateCalendarLauncher();
+
+                loadSlots();
+                if (dateInput.value) openSlotSelection();
+
+            });
+
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                clearTimeout(lookupTimer);
+
+                if (!validateGitLinkCount()) return;
+
+                const gitInputs = Array.from(form.querySelectorAll(".git-link"));
+                let gitLinksValid = true;
+
+                gitInputs.forEach(function (input) {
+                    if (!validateGitLink(input)) gitLinksValid = false;
+                });
+
+                if (!gitLinksValid) {
+                    const firstInvalidGit = gitInputs.find(function (input) {
+                        return !input.checkValidity();
+                    });
+                    if (firstInvalidGit) firstInvalidGit.reportValidity();
+                    return;
+                }
+
+                if (!syncCRNumber()) {
+                    crSuffix.reportValidity();
+                    return;
+                }
+
+                if (!dateInput.value) {
+                    calendarHelp.textContent = "Please choose a deployment date from the calendar.";
+                    calendarHelp.style.color = "#b91c1c";
+                    openCalendar();
+                    return;
+                }
+
+                if (!slotInput.value) {
+                    slotSelection.textContent = "Please choose a green, available slot.";
+                    slotGrid.scrollIntoView({ behavior: "smooth", block: "center" });
+                    return;
+                }
+
+                if (isChecking) {
+                    showMessage("Please wait while the CR Number is checked.", "error");
+                    return;
+                }
+
+                saveButton.disabled = true;
+
+                saveButton.textContent = "Checking...";
+
+                try {
+                    const crValid = await checkCRNumber();
+
+
+                    console.log("===== SAVE VALIDATION =====");
+                    console.log("Date Input:", dateInput.value);
+                    console.log("Slot Input:", slotInput.value);
+                    console.log("Allowed CAB Dates:", allowedCabDates);
+                    console.log(
+                        "Date Match:",
+                        allowedCabDates.includes(dateInput.value)
+                    );
+
+                    if (lookupFailed || isChecking || !allowedCabDates.length) {
+                        showMessage("CR verification failed or the ITSM CAB date is missing. Please retry before saving.", "error");
+                        return;
+                    }
+                    if (!allowedCabDates.includes(dateInput.value)) {
+                        showMessage("Only CAB dates returned by ITSM can be booked.", "error");
+                        return;
+                    }
+
+                    const response = await fetch(
+                        slotStatusUrl + "?date=" + encodeURIComponent(dateInput.value)
+                        + "&change_type=" + encodeURIComponent(changeTypeInput.value || "")
+                        + "&cr_number=" + encodeURIComponent(crInput.value || ""),
+                        {
+
+                            headers: { "Accept": "application/json" },
+                            cache: "no-store"
+
+                        }
+
+                    );
+
+                    if (!response.ok) throw new Error("Unable to verify slot availability.");
+                    const result = await response.json();
+                    const selected = result.slots.find(function (slot) {
+                        return slot.start === slotInput.value;
+                    });
+
+                    if (result.blocked || !selected || selected.state !== "available") {
+                        selectedSlot = "";
+                        slotInput.value = "";
+                        await loadSlots();
+
+                        showMessage(
+                            "This slot is no longer available. Select a green slot.",
+                            "error"
+                        );
+                        return;
+                    }
+
+                    saveButton.textContent = "Submitting...";
+                    form.submit();
+
+                } catch (error) {
+                    console.error("Pre-submit verification failed:", error);
+                    showMessage("Verification failed. Please retry before saving.", "error");
+
+                } finally {
+                    saveButton.disabled = false;
+                    saveButton.textContent = "Save Release";
+                }
+
+            });
+
+            // Initialize the CR field from the hidden input populated by Flask.
+
+            const initialCR = crInput.value || "";
+
+            const initialSuffix = initialCR.replace(/^CR-/i, "");
+
+            crSuffix.value = initialSuffix;
+
+            crInput.value = initialSuffix ? "CR-" + initialSuffix : "";
+
+            renderMonthCalendar();
+
+            updateCalendarLauncher();
+
+            if (crInput.value) {
+                checkCRNumber();
+            }
+
+        });
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,3662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manager Dashboard | Deployment Tracker</title>
+
+<style>
+:root {
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    color: #172033;
+    background: #f5f7fc;
+    --navy: #172554;
+    --blue: #4f67f6;
+    --muted: #7b879c;
+    --line: #e7ecf4;
+    --green: #059669;
+    --orange: #d97706;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --cyan: #0891b2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: #f5f7fc;
+}
+
+button, input, select { font: inherit; }
+
+.top {
+    background:
+        radial-gradient(circle at 85% 0%, #394fa7 0, transparent 34%),
+        linear-gradient(120deg, #111a3d, #202f69);
+    color: white;
+    padding: 25px max(22px, calc((100% - 1500px) / 2));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.logo {
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #ffffff30;
+    border-radius: 15px;
+    background: #ffffff15;
+    font-size: 26px;
+}
+
+.top h1 {
+    margin: 0;
+    font-size: 25px;
+    letter-spacing: -.6px;
+}
+
+.top p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #cbd5ff;
+}
+
+.actions, .filters {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 14px;
+    background: #4f67f6;
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px #17255420;
+}
+
+.btn.ghost {
+    color: white;
+    background: #ffffff12;
+    border: 1px solid #ffffff35;
+}
+
+.btn.light {
+    color: #354fd2;
+    background: #edf1ff;
+}
+
+.wrap {
+    max-width: 1540px;
+    margin: 27px auto;
+    padding: 0 24px;
+}
+
+.intro {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.intro h2 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: -.5px;
+}
+
+.intro p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid #bcebd2;
+    border-radius: 30px;
+    color: #087f5b;
+    background: #e4fbef;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .35px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 4px #10b98120;
+}
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.metric {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 150px;
+    padding: 20px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    box-shadow: 0 4px 18px #1b2d5907;
+    transition: transform .18s, box-shadow .18s;
+}
+
+.metric:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px #1b2d5910;
+}
+
+.metric::after {
+    content: "";
+    position: absolute;
+    width: 105px;
+    height: 105px;
+    right: -37px;
+    top: -42px;
+    border-radius: 50%;
+    background: var(--tint, #edf1ff);
+    opacity: .85;
+}
+
+.metric-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.metric .label {
+    color: #738099;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .65px;
+}
+
+.metric .icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: var(--tint, #edf1ff);
+    color: var(--accent, #4f67f6);
+    font-size: 19px;
+}
+
+.metric .number {
+    position: relative;
+    z-index: 1;
+    margin-top: 15px;
+    font-size: 33px;
+    font-weight: 850;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+
+.metric small {
+    display: block;
+    margin-top: 9px;
+    color: #8994a8;
+    font-size: 11px;
+}
+
+.gridcharts {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr 1fr;
+    gap: 17px;
+    margin-bottom: 20px;
+}
+
+.panel {
+    min-width: 0;
+    padding: 21px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    box-shadow: 0 4px 18px #1b2d5907;
+}
+
+.panelhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.panel h3 {
+    margin: 0;
+    color: #202b43;
+    font-size: 15px;
+    letter-spacing: -.2px;
+}
+
+.sub {
+    margin-top: 6px;
+    color: #8a96aa;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 20px;
+    padding: 5px 9px;
+    background: #edf1f7;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.pill.status {
+    background: #e8edff;
+    color: #3656c8;
+}
+
+.pill.successful,
+.pill.completed,
+.pill.deployed {
+    background: #dcfce7;
+    color: #087443;
+}
+
+.pill.pending,
+.pill.scheduled {
+    background: #fff1d6;
+    color: #a16207;
+}
+
+.pill.failed,
+.pill.cancelled {
+    background: #fee2e2;
+    color: #a51d2d;
+}
+
+/* Deployment status colors synchronized with app.py STATUSES.
+   Approval-only states are included because the approval screen writes them. */
+.pill.scheduled-deployment {
+    color: #92400e;
+    background: #fef3c7;
+}
+.pill.deployment-completed {
+    color: #065f46;
+    background: #d1fae5;
+}
+.pill.deployment-failed {
+    color: #991b1b;
+    background: #fee2e2;
+}
+.pill.on-hold {
+    color: #334155;
+    background: #e2e8f0;
+}
+.pill.postponed {
+    color: #9a3412;
+    background: #ffedd5;
+}
+.pill.rolled {
+    color: #5b21b6;
+    background: #ede9fe;
+}
+.pill.cancelled {
+    color: #475569;
+    background: #e2e8f0;
+}
+.pill.approved {
+    color: #1d4ed8;
+    background: #dbeafe;
+}
+.pill.rejected {
+    color: #9f1239;
+    background: #ffe4e6;
+}
+
+.pill.rolled-back {
+    background: #f0e7ff;
+    color: #6d28d9;
+}
+
+.pill.in-progress {
+    background: #dff7fc;
+    color: #087c96;
+}
+
+.chart {
+    position: relative;
+    width: 100%;
+    height: 210px;
+}
+
+.chart canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.activity-panelhead {
+    align-items: flex-start;
+}
+
+.week-range {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.week-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.week-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    min-width: 32px;
+    padding: 6px 9px;
+    border: 1px solid #e0e7ff;
+    border-radius: 8px;
+    background: #f3f5ff;
+    color: #354fd2;
+    font-size: 11px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.week-nav:hover {
+    background: #e7ebff;
+}
+
+.week-nav:focus-visible {
+    outline: 2px solid #4f67f6;
+    outline-offset: 2px;
+}
+
+.donutwrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    min-height: 210px;
+}
+
+.donut {
+    position: relative;
+    flex: 0 0 auto;
+    width: 148px;
+    height: 148px;
+    border-radius: 50%;
+    background: #edf1f7;
+}
+
+.donut::after {
+    content: "";
+    position: absolute;
+    inset: 25px;
+    border-radius: 50%;
+    background: white;
+}
+
+.donutcenter {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.donutcenter strong {
+    font-size: 25px;
+    letter-spacing: -1px;
+}
+
+.donutcenter span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.donutlegend {
+    display: grid;
+    gap: 14px;
+    min-width: 100px;
+}
+
+.donutlegend .item {
+    display: grid;
+    grid-template-columns: 9px 1fr auto;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.donutlegend b {
+    color: #1f2a44;
+    font-size: 12px;
+}
+
+.swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+}
+
+.barlist {
+    display: grid;
+    gap: 16px;
+}
+
+.barrow {
+    display: grid;
+    grid-template-columns: 90px minmax(35px, 1fr) 25px;
+    align-items: center;
+    gap: 9px;
+    color: #64748b;
+    font-size: 10px;
+}
+
+.track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #edf1f7;
+}
+
+.fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width .3s;
+}
+
+.barrow strong {
+    text-align: right;
+    color: #27344d;
+    font-size: 11px;
+}
+
+.barrow.status-option {
+    cursor: pointer;
+    padding: 7px 8px;
+    margin: -7px -8px;
+    border-radius: 9px;
+    outline: none;
+    transition: background .15s, box-shadow .15s;
+}
+
+.barrow.status-option:hover,
+.barrow.status-option:focus-visible {
+    background: #f5f8ff;
+}
+
+.barrow.status-option.is-selected {
+    background: #edf1ff;
+    box-shadow: inset 0 0 0 1px #c8d3ff;
+}
+
+.barrow.status-option .status-name {
+    font-weight: 650;
+    color: #475569;
+}
+
+.records {
+    padding: 0;
+    overflow: hidden;
+}
+
+.records .panelhead {
+    padding: 21px 21px 15px;
+    margin-bottom: 0;
+}
+
+.filters {
+    width: 100%;
+}
+
+.filters input,
+.filters select {
+    min-width: 140px;
+    max-width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dce4ef;
+    border-radius: 10px;
+    outline: none;
+    background: white;
+    color: #334155;
+    font-size: 12px;
+}
+
+.filters input {
+    flex: 1 1 210px;
+}
+
+.filters select {
+    flex: 0 1 165px;
+}
+
+.filters input:focus,
+.filters select:focus {
+    border-color: #7188ff;
+    box-shadow: 0 0 0 3px #4568f51a;
+}
+
+.tablewrap {
+    max-width: 100%;
+    overflow: auto;
+    border-top: 1px solid var(--line);
+}
+
+table {
+    width: 100%;
+    min-width: 1250px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+}
+
+th, td {
+    padding: 14px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid #edf1f6;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f7f9fe;
+    color: #758198;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .45px;
+    text-transform: uppercase;
+}
+
+td {
+    color: #44516a;
+}
+
+td:first-child {
+    color: #8a96a9;
+}
+
+tbody tr {
+    transition: background .12s;
+}
+
+tbody tr:hover td {
+    background: #f5f8ff;
+}
+
+.foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 15px 21px;
+    color: #8792a6;
+    font-size: 11px;
+}
+
+.empty {
+    padding: 28px;
+    text-align: center;
+    color: #94a3b8;
+}
+
+@media (max-width: 1250px) {
+    .metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .gridcharts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gridcharts .panel:first-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 760px) {
+    .top {
+        padding: 22px 16px;
+    }
+
+    .top h1 {
+        font-size: 21px;
+    }
+
+    .wrap {
+        margin: 20px auto;
+        padding: 0 12px;
+    }
+
+    .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .metric {
+        min-height: 130px;
+        padding: 14px;
+    }
+
+    .metric .number {
+        font-size: 28px;
+    }
+
+    .metric .label {
+        font-size: 9px;
+    }
+
+    .metric .icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .gridcharts {
+        grid-template-columns: 1fr;
+    }
+
+    .gridcharts .panel:first-child {
+        grid-column: auto;
+    }
+
+    .panel {
+        padding: 15px;
+    }
+
+    .records .panelhead {
+        padding: 16px 14px;
+    }
+
+    .filters {
+        align-items: stretch;
+    }
+
+    .filters input,
+    .filters select {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .donutwrap {
+        gap: 15px;
+    }
+
+    .donut {
+        width: 125px;
+        height: 125px;
+    }
+
+    .donut::after {
+        inset: 22px;
+    }
+
+    .foot {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 380px) {
+    .donutwrap {
+        flex-wrap: wrap;
+    }
+
+    .donutlegend {
+        width: 100%;
+    }
+}
+
+.audit-history-panel { margin-top: 20px; }
+.audit-value { max-width: 260px; white-space: normal; overflow-wrap: anywhere; }
+#changeHistoryTable td { vertical-align: top; }
+.history-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 21px;
+    border-top: 1px solid var(--line);
+}
+.history-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 320px;
+    max-width: 560px;
+}
+.history-search-wrap input {
+    width: 100%;
+    min-width: 180px;
+    padding: 10px 12px;
+    border: 1px solid #dce4ef;
+    border-radius: 10px;
+    outline: none;
+    color: #334155;
+    background: #fff;
+    font-size: 12px;
+}
+.history-search-wrap input:focus {
+    border-color: #7188ff;
+    box-shadow: 0 0 0 3px #4568f51a;
+}
+.history-count { color: var(--muted); font-size: 11px; }
+.history-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+}
+.history-pagination .btn {
+    padding: 8px 11px;
+    min-width: 36px;
+    font-size: 11px;
+}
+.history-pagination .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.history-page-label { min-width: 74px; text-align: center; color: #64748b; font-size: 11px; }
+.history-no-results td { padding: 22px; text-align: center; color: #8290a5; }
+.sort-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.sort-heading:hover, .sort-heading:focus-visible { color: #3656c8; outline: none; }
+.sort-indicator { font-size: 12px; color: #9aa6b9; }
+.sort-heading[aria-sort="ascending"] .sort-indicator,
+.sort-heading[aria-sort="descending"] .sort-indicator { color: #3656c8; }
+.records-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 21px;
+    border-top: 1px solid var(--line);
+}
+.records-pagination .btn { padding: 8px 11px; min-width: 36px; font-size: 11px; }
+.records-pagination .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.records-page-label { min-width: 74px; text-align: center; color: #64748b; font-size: 11px; }
+@media (max-width: 760px) {
+    .records-pagination { padding: 14px; align-items: stretch; }
+    .records-pagination nav { justify-content: space-between; }
+}
+
+@media (max-width: 760px) {
+    .history-tools { padding: 14px; align-items: stretch; }
+    .history-search-wrap { max-width: none; flex-basis: 100%; }
+    .history-pagination { justify-content: space-between; }
+}
+
+
+
+.team-export-tools {
+    display: flex; align-items: end; gap: 10px; flex-wrap: wrap;
+    padding: 0 21px 18px;
+}
+.team-export-field { display: grid; gap: 5px; min-width: 150px; }
+.team-export-field label { color: #758198; font-size: 10px; font-weight: 800; letter-spacing: .4px; }
+.team-export-field input, .team-export-field select {
+    min-width: 150px; padding: 9px 11px; border: 1px solid #dce4ef;
+    border-radius: 9px; background: #fff; color: #334155; font-size: 12px;
+}
+.team-export-tools .btn { min-height: 36px; padding: 9px 13px; }
+@media (max-width: 760px) {
+    .team-export-tools { padding: 0 14px 15px; align-items: stretch; }
+    .team-export-field, .team-export-field input, .team-export-field select { width: 100%; }
+    .team-export-tools .btn { width: 100%; }
+}
+
+/* Team-wise deployment breakdown */
+.team-deployment-panel { min-width: 0; }
+.team-record-cell { min-width: 190px; max-width: 300px; white-space: normal; line-height: 1.6; }
+.team-record-item { display: inline; color: #475569; font-size: 11px; }
+.team-record-item strong { color: #1e293b; font-weight: 850; }
+.team-record-separator { color: #a0aabd; }
+.team-record-empty { color: #94a3b8; font-size: 11px; font-style: italic; }
+.team-deployment-list { display: grid; gap: 15px; }
+.team-deployment-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 145px) minmax(50px, 1fr) 34px;
+    align-items: center;
+    gap: 10px;
+}
+.team-deployment-name {
+    min-width: 0; color: #526078; font-size: 11px;
+    font-weight: 750; overflow-wrap: anywhere;
+}
+.team-deployment-track {
+    height: 9px; overflow: hidden; border-radius: 20px; background: #edf1f7;
+}
+.team-deployment-fill {
+    height: 100%; border-radius: 20px;
+    background: linear-gradient(90deg, #526bf6, #9baaff);
+}
+.team-deployment-count {
+    color: #202b43; font-size: 12px; font-weight: 850;
+    text-align: right; font-variant-numeric: tabular-nums;
+}
+.team-deployment-total {
+    display: inline-flex; align-items: center; padding: 5px 9px;
+    border-radius: 20px; background: #edf1ff; color: #3656c8;
+    font-size: 10px; font-weight: 800;
+}
+.team-deployment-empty {
+    padding: 22px 10px; border: 1px dashed #dce4ef;
+    border-radius: 12px; color: #8792a6; font-size: 12px;
+    text-align: center; line-height: 1.6;
+}
+@media (max-width: 760px) {
+    .team-deployment-row {
+        grid-template-columns: minmax(75px, 110px) minmax(35px, 1fr) 28px;
+        gap: 7px;
+    }
+}
+
+
+
+/* Visual refresh: richer color, depth and responsive chart styling */
+:root {
+    --navy:#172554; --blue:#4f67f6; --muted:#71809a; --line:#e6ebf5;
+    --green:#059669; --orange:#d97706; --red:#dc2626; --purple:#7c3aed; --cyan:#0891b2;
+}
+body { background:linear-gradient(135deg,#f4f7ff 0%,#f8faff 48%,#f2f6ff 100%); }
+.top {
+    background:radial-gradient(circle at 12% 0%,#536df7 0,transparent 32%),
+      radial-gradient(circle at 88% 10%,#8b5cf6 0,transparent 30%),
+      linear-gradient(120deg,#111a3d 0%,#243b82 58%,#3449a5 100%);
+    box-shadow:0 12px 35px #1c2d681c;
+}
+.logo { background:linear-gradient(145deg,#ffffff25,#ffffff0b); box-shadow:inset 0 1px #ffffff30; }
+.wrap { max-width:1580px; }
+.metric {
+    border:1px solid #e4e9f6; box-shadow:0 8px 24px #20356b0b;
+    background:linear-gradient(145deg,#fff 0%,#fbfcff 100%);
+}
+.metric::after { width:125px;height:125px;right:-38px;top:-50px;opacity:.95; }
+.metric .number { letter-spacing:-1.4px; }
+.metric:hover { box-shadow:0 14px 30px #20356b18; }
+.panel {
+    border:1px solid #e4e9f6; border-radius:19px;
+    box-shadow:0 9px 26px #20356b0c;
+    background:linear-gradient(160deg,#fff 0%,#fdfdff 100%);
+}
+.panelhead { margin-bottom:18px; }
+.panel h3 { font-size:15px; font-weight:850; color:#192849; }
+.sub { color:#8491a8; }
+.gridcharts { gap:18px; }
+.chart { height:235px; }
+.donut {
+    width:158px;height:158px;
+    box-shadow:0 9px 24px #243b8214,inset 0 0 0 1px #ffffff80;
+}
+.donut::after { inset:27px; box-shadow:inset 0 0 0 1px #edf1f8; }
+.donutcenter strong { color:#182647;font-size:29px; }
+.donutlegend { gap:15px; }
+.donutlegend .item { font-size:11px; }
+.donutlegend b { font-size:13px; }
+.track { height:10px; background:#edf1fa; box-shadow:inset 0 1px 2px #1d2f5b0b; }
+.fill { border-radius:20px; box-shadow:0 2px 7px #263a751f; }
+.barrow.status-option { border-radius:11px; padding:8px; margin:-8px; }
+.barrow.status-option:hover,.barrow.status-option:focus-visible { background:#f2f5ff; }
+.team-deployment-panel { background:linear-gradient(145deg,#fff 0%,#f7f8ff 100%); }
+.team-deployment-total { background:linear-gradient(120deg,#e9edff,#f2eaff); color:#4b46b5; padding:7px 11px; }
+.team-deployment-list { gap:17px; }
+.team-deployment-row { grid-template-columns:minmax(90px,150px) minmax(50px,1fr) 38px; }
+.team-deployment-track { height:11px; background:#e9eef8; box-shadow:inset 0 1px 2px #263a7510; }
+.team-deployment-fill { box-shadow:0 3px 8px #263a7520; }
+.team-deployment-row:nth-child(6n+1) .team-deployment-fill { background:linear-gradient(90deg,#4f67f6,#8b9bff); }
+.team-deployment-row:nth-child(6n+2) .team-deployment-fill { background:linear-gradient(90deg,#0891b2,#55c7df); }
+.team-deployment-row:nth-child(6n+3) .team-deployment-fill { background:linear-gradient(90deg,#7c3aed,#b49af8); }
+.team-deployment-row:nth-child(6n+4) .team-deployment-fill { background:linear-gradient(90deg,#059669,#55d6a8); }
+.team-deployment-row:nth-child(6n+5) .team-deployment-fill { background:linear-gradient(90deg,#d97706,#f6bd60); }
+.team-deployment-row:nth-child(6n) .team-deployment-fill { background:linear-gradient(90deg,#e04455,#f49aa5); }
+.team-deployment-name { color:#4b5872;font-size:12px; }
+.team-deployment-count { color:#1c2b4b;font-size:13px; }
+.records { border-radius:19px; }
+.records .panelhead { background:linear-gradient(90deg,#fbfcff,#f5f7ff); }
+.filters input,.filters select,.team-export-field input,.team-export-field select {
+    border-color:#dce4f2; box-shadow:0 2px 5px #20356b05;
+}
+.btn { background:linear-gradient(120deg,#526bf6,#4057dc); box-shadow:0 4px 12px #4f67f629; }
+.btn.light { background:#edf1ff;color:#4057c8;box-shadow:none; }
+.btn.ghost { box-shadow:none; }
+.pill { border-radius:7px; }
+th { background:#f4f6fc; }
+tbody tr:hover td { background:#f4f7ff; }
+@media(max-width:760px) {
+    .chart { height:220px; }
+    .donut { width:140px;height:140px; }
+}
+
+
+/* Manager header aligned with the Release Calendar header */
+.top.topbar {
+    width: 100%;
+    min-height: 64px;
+    height: 64px;
+    margin: 0;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-wrap: nowrap;
+    color: #fff;
+    background: linear-gradient(105deg, #30365f 0%, #5b526f 58%, #876678 100%);
+    box-shadow: 0 2px 7px #0f172a24;
+}
+.top.topbar .brand {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 60px;
+    min-width: 0;
+    padding: 4px 18px 4px 27px;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 0 28px 28px 0;
+}
+.top.topbar .brand-logo {
+    display: block;
+    width: clamp(150px, 25vw, 220px);
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+}
+.top.topbar .header-title {
+    min-width: 0;
+    max-width: 100%;
+    text-align: center;
+    line-height: 1.15;
+}
+.top.topbar .header-title h1 {
+    margin: 0;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: .1px;
+}
+.top.topbar .header-title p {
+    margin: 4px 0 0;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 500;
+}
+.top.topbar .actions {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 7px;
+}
+@media (max-width: 900px) {
+    .top.topbar .actions { position: static; transform: none; }
+}
+@media (max-width: 680px) {
+    .top.topbar {
+        min-height: 58px;
+        height: auto;
+        padding: 7px 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 7px;
+    }
+    .top.topbar .brand {
+        height: 54px;
+        min-width: 0;
+        padding: 5px 12px;
+    }
+    .top.topbar .brand-logo { width: clamp(105px, 28vw, 150px); }
+    .top.topbar .header-title { margin-left: 84px; }
+    .top.topbar .header-title h1 { font-size: 14px; }
+    .top.topbar .header-title p { font-size: 7px; }
+    .top.topbar .actions {
+        position: static;
+        transform: none;
+        width: 100%;
+        justify-content: center;
+    }
+}
+@media (max-width: 380px) {
+    .top.topbar .brand { height: 50px; padding-left: 8px; }
+    .top.topbar .brand-logo { width: 105px; }
+    .top.topbar .header-title { margin-left: 64px; }
+    .top.topbar .header-title h1 { font-size: 12px; }
+    .top.topbar .header-title p { display: none; }
+}
+
+    .jenkins-manager-cell { min-width: 145px; white-space: nowrap; font-size: 11px; line-height: 1.7; }
+    .jenkins-manager-cell a { color: var(--primary, #2457d6); text-decoration: none; font-weight: 700; }
+    .jenkins-manager-cell a:hover { text-decoration: underline; }
+
+
+/* Separate manager views for audit history and Jenkins execution status */
+.manager-view-switcher {
+    display:flex; gap:10px; flex-wrap:wrap; margin:0 0 20px;
+}
+.manager-view-switcher .btn { min-height:42px; padding:12px 17px; }
+.manager-view-switcher .btn[aria-expanded="true"] {
+    background:linear-gradient(120deg,#263b91,#526bf6);
+    box-shadow:0 5px 15px #4f67f633;
+}
+.manager-extra-view { margin:0 0 20px; }
+.manager-extra-view[hidden] { display:none !important; }
+.jenkins-status-panel .tablewrap { border-top:1px solid var(--line); }
+.jenkins-status-panel table { min-width:1050px; }
+.jenkins-status-panel .panelhead { padding:21px 21px 15px; margin-bottom:0; }
+.jenkins-status-panel .jenkins-state {
+    display:inline-flex; padding:5px 9px; border-radius:7px;
+    background:#edf1ff; color:#3656c8; font-size:10px; font-weight:800;
+}
+.jenkins-status-panel .jenkins-state.success { background:#dcfce7;color:#087443; }
+.jenkins-status-panel .jenkins-state.failure { background:#fee2e2;color:#a51d2d; }
+.jenkins-status-panel .jenkins-state.running { background:#dff7fc;color:#087c96; }
+@media(max-width:760px) {
+    .manager-view-switcher .btn { flex:1 1 100%; }
+    .jenkins-status-panel .panelhead { padding:16px 14px; }
+}
+
+
+/* ===== Modal views (history, Jenkins status, live room, diff) ===== */
+.manager-view-switcher .btn { position: relative; }
+.mgr-live-badge {
+    display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px;
+    border-radius:9px; background:#10b981; color:#fff; font-size:10px; font-weight:800;
+    animation: mgrPulse 1.6s infinite;
+}
+.mgr-live-badge[hidden] { display:none; }
+@keyframes mgrPulse { 0%{box-shadow:0 0 0 0 #10b98180} 70%{box-shadow:0 0 0 7px #10b98100} 100%{box-shadow:0 0 0 0 #10b98100} }
+
+.mgr-modal {
+    position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-start; justify-content:center;
+    padding:3vh 16px; background:#0b1230b3; backdrop-filter:blur(3px); overflow:auto;
+}
+.mgr-modal[hidden] { display:none !important; }
+.mgr-modal-box {
+    width:min(1280px,100%); max-height:94vh; overflow:auto; background:#fff; border-radius:18px;
+    box-shadow:0 30px 80px #0006; animation: mgrIn .18s ease;
+}
+@keyframes mgrIn { from{opacity:0; transform:translateY(12px) scale(.985)} to{opacity:1; transform:none} }
+body.mgr-modal-open { overflow:hidden; }
+.mgr-modal-box .panel { margin:0; border:0; box-shadow:none; border-radius:18px; }
+.mgr-head-actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.mgr-close {
+    width:34px; height:34px; border:0; border-radius:50%; background:#edf1ff; color:#354fd2;
+    font-size:15px; font-weight:800; cursor:pointer; transition:.15s;
+}
+.mgr-close:hover { background:#dc2626; color:#fff; }
+.audit-history-panel .panelhead { padding:21px 21px 0; }
+
+/* ----- Diff ----- */
+.diff-panel .panelhead { padding:21px 21px 0; }
+.diff-pickers { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; padding:0 21px 16px; }
+.diff-pickers label { display:flex; flex-direction:column; gap:6px; font-size:11px; font-weight:800; color:#738099; flex:1 1 260px; min-width:220px; }
+.diff-pickers select { padding:10px 11px; border:1px solid var(--line); border-radius:10px; background:#fff; color:#172033; font-size:12px; }
+.diff-pickers .diff-only { flex:0 0 auto; min-width:0; flex-direction:row; align-items:center; gap:7px; padding-bottom:10px; cursor:pointer; }
+.diff-result { padding:0 21px 21px; }
+.diff-summary { display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 14px; }
+.diff-chip { padding:6px 11px; border-radius:20px; font-size:11px; font-weight:800; background:#edf1f7; color:#475569; }
+.diff-chip.bad { background:#fff1d6; color:#a16207; }
+.diff-chip.good { background:#dcfce7; color:#087443; }
+.diff-table { width:100%; border-collapse:collapse; font-size:12px; }
+.diff-table th { text-align:left; padding:10px 12px; background:#f5f7fc; color:#738099; font-size:10px; letter-spacing:.5px; }
+.diff-table td { padding:10px 12px; border-top:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; }
+.diff-table td:first-child { font-weight:750; color:#475569; width:200px; }
+.diff-table tr.diff-group td { background:#eef2ff; color:#354fd2; font-size:10px; font-weight:850; letter-spacing:.6px; }
+.diff-table tr.differs td:nth-child(2) { background:#fee2e2; }
+.diff-table tr.differs td:nth-child(3) { background:#dcfce7; }
+.diff-table tr.differs td:first-child::before { content:"≠ "; color:#d97706; font-weight:900; }
+.diff-empty { padding:28px; text-align:center; color:#8a96aa; font-size:13px; }
+@media(max-width:760px){ .diff-table td:first-child{width:110px} .diff-pickers .btn{flex:1 1 100%} }
+
+/* ----- Live room (Teams-style, dark) ----- */
+.lr-box { background:#1b1b2b; color:#e8eaf6; display:flex; flex-direction:column; min-height:70vh; }
+.lr-top { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:14px 20px; background:#14141f; border-bottom:1px solid #2e2e45; position:sticky; top:0; z-index:2; }
+.lr-title { display:flex; align-items:center; gap:12px; }
+.lr-title strong { font-size:15px; }
+.lr-title small { display:block; margin-top:3px; color:#9aa3c7; font-size:11px; }
+.lr-rec { width:12px; height:12px; border-radius:50%; background:#ef4444; box-shadow:0 0 0 4px #ef444433; animation:mgrPulse 1.6s infinite; }
+.lr-filters { display:flex; gap:6px; background:#222236; padding:4px; border-radius:10px; }
+.lr-filters button { border:0; background:transparent; color:#b8bfe0; padding:7px 12px; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; }
+.lr-filters button b { margin-left:5px; padding:1px 6px; border-radius:8px; background:#33334f; font-size:10px; }
+.lr-filters button.active { background:#5b5fc7; color:#fff; }
+.lr-close { background:#2c2c44; color:#e8eaf6; }
+.lr-body { padding:20px; flex:1; }
+.lr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+.lr-tile {
+    position:relative; aspect-ratio:16/10; min-height:150px; border:2px solid transparent; border-radius:14px;
+    background:linear-gradient(145deg,#2a2a42,#212136); color:inherit; text-align:left; cursor:pointer;
+    display:grid; place-items:center; overflow:hidden; transition:.15s; padding:0;
+}
+.lr-tile:hover, .lr-tile:focus-visible { transform:translateY(-3px); border-color:#7c83ff; outline:none; box-shadow:0 10px 26px #0006; }
+.lr-tile.running { border-color:#22c55e; box-shadow:0 0 0 3px #22c55e22; }
+.lr-tile.failure { border-color:#ef444466; }
+.lr-avatar {
+    width:68px; height:68px; border-radius:50%; display:grid; place-items:center; font-size:23px; font-weight:800; color:#fff;
+    position:relative;
+}
+.lr-tile.running .lr-avatar::after { content:""; position:absolute; inset:-7px; border-radius:50%; border:3px solid #22c55e; animation:mgrPulse 1.4s infinite; }
+.lr-tag { position:absolute; left:10px; bottom:10px; right:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.lr-name { padding:4px 9px; border-radius:7px; background:#000a; font-size:12px; font-weight:750; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lr-timer { padding:4px 8px; border-radius:7px; background:#000a; font-size:11px; font-variant-numeric:tabular-nums; color:#86efac; }
+.lr-badge { position:absolute; top:10px; left:10px; padding:3px 9px; border-radius:20px; font-size:10px; font-weight:800; background:#33334f; color:#cfd4f5; }
+.lr-badge.running { background:#16a34a; color:#fff; }
+.lr-badge.success { background:#0f5132; color:#86efac; }
+.lr-badge.failure { background:#7f1d1d; color:#fecaca; }
+.lr-count { position:absolute; top:10px; right:10px; padding:3px 8px; border-radius:20px; font-size:10px; background:#000a; }
+.lr-empty { padding:60px 20px; text-align:center; color:#9aa3c7; }
+.lr-empty .btn { margin-top:14px; }
+
+.lr-detail { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; }
+.lr-stage { background:linear-gradient(145deg,#2a2a42,#212136); border-radius:14px; padding:26px; min-height:300px; }
+.lr-stage-head { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.lr-stage-head .lr-avatar { width:84px; height:84px; font-size:28px; }
+.lr-stage-head h3 { margin:0; font-size:22px; color:#fff; }
+.lr-stage-head p { margin:6px 0 0; color:#b8bfe0; font-size:13px; }
+.lr-bigtimer { margin-left:auto; font-size:30px; font-weight:800; font-variant-numeric:tabular-nums; color:#86efac; }
+.lr-kv { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-top:22px; }
+.lr-kv div { padding:12px 14px; border-radius:10px; background:#1b1b2b; }
+.lr-kv span { display:block; font-size:10px; letter-spacing:.6px; font-weight:800; color:#8f98c4; }
+.lr-kv b { display:block; margin-top:5px; font-size:13px; font-weight:700; color:#eef0ff; overflow-wrap:anywhere; }
+.lr-sec { margin:22px 0 0; font-size:11px; letter-spacing:.7px; font-weight:850; color:#8f98c4; }
+.lr-side { background:#14141f; border-radius:14px; padding:14px; max-height:560px; overflow:auto; }
+.lr-side h4 { margin:2px 4px 12px; font-size:12px; color:#b8bfe0; }
+.lr-exec { width:100%; display:flex; align-items:center; gap:10px; padding:9px; border:1px solid transparent; border-radius:10px; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.lr-exec:hover { background:#222236; }
+.lr-exec.active { background:#2c2c4a; border-color:#5b5fc7; }
+.lr-exec .lr-avatar { width:34px; height:34px; font-size:12px; flex-shrink:0; }
+.lr-exec strong { display:block; font-size:12px; }
+.lr-exec small { display:block; margin-top:2px; font-size:10px; color:#9aa3c7; }
+.lr-exec .st { margin-left:auto; font-size:10px; font-weight:800; padding:3px 7px; border-radius:7px; background:#33334f; }
+.lr-exec .st.running { background:#16a34a; } .lr-exec .st.success { background:#0f5132; color:#86efac; } .lr-exec .st.failure { background:#7f1d1d; color:#fecaca; }
+.lr-controls { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:18px; padding:12px; background:#14141f; border-radius:14px; }
+.lr-controls .btn { background:#2c2c44; color:#e8eaf6; }
+.lr-controls .btn.primary { background:#5b5fc7; color:#fff; }
+@media(max-width:900px){ .lr-detail{grid-template-columns:1fr} .lr-bigtimer{margin-left:0} }
+
+.records-close-row { justify-content:flex-end; padding:16px 21px 0; }
+#allRecordsView .panelhead { padding-top:6px; }
+
+/* ================= Visual refresh + bottom dock ================= */
+html { scroll-behavior:smooth; }
+body {
+    background:
+        radial-gradient(900px 420px at 8% -5%, #dfe6ff 0, transparent 60%),
+        radial-gradient(800px 400px at 100% 10%, #efe4ff 0, transparent 55%),
+        #f5f7fc;
+    background-attachment:fixed;
+    padding-bottom:110px;
+}
+:focus-visible { outline:3px solid #4f67f655; outline-offset:2px; border-radius:8px; }
+::-webkit-scrollbar { width:10px; height:10px; }
+::-webkit-scrollbar-thumb { background:#c6cde4; border-radius:10px; border:2px solid transparent; background-clip:content-box; }
+::-webkit-scrollbar-thumb:hover { background:#9aa6d1; background-clip:content-box; border:2px solid transparent; }
+
+.intro h2 { font-size:26px; background:linear-gradient(90deg,#172554,#4f67f6); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.intro-hint { display:inline-block; margin-left:6px; padding:3px 10px; border-radius:20px; background:#eef2ff; color:#3656c8; font-size:11px; font-weight:700; }
+.live { animation:mgrPulse 2.4s infinite; }
+
+.btn { background:linear-gradient(135deg,#4f67f6,#6a5cf0); box-shadow:0 3px 10px #4f67f630; }
+.btn.light { background:#edf1ff; color:#354fd2; box-shadow:none; }
+.btn.ghost { background:#ffffff14; box-shadow:none; }
+.btn:active { transform:translateY(0) scale(.98); }
+
+.metric { border-radius:20px; border:1px solid #e3e9f7; background:linear-gradient(180deg,#fff,#fbfcff); }
+.metric::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#4f67f6); border-radius:4px 0 0 4px; }
+.metric:hover { transform:translateY(-5px); box-shadow:0 16px 34px #1b2d5918; }
+.metric .number { color:var(--accent,#172033); }
+
+.panel { border-radius:20px; border:1px solid #e3e9f7; box-shadow:0 6px 24px #1b2d590a; transition:box-shadow .2s; }
+.panel:hover { box-shadow:0 10px 30px #1b2d5912; }
+.panel h3 { font-size:16px; }
+
+.tablewrap { border-radius:14px; }
+table thead th { background:#f4f6fd !important; color:#5a6784; font-size:11px; letter-spacing:.4px; position:sticky; top:0; z-index:1; }
+table tbody tr { transition:background .12s; }
+table tbody tr:nth-child(even) td { background:#fafbff; }
+table tbody tr:hover td { background:#eef2ff !important; }
+input[type="search"], input[type="date"], select { border-radius:10px; transition:border-color .15s, box-shadow .15s; }
+input[type="search"]:focus, input[type="date"]:focus, select:focus { border-color:#4f67f6; box-shadow:0 0 0 4px #4f67f622; outline:none; }
+
+/* ----- Floating views menu (bottom-right, chat-widget style) ----- */
+.mgr-fab { position:fixed; right:22px; bottom:22px; z-index:1100; margin:0; display:flex; flex-direction:column; align-items:flex-end; gap:12px; }
+.fab-main {
+    position:relative; display:inline-flex; align-items:center; gap:9px; height:56px; padding:0 22px 0 18px; border:0; border-radius:30px;
+    background:linear-gradient(135deg,#4f67f6,#7c5cf0); color:#fff; font-size:14px; font-weight:800; cursor:pointer;
+    box-shadow:0 12px 30px #4f67f666, 0 2px 6px #0003; transition:transform .18s, box-shadow .18s;
+}
+.fab-main:hover { transform:translateY(-3px); box-shadow:0 16px 36px #4f67f680; }
+.fab-main-ico { font-size:20px; line-height:1; transition:transform .25s; }
+.fab-main .mgr-live-badge { position:absolute; top:-6px; right:-4px; border:2px solid #fff; }
+.fab-menu {
+    width:310px; max-width:calc(100vw - 32px); padding:10px; background:#fff; border:1px solid #e3e9f7; border-radius:20px;
+    box-shadow:0 24px 60px #0b123550; transform-origin:bottom right; animation:fabPop .18s ease;
+}
+.fab-menu[hidden] { display:none; }
+@keyframes fabPop { from{opacity:0; transform:translateY(10px) scale(.96)} to{opacity:1; transform:none} }
+.fab-head { padding:8px 10px 10px; }
+.fab-head strong { display:block; font-size:14px; color:#172554; }
+.fab-head small { color:#8a96aa; font-size:11px; }
+.fab-item {
+    width:100%; display:flex; align-items:center; gap:12px; padding:10px; border:0; border-radius:13px; background:transparent;
+    text-align:left; cursor:pointer; color:#172033; transition:background .12s;
+}
+.fab-item:hover, .fab-item:focus-visible { background:#eef2ff; }
+.fab-item[aria-expanded="true"] { background:#e4e9ff; }
+.fab-ico { position:relative; display:grid; place-items:center; flex-shrink:0; width:40px; height:40px; border-radius:12px; background:#edf1ff; color:#4f67f6; font-size:18px; }
+.fab-item:nth-of-type(2) .fab-ico { background:#f1e9ff; color:#7c3aed; }
+.fab-item:nth-of-type(3) .fab-ico { background:#e0f6fb; color:#0891b2; }
+.fab-item:nth-of-type(4) .fab-ico { background:#dcfce7; color:#059669; }
+.fab-item:nth-of-type(5) .fab-ico { background:#fff1d6; color:#d97706; }
+.fab-txt b { display:block; font-size:13px; }
+.fab-txt small { display:block; margin-top:2px; font-size:11px; color:#8a96aa; }
+.fab-item .mgr-live-badge { position:absolute; top:-5px; right:-5px; }
+
+.fab-item:nth-of-type(6) .fab-ico { background:#e0e7ff; color:#4338ca; }
+/* popups sit above content; leave room for the floating button */
+.mgr-modal { padding-bottom:3vh; }
+.mgr-modal-box { max-height:94vh; }
+@media (max-width:640px) {
+    .mgr-fab { right:14px; bottom:14px; }
+    .fab-main { height:52px; padding:0 18px 0 14px; }
+    .intro-hint { display:block; margin:8px 0 0; }
+    body { padding-bottom:90px; }
+}
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+
+/* ================= Page Assistant (rule-based chat bot) ================= */
+.bot-launcher {
+    position:fixed; right:146px; bottom:22px; z-index:1100; width:60px; height:60px; padding:0; border:0; border-radius:50%;
+    display:grid; place-items:center; color:#fff; cursor:pointer; text-align:left;
+    background:linear-gradient(120deg,#0ea5e9,#4f67f6,#8b5cf6,#0ea5e9); background-size:240% 100%;
+    animation:botGradient 6s linear infinite, botRing 2.8s ease-out infinite;
+    box-shadow:0 12px 30px #4f67f655, 0 2px 6px #0003; transition:transform .18s;
+}
+.bot-launcher:hover { transform:translateY(-4px) scale(1.03); }
+.bot-launcher:active { transform:scale(.97); }
+@keyframes botGradient { to { background-position:240% 0; } }
+@keyframes botRing { 0%{box-shadow:0 12px 30px #4f67f655, 0 0 0 0 #4f67f666} 70%,100%{box-shadow:0 12px 30px #4f67f655, 0 0 0 16px #4f67f600} }
+.bot-l-avatar { position:relative; flex-shrink:0; width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:#ffffff2e; border:1px solid #ffffff55; backdrop-filter:blur(4px); }
+.bot-l-face { font-size:27px; line-height:1; animation:botBob 3s ease-in-out infinite; }
+.bot-l-x { position:absolute; font-size:20px; font-weight:800; opacity:0; transform:rotate(-90deg); transition:.2s; }
+.bot-l-dot { position:absolute; right:0; bottom:1px; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #fff; animation:mgrPulse 2s infinite; }
+@keyframes botBob { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-2px) rotate(-6deg)} }
+.bot-launcher[aria-expanded="true"] { background:linear-gradient(120deg,#1e293b,#334155); animation:none; box-shadow:0 12px 30px #0b123566; }
+.bot-launcher[aria-expanded="true"] .bot-l-face { opacity:0; }
+.bot-launcher[aria-expanded="true"] .bot-l-x { opacity:1; transform:none; }
+.bot-launcher[aria-expanded="true"] .bot-l-dot { display:none; }
+
+.bot-window {
+    position:fixed; right:22px; bottom:92px; z-index:1150; width:390px; max-width:calc(100vw - 20px);
+    height:min(580px, calc(100vh - 120px)); display:flex; flex-direction:column; overflow:hidden;
+    background:#fff; border:1px solid #e3e9f7; border-radius:22px; box-shadow:0 28px 70px #0b123560;
+    transform-origin:bottom right; animation:fabPop .2s ease;
+}
+.bot-window[hidden] { display:none; }
+.bot-head { display:flex; align-items:center; gap:11px; padding:14px 14px; background:linear-gradient(120deg,#111a3d,#2b3f9a); color:#fff; }
+.bot-avatar { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:#ffffff22; font-size:21px; }
+.bot-title { flex:1; min-width:0; }
+.bot-title strong { display:block; font-size:14px; }
+.bot-title small { display:block; margin-top:2px; font-size:10.5px; color:#c7d0ff; }
+.bot-icon-btn { width:30px; height:30px; border:0; border-radius:50%; background:#ffffff1f; color:#fff; font-size:14px; cursor:pointer; }
+.bot-icon-btn:hover { background:#ffffff40; }
+.bot-msgs { flex:1; overflow-y:auto; padding:16px 14px; background:#f6f8fe; display:flex; flex-direction:column; gap:12px; }
+.bot-msg { display:flex; max-width:100%; }
+.bot-msg.user { justify-content:flex-end; }
+.bot-bubble { max-width:92%; padding:10px 13px; border-radius:16px; font-size:13px; line-height:1.5; color:#172033; background:#fff; border:1px solid #e3e9f7; box-shadow:0 2px 8px #1b2d5908; overflow-wrap:anywhere; }
+.bot-msg.user .bot-bubble { background:linear-gradient(135deg,#4f67f6,#6a5cf0); color:#fff; border:0; border-bottom-right-radius:5px; }
+.bot-msg.bot .bot-bubble { border-bottom-left-radius:5px; }
+.bot-bubble b { font-weight:750; }
+.bot-bubble p { margin:0 0 6px; } .bot-bubble p:last-child { margin-bottom:0; }
+.bot-list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
+.bot-list li { padding:7px 9px; border-radius:10px; background:#f3f6ff; font-size:12px; }
+.bot-more { margin-top:6px; font-size:11px; color:#8a96aa; }
+.bot-card { margin:6px 0 0; padding:10px; border-radius:12px; background:#f3f6ff; font-size:12px; }
+.bot-card h5 { margin:0 0 6px; font-size:13px; color:#172554; }
+.bot-kv { display:grid; grid-template-columns:110px 1fr; gap:3px 8px; }
+.bot-kv span { color:#8a96aa; } .bot-kv b { font-weight:650; }
+.bot-sub { margin:9px 0 4px; font-size:10px; letter-spacing:.6px; font-weight:850; color:#5a6784; }
+.bot-link { border:0; padding:0; background:none; color:#3656c8; font:inherit; font-weight:750; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.bot-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+.bot-act, .bot-chip { border:1px solid #cfd8fb; background:#eef2ff; color:#3656c8; padding:6px 11px; border-radius:18px; font-size:11.5px; font-weight:700; cursor:pointer; transition:.12s; }
+.bot-act:hover, .bot-chip:hover { background:#4f67f6; color:#fff; border-color:#4f67f6; }
+.bot-chips { display:flex; gap:7px; padding:9px 12px; overflow-x:auto; border-top:1px solid #e7ecf4; background:#fff; scrollbar-width:thin; }
+.bot-chip { flex:0 0 auto; }
+.bot-form { display:flex; gap:8px; padding:10px 12px; background:#fff; border-top:1px solid #e7ecf4; }
+.bot-form input { flex:1; min-width:0; padding:11px 13px; border:1px solid #dfe5f4; border-radius:14px; font-size:13px; background:#f9faff; }
+.bot-form input:focus { border-color:#4f67f6; box-shadow:0 0 0 4px #4f67f622; outline:none; background:#fff; }
+.bot-send { width:42px; border:0; border-radius:14px; background:linear-gradient(135deg,#4f67f6,#6a5cf0); color:#fff; font-size:16px; cursor:pointer; }
+.bot-foot { padding:0 12px 9px; background:#fff; text-align:center; font-size:10px; color:#9aa5ba; }
+.bot-typing { display:inline-flex; gap:4px; padding:4px 2px; }
+.bot-typing i { width:7px; height:7px; border-radius:50%; background:#9aa5ba; animation:botDot 1s infinite; }
+.bot-typing i:nth-child(2) { animation-delay:.15s; } .bot-typing i:nth-child(3) { animation-delay:.3s; }
+@keyframes botDot { 0%,60%,100%{opacity:.3; transform:none} 30%{opacity:1; transform:translateY(-4px)} }
+@media (max-width:640px) {
+    .bot-launcher { right:124px; bottom:14px; width:54px; height:54px; }
+    .bot-launcher .bot-l-avatar { width:40px; height:40px; }
+    .bot-window { right:8px; left:8px; width:auto; bottom:76px; max-width:none; }
+}
+
+
+/* ===== Live Running Status inside Deployment Activity ===== */
+.rs-live { margin-top:18px; padding-top:16px; border-top:1px dashed #d9e0f2; }
+.rs-live-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.rs-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:850; color:#192849; }
+.rs-title small { display:block; margin-top:2px; font-size:10.5px; font-weight:600; color:#8491a8; }
+.rs-live-tag { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:20px; background:#e4fbef; color:#087f5b; font-size:9.5px; font-weight:850; letter-spacing:.5px; }
+.rs-live-tag i { width:7px; height:7px; border-radius:50%; background:#10b981; animation:mgrPulse 1.6s infinite; }
+.rs-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.rs-chip { padding:4px 11px; border-radius:20px; font-size:10.5px; font-weight:800; }
+.rs-chip.run { background:#dcfce7; color:#087443; }
+.rs-chip.stop { background:#e8edff; color:#3656c8; }
+.rs-chip.tot { background:#f0e9ff; color:#6d28d9; }
+.rs-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:11px; }
+.rs-card {
+    position:relative; overflow:hidden; padding:13px 14px 15px; border-radius:16px; color:#fff;
+    transition:transform .18s, box-shadow .18s;
+}
+.rs-card:hover { transform:translateY(-3px); }
+.rs-card::after { content:""; position:absolute; width:90px; height:90px; right:-28px; top:-34px; border-radius:50%; background:#ffffff1f; }
+.rs-card.running { background:linear-gradient(135deg,#059669 0%,#0d9488 55%,#0891b2 100%); box-shadow:0 10px 24px #05966940; }
+.rs-card.stopped { background:linear-gradient(135deg,#6366f1 0%,#7c3aed 100%); box-shadow:0 10px 24px #6366f130; }
+.rs-card-top { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.rs-cr { font-size:14px; font-weight:850; letter-spacing:-.2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rs-pill { flex-shrink:0; padding:2px 8px; border-radius:20px; background:#ffffff2e; font-size:9px; font-weight:850; letter-spacing:.5px; }
+.rs-card.running .rs-pill::before { content:""; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:#bbf7d0; animation:mgrPulse 1.4s infinite; }
+.rs-app { position:relative; z-index:1; margin-top:3px; font-size:11px; opacity:.9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rs-time { position:relative; z-index:1; margin-top:10px; font-size:26px; font-weight:850; letter-spacing:-.5px; font-variant-numeric:tabular-nums; }
+.rs-meta { position:relative; z-index:1; margin-top:2px; font-size:10px; opacity:.85; }
+.rs-bar { position:absolute; left:0; right:0; bottom:0; height:4px; background:#ffffff26; overflow:hidden; }
+.rs-card.running .rs-bar::before { content:""; position:absolute; inset:0; width:40%; background:linear-gradient(90deg,transparent,#fff,transparent); animation:rsSweep 1.8s linear infinite; }
+.rs-card.stopped .rs-bar { background:#ffffff40; }
+@keyframes rsSweep { from { transform:translateX(-100%); } to { transform:translateX(260%); } }
+.rs-empty { padding:20px 14px; border:1px dashed #cfd8fb; border-radius:14px; background:linear-gradient(135deg,#f3f6ff,#f7f0ff); color:#6b7a99; font-size:12px; text-align:center; line-height:1.6; }
+.rs-empty b { display:block; margin-bottom:2px; font-size:13px; color:#3656c8; }
+.rs-more { display:flex; align-items:center; justify-content:center; min-height:96px; border:2px dashed #c7d2fe; border-radius:16px; background:#f5f7ff; color:#4f67f6; font-weight:800; font-size:12px; cursor:pointer; }
+.rs-more:hover { background:#e9edff; }
+</style>
+</head>
+
+<body>
+
+<header class="top topbar">
+    <div class="brand"><img src="data:image/png;base64,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" alt="RBL Bank — Apno Ka Bank" class="brand-logo"></div>
+
+    <div class="header-title">
+        <h1>Manager Dashboard</h1>
+        <p>Manager Overview · Deployment Tracker</p>
+    </div>
+
+    <nav class="actions">
+        <a class="btn ghost" href="/">＋ New Deployment</a>
+        <a class="btn ghost" href="/governance_tracker">DevOps Workspace ↗</a>
+        <button class="btn" type="button" onclick="window.location.reload()">↻ Refresh</button>
+    </nav>
+</header>
+
+<main class="wrap">
+
+    <section class="intro">
+        <div>
+            <h2>Deployment Overview</h2>
+            <p>Monitor releases, deployment activity, automation and rollback requests. <span class="intro-hint">Tap the Views button at the bottom-right to open Records, History and Jenkins views.</span></p>
+        </div>
+
+        <div class="live">
+            <span class="dot"></span>
+            LIVE DATABASE SNAPSHOT
+        </div>
+    </section>
+
+    <nav class="manager-view-switcher mgr-fab" id="mgrFab" aria-label="Open detail views">
+    <div class="fab-menu" id="fabMenu" role="menu" hidden>
+        <div class="fab-head"><strong>Quick views</strong><small>Open a detailed view in a popup</small></div>
+        <button class="fab-item" type="button" role="menuitem" id="toggleAllRecords" data-open-modal="allRecordsModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">▦</span><span class="fab-txt"><b>All Deployment Records</b><small>Search, filter and export</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" id="toggleChangeHistory" data-open-modal="changeHistoryModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">▤</span><span class="fab-txt"><b>Deployment &amp; Change History</b><small>Who changed what, and when</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" id="toggleJenkinsStatus" data-open-modal="jenkinsStatusModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">⚙</span><span class="fab-txt"><b>Jenkins Build Status</b><small>Every execution per CR</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" id="toggleJenkinsLive" data-open-modal="jenkinsLiveModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">●<span class="mgr-live-badge" id="liveBadge" hidden>0</span></span><span class="fab-txt"><b>Jenkins Live Room</b><small>CRs running right now</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" id="toggleJenkinsDiff" data-open-modal="jenkinsDiffModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">⇄</span><span class="fab-txt"><b>Jenkins Build Diff</b><small>Compare two builds</small></span></button>
+        <button class="fab-item" type="button" role="menuitem" data-open-modal="runningStatusModal" aria-haspopup="dialog" aria-expanded="false">
+            <span class="fab-ico">⏱<span class="mgr-live-badge" id="rsBadge" hidden>0</span></span><span class="fab-txt"><b>Running Status</b><small>Live timers and Start/Stop history</small></span></button>
+    </div>
+    <button class="fab-main" type="button" id="fabMain" aria-haspopup="menu" aria-expanded="false" aria-controls="fabMenu" aria-label="Open views menu">
+        <span class="fab-main-ico" aria-hidden="true">☰</span><span class="fab-main-lbl">Views</span>
+        <span class="mgr-live-badge" id="fabBadge" hidden>0</span>
+    </button>
+</nav>
+
+    <section class="metrics">
+
+        <div class="metric" style="--accent:#4568f5;--tint:#e9edff">
+            <div class="metric-head">
+                <span class="label">TOTAL DEPLOYMENTS</span>
+                <span class="icon">▦</span>
+            </div>
+            <div class="number">{{ metrics.total }}</div>
+            <small>All deployment records</small>
+        </div>
+
+        <div class="metric" style="--accent:#0891b2;--tint:#dff8fc">
+            <div class="metric-head">
+                <span class="label">TODAY</span>
+                <span class="icon">◷</span>
+            </div>
+            <div class="number">{{ metrics.daily }}</div>
+            <small>Deployments scheduled for today</small>
+        </div>
+
+        <div class="metric" style="--accent:#8b5cf6;--tint:#f0e9ff">
+            <div class="metric-head">
+                <span class="label">THIS WEEK</span>
+                <span class="icon">▤</span>
+            </div>
+            <div class="number">{{ metrics.weekly }}</div>
+            <small>Monday – Sunday</small>
+        </div>
+
+        <div class="metric" style="--accent:#059669;--tint:#dcfce9">
+            <div class="metric-head">
+                <span class="label">THIS MONTH</span>
+                <span class="icon">▣</span>
+            </div>
+            <div class="number">{{ metrics.monthly }}</div>
+            <small>Current calendar month</small>
+        </div>
+
+        <div class="metric" style="--accent:#e04455;--tint:#ffe7ea">
+            <div class="metric-head">
+                <span class="label">ROLLBACK REQUESTS</span>
+                <span class="icon">↶</span>
+            </div>
+            <div class="number">{{ metrics.rollbacks }}</div>
+            <small>Records with Roll Back = Yes</small>
+        </div>
+
+    </section>
+
+    <section class="gridcharts">
+
+        <div class="panel">
+            <div class="panelhead activity-panelhead">
+                <div>
+                    <h3>Deployment Activity</h3>
+                    <div class="sub" id="activitySubtitle">Deployments for the selected calendar week</div>
+                    <div class="week-range" id="activityWeekRange" aria-live="polite">Loading week…</div>
+                </div>
+                <div class="week-controls" aria-label="Deployment activity week navigation">
+                    <button type="button" class="week-nav" id="previousWeekButton"
+                            aria-label="Previous week" title="Previous week">‹</button>
+                    <button type="button" class="week-nav" id="currentWeekButton"
+                            title="Go to current week">This week</button>
+                    <button type="button" class="week-nav" id="nextWeekButton"
+                            aria-label="Next week" title="Next week">›</button>
+                </div>
+            </div>
+            <div class="chart">
+                <canvas id="activityChart"
+                    aria-label="Deployments by day for the selected calendar week"></canvas>
+            </div>
+            <div class="rs-live" id="rsLivePanel">
+                <div class="rs-live-head">
+                    <div class="rs-title">
+                        <div>Running Status<small id="rsLiveSub">Connecting…</small></div>
+                        <span class="rs-live-tag"><i></i>LIVE</span>
+                    </div>
+                    <div class="rs-chips">
+                        <span class="rs-chip run">● Running <b id="rsChipRun">0</b></span>
+                        <span class="rs-chip stop">■ Stopped <b id="rsChipStop">0</b></span>
+                        <span class="rs-chip tot">Σ Total <b id="rsChipTot">0</b></span>
+                    </div>
+                </div>
+                <div class="rs-cards" id="rsLiveCards"><div class="rs-empty">Loading running status…</div></div>
+            </div>
+
+        </div>
+
+        <div class="panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Deployment Type</h3>
+                    <div class="sub">Automation versus manual deployment</div>
+                </div>
+            </div>
+            <div class="donutwrap">
+                <div class="donut" id="typeDonut">
+                    <div class="donutcenter">
+                        <strong id="typeTotal">0</strong>
+                        <span>deployments</span>
+                    </div>
+                </div>
+                <div class="donutlegend" id="typeLegend"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Status Breakdown</h3>
+                    <div class="sub">Select a status to filter the deployment records</div>
+                </div>
+                <button class="btn light" type="button" id="clearStatusChoice">All statuses</button>
+            </div>
+            <div class="barlist" id="statusBars" aria-label="Choose a deployment status"></div>
+        </div>
+
+        <div class="panel team-deployment-panel">
+            <div class="panelhead">
+                <div>
+                    <h3>Team-wise Deployment Breakdown</h3>
+                    <div class="sub">Deployment count allocated to each team in Governance Tracker</div>
+                </div>
+                <span class="team-deployment-total">{{ team_deployment_total }} total</span>
+            </div>
+            {% if team_deployment_counts %}
+                <div class="team-deployment-list">
+                    {% for item in team_deployment_counts %}
+                        <div class="team-deployment-row">
+                            <span class="team-deployment-name" title="{{ item.team }}">{{ item.team }}</span>
+                            <div class="team-deployment-track" role="img"
+                                 aria-label="{{ item.team }}: {{ item.count }} deployments">
+                                <div class="team-deployment-fill"
+                                     data-percent="{{ ((item.count / team_chart_max * 100) if team_chart_max else 0)|round(2) }}"></div>
+                            </div>
+                            <strong class="team-deployment-count">{{ item.count }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="team-deployment-empty">
+                    No team allocations found yet.<br>
+                    Add team names and deployment counts in Governance Tracker.
+                </div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <div class="mgr-modal" id="allRecordsModal" data-modal hidden>
+    <div class="mgr-modal-box" role="dialog" aria-modal="true" aria-label="All Deployment Records">
+    <section class="panel records" id="allRecordsView">
+
+        <div class="mgr-head-actions records-close-row">
+            <button class="mgr-close" type="button" data-close-modal aria-label="Close All Deployment Records">✕</button>
+        </div>
+
+        <div class="panelhead">
+            <div>
+                <h3>All Deployment Records</h3>
+                <div class="sub">Search, filter and export deployment details</div>
+            </div>
+
+            <div class="filters">
+                <input id="search" type="search"
+                    placeholder="Search CR, RFID, application, owner..."
+                    aria-label="Search deployment records">
+
+                <select id="rollbackFilter" aria-label="Filter by rollback">
+                    <option value="">All rollback values</option>
+                    <option value="yes">Roll Back: Yes</option>
+                    <option value="no">Roll Back: No</option>
+                </select>
+
+                <input id="recordsFromDate" type="date" aria-label="From date" title="From date">
+                <input id="recordsToDate" type="date" aria-label="To date" title="To date">
+
+                <select id="statusFilter" aria-label="Filter by status">
+                    <option value="">All statuses</option>
+                    <option value="scheduled deployment">Scheduled Deployment</option>
+                    <option value="deployment completed">Deployment Completed</option>
+                    <option value="deployment failed">Deployment Failed</option>
+                    <option value="on hold">On Hold</option>
+                    <option value="postponed">Postponed</option>
+                    <option value="rolled">Rolled</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    {% for record_status in records|map(attribute='status')|select|unique|sort %}
+                        {% if record_status|lower not in ['scheduled deployment', 'deployment completed', 'deployment failed', 'on hold', 'postponed', 'rolled', 'cancelled', 'approved', 'rejected'] %}
+                    <option value="{{ record_status|lower }}">{{ record_status }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+
+                <select id="recordsExportFormat" aria-label="Export format">
+                    <option value="csv">CSV</option>
+                    <option value="xlsx">Excel (.xlsx)</option>
+                </select>
+                <button class="btn light" type="button" id="applyRecordDateFilter">View Date-wise Report</button>
+                <button class="btn" type="button" id="exportRecordsButton">↓ Export Report</button>
+            </div>
+        </div>
+
+        <div class="tablewrap">
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>SR.NO</th>
+                        <th>CR Number</th>
+                        <th>RFID</th>
+                        <th><button class="sort-heading" type="button" data-record-sort="date" aria-sort="none">Deployment Date <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th><button class="sort-heading" type="button" data-record-sort="slotStart" aria-sort="none">Slot Start <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th>Slot End</th>
+                        <th>Application</th>
+                        <th>Team-wise Deployment Breakdown</th>
+                        <th>Type</th>
+                        <th>Change Type</th>
+                        <th>Released By</th>
+                        <th>Verified / Deployed By</th>
+                        <th>Requestor</th>
+                        <th>Incident</th>
+                        <th>Roll Back</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for r in records %}
+                    <tr
+                        data-date="{{ r.deployment_date.strftime('%Y-%m-%d') if r.deployment_date else '' }}"
+                        data-slot-start="{{ r.slot_start.strftime('%H:%M:%S') if r.slot_start else '' }}"
+                        data-type="{{ (r.deployment_type or 'Unknown')|lower }}"
+                        data-rollback="{{ (r.roll_back or 'No')|lower }}"
+                        data-status="{{ (r.status or '')|lower }}">
+
+                        <td>{{ loop.index }}</td>
+                        <td>{{ r.cr_number or '' }}</td>
+                        <td>{{ r.rfid or '' }}</td>
+
+                        <td>{{ r.deployment_date.strftime('%Y-%m-%d') if r.deployment_date else '' }}</td>
+                        <td>{{ r.slot_start.strftime('%H:%M') if r.slot_start else '' }}</td>
+                        <td>{{ r.slot_end.strftime('%H:%M') if r.slot_end else '' }}</td>
+
+                        <td>{{ r.application_name or '' }}</td>
+                        <td class="team-record-cell">
+                            {% if r.team_allocations_display %}
+                                {% for allocation in r.team_allocations_display %}
+                                    <span class="team-record-item">{{ allocation.team }}: <strong>{{ allocation.count }}</strong></span>{% if not loop.last %}<span class="team-record-separator"> | </span>{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="team-record-empty">Not allocated</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.deployment_type or '' }}</td>
+                        <td>{{ r.change_type or '' }}</td>
+                        <td>{{ r.released_by or '' }}</td>
+                        <td>{{ r.verified_and_deployed_by or '' }}</td>
+                        <td>{{ r.change_requestor or '' }}</td>
+                        <td>{{ r.incident_number if r.incident_number is not none else '' }}</td>
+
+                        <td>
+                            <span class="pill {{ 'yes' if (r.roll_back or '')|lower == 'yes' else 'no' }}">
+                                {{ r.roll_back or 'No' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% set status_class = (r.status or '')|lower|replace(' ', '-') %}
+                            <span class="pill {{ status_class }}">
+                                {{ r.status or 'Unknown' }}
+                            </span>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="16" class="empty">
+                            No deployment records found.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="records-pagination">
+            <span class="history-count" id="recordPageSummary" aria-live="polite">Showing {{ records|length }} records</span>
+            <nav class="history-pagination" aria-label="All deployment records pagination">
+                <button class="btn light" type="button" id="recordsPrev" disabled>← Previous</button>
+                <span class="records-page-label" id="recordsPageLabel">Page 1 of 1</span>
+                <button class="btn light" type="button" id="recordsNext" disabled>Next →</button>
+            </nav>
+        </div>
+        <div class="foot">
+            <span id="visibleCount">Showing {{ records|length }} records</span>
+            <span>Metrics use deployment date. Rollbacks count records where Roll Back = Yes.</span>
+        </div>
+
+    </section>
+    </div>
+    </div>
+
+
+    <div class="mgr-modal" id="jenkinsStatusModal" data-modal hidden>
+    <div class="mgr-modal-box" role="dialog" aria-modal="true" aria-label="Jenkins Build Status">
+    <section class="panel records jenkins-status-panel" id="jenkinsStatusView">
+        <div class="panelhead">
+            <div>
+                <h3>Jenkins Build Status</h3>
+                <div class="sub">All Jenkins executions linked to deployment CR numbers. Each execution remains listed separately.</div>
+            </div>
+            <div class="mgr-head-actions">
+                <span class="pill status">Execution history</span>
+                <button class="btn light" type="button" data-open-modal="jenkinsDiffModal">⇄ Jenkins Build Diff</button>
+                <button class="mgr-close" type="button" data-close-modal aria-label="Close Jenkins Build Status">✕</button>
+            </div>
+        </div>
+        <div class="tablewrap">
+            <table id="managerJenkinsTable">
+                <thead>
+                    <tr>
+                        <th>CR Number</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Build / Deploy</th>
+                        <th>Platform</th>
+                        <th>Status</th>
+                        <th>Triggered User</th>
+                        <th>Build</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% set jenkins_ns = namespace(count=0) %}
+                {% for r in records %}
+                    {% for build in (r.jenkins_builds or []) %}
+                        {% set jenkins_ns.count = jenkins_ns.count + 1 %}
+                        {% set build_status = (build.status or build.result or ('Running' if build.building else 'Unknown')) %}
+                        {% set build_status_class = 'success' if build_status|lower in ['success', 'successful', 'stable'] else ('failure' if build_status|lower in ['failure', 'failed', 'aborted', 'cancelled'] else ('running' if build.building or build_status|lower == 'running' else '')) %}
+                        <tr data-jenkins-row="true">
+                            <td><strong>{{ r.cr_number or '—' }}</strong></td>
+                            <td>{{ (build.start_time or '—')|replace('T', ' ') }}</td>
+                            <td>{{ (build.end_time or ('Running' if build.building else '—'))|replace('T', ' ') }}</td>
+                            <td>{{ build.build_type or 'Unknown' }}</td>
+                            <td>{{ build.platform or 'Unknown' }}</td>
+                            <td><span class="jenkins-state {{ build_status_class }}">{{ build_status }}</span></td>
+                            <td>{{ build.triggered_by or 'Unknown' }}</td>
+                            <td>
+                                {% if build.url %}
+                                    <a href="{{ build.url|e }}" target="_blank" rel="noopener noreferrer">#{{ build.number }} ↗</a>
+                                {% else %}
+                                    {{ build.number or '—' }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+                {% if jenkins_ns.count == 0 %}
+                    <tr><td colspan="8" class="empty">No Jenkins executions are linked to the deployment records.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+        <div class="foot">
+            <span>{{ jenkins_ns.count }} Jenkins execution{{ '' if jenkins_ns.count == 1 else 's' }} found</span>
+            <span>Build details are grouped by the CR associated with the deployment record.</span>
+        </div>
+    </section>
+    </div>
+    </div>
+
+    <div class="mgr-modal" id="changeHistoryModal" data-modal hidden>
+    <div class="mgr-modal-box" role="dialog" aria-modal="true" aria-label="Deployment and Change History">
+    <section class="panel records audit-history-panel" id="changeHistoryView">
+        <div class="panelhead">
+            <div>
+                <h3>Change History</h3>
+                <div class="sub">Search by the person's name/email or CR number. Date and slot show the linked deployment's current schedule. Latest 200 changes, 10 at a time.</div>
+            </div>
+            <div class="mgr-head-actions">
+                <button class="mgr-close" type="button" data-close-modal aria-label="Close Change History">✕</button>
+            </div>
+        </div>
+        <div class="history-tools">
+            <div class="history-search-wrap">
+                <input id="historySearch" type="search"
+                       placeholder="Search Modified By or CR Number..."
+                       aria-label="Search change history by modified by or CR number"
+                       autocomplete="off">
+                <button class="btn light" id="clearHistorySearch" type="button">Clear</button>
+            </div>
+            <span class="history-count" id="historyCount" aria-live="polite">Loading history...</span>
+        </div>
+        <div class="tablewrap">
+            <table id="changeHistoryTable">
+                <thead>
+                    <tr>
+                        <th>SR No.</th>
+                        <th><button class="sort-heading" type="button" data-history-sort="modifiedAt" aria-sort="descending">Modified At <span class="sort-indicator" aria-hidden="true">↓</span></button></th>
+                        <th>Modified By</th>
+                        <th>Action</th>
+                        <th>CR Number</th>
+                        <th>RFID</th>
+                        <th><button class="sort-heading" type="button" data-history-sort="deploymentDate" aria-sort="none">Deployment Date <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th><button class="sort-heading" type="button" data-history-sort="slotStart" aria-sort="none">Slot Start <span class="sort-indicator" aria-hidden="true">↕</span></button></th>
+                        <th>Field</th>
+                        <th>Previous Value</th>
+                        <th>New Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% set history_ns = namespace(sr=0) %}
+                {% for event in change_history %}
+                    {% if event.changes %}
+                        {% for field, values in event.changes.items() %}
+                        {% set history_ns.sr = history_ns.sr + 1 %}
+                        {% set linked_record = (records | selectattr('id', 'equalto', event.deployment_id) | first) %}
+                        <tr data-history-row="true">
+                            <td>{{ history_ns.sr }}</td>
+                            <td data-sort-value="{{ event.modified_at.strftime('%Y-%m-%d %H:%M:%S') if event.modified_at else '' }}">{{ event.modified_at.strftime('%Y-%m-%d %H:%M:%S') if event.modified_at else '' }}</td>
+                            <td>{{ event.modified_by or 'Not provided' }}</td>
+                            <td>{{ event.action or '' }}</td>
+                            <td>{{ event.cr_number or '' }}</td>
+                            <td>{{ event.rfid or '' }}</td>
+                            <td data-sort-value="{{ linked_record.deployment_date.strftime('%Y-%m-%d') if linked_record and linked_record.deployment_date else '' }}">{{ linked_record.deployment_date.strftime('%Y-%m-%d') if linked_record and linked_record.deployment_date else '—' }}</td>
+                            <td data-sort-value="{{ linked_record.slot_start.strftime('%H:%M:%S') if linked_record and linked_record.slot_start else '' }}">{{ linked_record.slot_start.strftime('%H:%M') if linked_record and linked_record.slot_start else '—' }}</td>
+                            <td>{{ field.replace('_', ' ')|title }}</td>
+                            <td class="audit-value">{{ values.get('old') if values.get('old') is not none else '—' }}</td>
+                            <td class="audit-value">{{ values.get('new') if values.get('new') is not none else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% else %}
+                    <tr><td colspan="11" class="empty">No changes recorded yet.</td></tr>
+                {% endfor %}
+                <tr id="historyNoResults" class="history-no-results" hidden>
+                    <td colspan="11">No matching changes found. Try another name/email or CR number.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="history-tools">
+            <span class="history-count" id="historyPageSummary" aria-live="polite">Showing 0 changes</span>
+            <nav class="history-pagination" aria-label="Change history pagination">
+                <button class="btn light" type="button" id="historyPrev" disabled>← Previous</button>
+                <span class="history-page-label" id="historyPageLabel">Page 0 of 0</span>
+                <button class="btn light" type="button" id="historyNext" disabled>Next →</button>
+            </nav>
+        </div>
+    </section>
+    </div>
+    </div>
+
+    <!-- ===== Jenkins Live Room (Teams-style) ===== -->
+    <div class="mgr-modal" id="jenkinsLiveModal" data-modal hidden>
+        <div class="mgr-modal-box lr-box" role="dialog" aria-modal="true" aria-label="Jenkins Live Room">
+            <header class="lr-top">
+                <div class="lr-title">
+                    <span class="lr-rec"></span>
+                    <div>
+                        <strong>Jenkins Live Room</strong>
+                        <small id="lrSubtitle">Loading…</small>
+                    </div>
+                </div>
+                <div class="lr-filters" id="lrFilters" role="tablist" aria-label="Filter CRs">
+                    <button type="button" data-lr-filter="live" role="tab">Live now <b id="lrCountLive">0</b></button>
+                    <button type="button" data-lr-filter="all" role="tab">All CRs <b id="lrCountAll">0</b></button>
+                    <button type="button" data-lr-filter="failure" role="tab">Failed <b id="lrCountFail">0</b></button>
+                </div>
+                <button class="mgr-close lr-close" type="button" data-close-modal aria-label="Close Jenkins Live Room">✕</button>
+            </header>
+            <div class="lr-body" id="lrBody"></div>
+        </div>
+    </div>
+
+    <!-- ===== Jenkins Build Diff ===== -->
+    <div class="mgr-modal" id="jenkinsDiffModal" data-modal hidden>
+        <div class="mgr-modal-box" role="dialog" aria-modal="true" aria-label="Jenkins Build Diff">
+            <section class="panel records diff-panel">
+                <div class="panelhead">
+                    <div>
+                        <h3>Jenkins Build Diff</h3>
+                        <div class="sub">Pick any two Jenkins executions to compare build details and the linked deployment records side by side.</div>
+                    </div>
+                    <div class="mgr-head-actions">
+                        <button class="mgr-close" type="button" data-close-modal aria-label="Close Jenkins Build Diff">✕</button>
+                    </div>
+                </div>
+                <div class="diff-pickers">
+                    <label>Build A
+                        <select id="diffA"></select>
+                    </label>
+                    <button class="btn light" type="button" id="diffSwap" title="Swap A and B">⇄</button>
+                    <label>Build B
+                        <select id="diffB"></select>
+                    </label>
+                    <button class="btn" type="button" id="diffRun">Compare</button>
+                    <label class="diff-only"><input type="checkbox" id="diffOnly"> Differences only</label>
+                </div>
+                <div id="diffResult" class="diff-result" aria-live="polite"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- ===== Running Status (live timers + Start/Stop history) ===== -->
+    <div class="mgr-modal" id="runningStatusModal" data-modal hidden>
+    <div class="mgr-modal-box" role="dialog" aria-modal="true" aria-label="Running Status">
+    <section class="panel records">
+        <div class="panelhead">
+            <div>
+                <h3>Running Status</h3>
+                <div class="sub">Deployments started from the DevOps workspace, by CR number. Refreshes every 10 seconds while open.</div>
+            </div>
+            <div class="mgr-head-actions">
+                <button class="btn" type="button" id="rsTabLive">Live <span id="rsLiveCount">0</span></button>
+                <button class="btn light" type="button" id="rsTabHistory">History</button>
+                <button class="mgr-close" type="button" data-close-modal aria-label="Close Running Status">✕</button>
+            </div>
+        </div>
+        <div class="history-tools">
+            <div class="history-search-wrap">
+                <input id="rsSearch" type="search" placeholder="Search CR number..." autocomplete="off" aria-label="Search running status by CR number">
+                <button class="btn light" type="button" id="rsClear">Clear</button>
+            </div>
+            <span class="history-count" id="rsCount" aria-live="polite"></span>
+        </div>
+        <div class="tablewrap">
+            <table style="min-width:900px">
+                <thead id="rsHead"></thead>
+                <tbody id="rsBody"><tr><td class="empty">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+    </div>
+    </div>
+
+</main>
+
+{% set jp = namespace(items=[]) %}
+{% for r in records %}
+    {% for build in (r.jenkins_builds or []) %}
+        {% set jp.items = jp.items + [{
+            'cr': r.cr_number or '',
+            'rfid': r.rfid or '',
+            'app': r.application_name or '',
+            'date': r.deployment_date.strftime('%Y-%m-%d') if r.deployment_date else '',
+            'slot_start': r.slot_start.strftime('%H:%M') if r.slot_start else '',
+            'slot_end': r.slot_end.strftime('%H:%M') if r.slot_end else '',
+            'dtype': r.deployment_type or '',
+            'ctype': r.change_type or '',
+            'rstatus': r.status or '',
+            'requestor': r.change_requestor or '',
+            'released_by': r.released_by or '',
+            'verified_by': r.verified_and_deployed_by or '',
+            'incident': r.incident_number or '',
+            'rollback': r.roll_back or 'No',
+            'number': build.number or '',
+            'url': build.url or '',
+            'status': (build.status or build.result or ('Running' if build.building else 'Unknown')),
+            'building': true if build.building else false,
+            'build_type': build.build_type or 'Unknown',
+            'platform': build.platform or 'Unknown',
+            'triggered_by': build.triggered_by or 'Unknown',
+            'start_time': build.start_time or '',
+            'end_time': build.end_time or ''
+        }] %}
+    {% endfor %}
+{% endfor %}
+<script id="jenkinsData" type="application/json">{{ jp.items | tojson }}</script>
+
+<script>
+
+(function initManagerModals() {
+    /* ---------- Modal manager ---------- */
+    let lastTrigger = null;
+    const modals = () => [...document.querySelectorAll('[data-modal]')];
+
+    function setExpanded(modalId, open) {
+        document.querySelectorAll('[data-open-modal="' + modalId + '"]').forEach(b => {
+            if (b.closest('.manager-view-switcher')) {
+                b.setAttribute('aria-expanded', open ? 'true' : 'false');
+                b.classList.toggle('active', open);
+            }
+        });
+    }
+    function closeAll(restoreFocus) {
+        modals().forEach(m => {
+            if (!m.hidden) { m.hidden = true; setExpanded(m.id, false); }
+        });
+        document.body.classList.remove('mgr-modal-open');
+        if (restoreFocus && lastTrigger) { lastTrigger.focus(); }
+    }
+    function openModal(id, trigger) {
+        const target = document.getElementById(id);
+        if (!target) return;
+        if (trigger && trigger.closest('.manager-view-switcher')) lastTrigger = trigger;
+        closeAll(false);
+        target.hidden = false;
+        document.body.classList.add('mgr-modal-open');
+        setExpanded(id, true);
+        target.scrollTop = 0;
+        const box = target.querySelector('.mgr-modal-box');
+        if (box) box.scrollTop = 0;
+        target.dispatchEvent(new CustomEvent('modal:open'));
+        const closeBtn = target.querySelector('[data-close-modal]');
+        if (closeBtn) closeBtn.focus();
+    }
+    document.addEventListener('click', e => {
+        const opener = e.target.closest('[data-open-modal]');
+        if (opener) { openModal(opener.dataset.openModal, opener); return; }
+        if (e.target.closest('[data-close-modal]')) { closeAll(true); return; }
+        if (e.target.classList && e.target.classList.contains('mgr-modal')) closeAll(true);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modals().some(m => !m.hidden)) closeAll(true);
+    });
+
+    /* ---------- Data ---------- */
+    let DATA = [];
+    try { DATA = JSON.parse(document.getElementById('jenkinsData').textContent || '[]'); } catch (err) { DATA = []; }
+    DATA.forEach((b, i) => { b._i = i; });
+
+    const esc = s => String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const dash = v => (v === '' || v === null || v === undefined) ? '—' : v;
+
+    function stateOf(b) {
+        const s = String(b.status || '').toLowerCase();
+        if (b.building || ['running', 'in progress', 'in_progress', 'building'].includes(s)) return 'running';
+        if (['success', 'successful', 'stable'].includes(s)) return 'success';
+        if (['failure', 'failed', 'aborted', 'cancelled', 'unstable'].includes(s)) return 'failure';
+        return 'unknown';
+    }
+    function parseTime(v) {
+        if (!v) return null;
+        const d = new Date(String(v).replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+    }
+    function fmtDur(ms) {
+        if (ms === null || ms < 0 || isNaN(ms)) return '—';
+        const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+        const p = n => String(n).padStart(2, '0');
+        return (h ? h + ':' + p(m) : m) + ':' + p(s);
+    }
+    function durationOf(b) {
+        const s = parseTime(b.start_time);
+        if (!s) return null;
+        const e = parseTime(b.end_time);
+        if (e) return e - s;
+        return stateOf(b) === 'running' ? Date.now() - s.getTime() : null;
+    }
+    const fmtTime = v => v ? String(v).replace('T', ' ') : '';
+    function initials(name) {
+        const parts = String(name || '?').split(/[^A-Za-z0-9]+/).filter(Boolean);
+        return ((parts[0] || '?')[0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+    function colorFor(name) {
+        let h = 0; const s = String(name || '');
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+        return 'hsl(' + h + ',55%,48%)';
+    }
+
+    /* Group executions by CR */
+    function groupByCr() {
+        const map = new Map();
+        DATA.forEach(b => {
+            const key = b.cr || '(no CR)';
+            if (!map.has(key)) map.set(key, { cr: key, rec: b, builds: [] });
+            map.get(key).builds.push(b);
+        });
+        const groups = [...map.values()];
+        groups.forEach(g => {
+            g.builds.sort((a, b) => ((parseTime(b.start_time) || 0) - (parseTime(a.start_time) || 0)));
+            const running = g.builds.find(b => stateOf(b) === 'running');
+            g.lead = running || g.builds[0];
+            g.state = stateOf(g.lead);
+        });
+        groups.sort((a, b) => (b.state === 'running') - (a.state === 'running'));
+        return groups;
+    }
+
+    /* ---------- Live room ---------- */
+    const lr = { filter: null, cr: null, buildIdx: null };
+    const lrBody = document.getElementById('lrBody');
+    const liveBadge = document.getElementById('liveBadge');
+    const labelFor = { running: 'LIVE', success: 'SUCCESS', failure: 'FAILED', unknown: 'UNKNOWN' };
+
+    function timerHtml(b) {
+        const st = stateOf(b);
+        if (st === 'running' && parseTime(b.start_time)) {
+            return '<span class="lr-timer" data-since="' + esc(b.start_time) + '">' + fmtDur(Date.now() - parseTime(b.start_time)) + '</span>';
+        }
+        const d = durationOf(b);
+        return d === null ? '' : '<span class="lr-timer" style="color:#cfd4f5">' + fmtDur(d) + '</span>';
+    }
+
+    function renderGrid(groups) {
+        const live = groups.filter(g => g.state === 'running');
+        const fails = groups.filter(g => g.state === 'failure');
+        let list = lr.filter === 'live' ? live : lr.filter === 'failure' ? fails : groups;
+        if (!list.length) {
+            lrBody.innerHTML = '<div class="lr-empty"><div style="font-size:34px">📭</div><p>' +
+                (lr.filter === 'live' ? 'No CRs are running on Jenkins right now.' : 'Nothing to show for this filter.') +
+                '</p>' + (lr.filter !== 'all' ? '<button class="btn" type="button" data-lr-filter="all">Show all CRs</button>' : '') + '</div>';
+            return;
+        }
+        lrBody.innerHTML = '<div class="lr-grid">' + list.map(g => {
+            const b = g.lead;
+            return '<button type="button" class="lr-tile ' + g.state + '" data-lr-cr="' + esc(g.cr) + '" aria-label="Open CR ' + esc(g.cr) + '">' +
+                '<span class="lr-badge ' + g.state + '">' + labelFor[g.state] + '</span>' +
+                '<span class="lr-count">' + g.builds.length + ' build' + (g.builds.length === 1 ? '' : 's') + '</span>' +
+                '<span class="lr-avatar" style="background:' + colorFor(b.triggered_by) + '">' + esc(initials(b.triggered_by)) + '</span>' +
+                '<span class="lr-tag"><span class="lr-name">' + esc(g.cr) + ' · ' + esc(b.triggered_by) + '</span>' + timerHtml(b) + '</span>' +
+                '</button>';
+        }).join('') + '</div>';
+    }
+
+    function kv(label, value) { return '<div><span>' + esc(label) + '</span><b>' + esc(dash(value)) + '</b></div>'; }
+
+    function renderDetail(group) {
+        const sel = group.builds.find(b => b._i === lr.buildIdx) || group.lead;
+        lr.buildIdx = sel._i;
+        const st = stateOf(sel), r = group.rec;
+        const slot = r.slot_start ? r.slot_start + (r.slot_end ? ' – ' + r.slot_end : '') : '';
+        const dur = durationOf(sel);
+        lrBody.innerHTML =
+            '<div class="lr-detail">' +
+              '<div class="lr-stage">' +
+                '<div class="lr-stage-head">' +
+                  '<span class="lr-avatar ' + '" style="background:' + colorFor(sel.triggered_by) + '">' + esc(initials(sel.triggered_by)) + '</span>' +
+                  '<div><h3>' + esc(group.cr) + '</h3><p>' + esc(dash(r.app)) + ' · triggered by ' + esc(sel.triggered_by) + '</p></div>' +
+                  '<div class="lr-bigtimer" ' + (st === 'running' && parseTime(sel.start_time) ? 'data-since="' + esc(sel.start_time) + '"' : '') + '>' + (dur === null ? '—' : fmtDur(dur)) + '</div>' +
+                '</div>' +
+                '<div class="lr-sec">BUILD #' + esc(sel.number || '—') + '</div>' +
+                '<div class="lr-kv">' +
+                    kv('Status', sel.status) + kv('Build / Deploy', sel.build_type) + kv('Platform', sel.platform) +
+                    kv('Triggered User', sel.triggered_by) + kv('Start Time', fmtTime(sel.start_time)) +
+                    kv('End Time', sel.end_time ? fmtTime(sel.end_time) : (st === 'running' ? 'Running' : '')) +
+                '</div>' +
+                '<div class="lr-sec">DEPLOYMENT RECORD</div>' +
+                '<div class="lr-kv">' +
+                    kv('CR Number', r.cr) + kv('RFID', r.rfid) + kv('Application', r.app) +
+                    kv('Deployment Date', r.date) + kv('Slot', slot) + kv('Deployment Type', r.dtype) +
+                    kv('Change Type', r.ctype) + kv('Deployment Status', r.rstatus) + kv('Change Requestor', r.requestor) +
+                    kv('Released By', r.released_by) + kv('Verified & Deployed By', r.verified_by) +
+                    kv('Incident Number', r.incident) + kv('Roll Back', r.rollback) +
+                '</div>' +
+              '</div>' +
+              '<aside class="lr-side"><h4>Executions (' + group.builds.length + ')</h4>' +
+                group.builds.map(b => {
+                    const s = stateOf(b);
+                    return '<button type="button" class="lr-exec' + (b._i === sel._i ? ' active' : '') + '" data-lr-build="' + b._i + '">' +
+                        '<span class="lr-avatar" style="background:' + colorFor(b.triggered_by) + '">' + esc(initials(b.triggered_by)) + '</span>' +
+                        '<span><strong>#' + esc(b.number || '—') + ' · ' + esc(b.build_type) + '</strong><small>' + esc(b.platform) + ' · ' + esc(fmtTime(b.start_time) || '—') + '</small></span>' +
+                        '<span class="st ' + s + '">' + esc(b.status) + '</span></button>';
+                }).join('') +
+              '</aside>' +
+            '</div>' +
+            '<div class="lr-controls">' +
+                '<button class="btn" type="button" data-lr-back>← All CRs</button>' +
+                (sel.url ? '<a class="btn primary" href="' + esc(sel.url) + '" target="_blank" rel="noopener noreferrer">Open in Jenkins ↗</a>' : '') +
+                (group.builds.length > 1 ? '<button class="btn" type="button" data-lr-compare>⇄ Compare with previous build</button>' : '') +
+            '</div>';
+    }
+
+    function renderLive() {
+        const groups = groupByCr();
+        const live = groups.filter(g => g.state === 'running').length;
+        const fail = groups.filter(g => g.state === 'failure').length;
+        document.getElementById('lrCountLive').textContent = live;
+        document.getElementById('lrCountAll').textContent = groups.length;
+        document.getElementById('lrCountFail').textContent = fail;
+        document.getElementById('lrSubtitle').textContent = live + ' CR' + (live === 1 ? '' : 's') + ' running now · ' + groups.length + ' total · snapshot (use ↻ Refresh to update)';
+        if (lr.filter === null) lr.filter = live ? 'live' : 'all';
+        document.querySelectorAll('[data-lr-filter]').forEach(b => {
+            if (b.closest('#lrFilters')) {
+                b.classList.toggle('active', b.dataset.lrFilter === lr.filter);
+                b.setAttribute('aria-selected', b.dataset.lrFilter === lr.filter ? 'true' : 'false');
+            }
+        });
+        const group = lr.cr && groups.find(g => g.cr === lr.cr);
+        if (group) { document.getElementById('lrFilters').style.visibility = 'hidden'; renderDetail(group); }
+        else { lr.cr = null; document.getElementById('lrFilters').style.visibility = ''; renderGrid(groups); }
+    }
+
+    document.getElementById('jenkinsLiveModal').addEventListener('click', e => {
+        const f = e.target.closest('[data-lr-filter]');
+        if (f) { lr.filter = f.dataset.lrFilter; lr.cr = null; renderLive(); return; }
+        const tile = e.target.closest('[data-lr-cr]');
+        if (tile) { lr.cr = tile.dataset.lrCr; lr.buildIdx = null; renderLive(); return; }
+        const bld = e.target.closest('[data-lr-build]');
+        if (bld) { lr.buildIdx = Number(bld.dataset.lrBuild); renderLive(); return; }
+        if (e.target.closest('[data-lr-back]')) { lr.cr = null; renderLive(); return; }
+        if (e.target.closest('[data-lr-compare]')) {
+            const g = groupByCr().find(x => x.cr === lr.cr);
+            if (!g) return;
+            const idx = g.builds.findIndex(b => b._i === lr.buildIdx);
+            const a = g.builds[idx + 1] || g.builds[idx];
+            openModal('jenkinsDiffModal');
+            diffSet(a._i, g.builds[idx]._i);
+        }
+    });
+    document.getElementById('jenkinsLiveModal').addEventListener('modal:open', () => { lr.cr = null; renderLive(); });
+
+    /* live timers */
+    setInterval(() => {
+        const m = document.getElementById('jenkinsLiveModal');
+        if (m.hidden) return;
+        m.querySelectorAll('[data-since]').forEach(el => {
+            const s = parseTime(el.dataset.since);
+            if (s) el.textContent = fmtDur(Date.now() - s.getTime());
+        });
+    }, 1000);
+
+    /* badge on switcher */
+    const runningCount = DATA.filter(b => stateOf(b) === 'running').length;
+    if (runningCount && liveBadge) { liveBadge.textContent = runningCount; liveBadge.hidden = false; }
+
+    /* ---------- Diff ---------- */
+    const diffA = document.getElementById('diffA'), diffB = document.getElementById('diffB');
+    const diffOnly = document.getElementById('diffOnly'), diffResult = document.getElementById('diffResult');
+    let diffReady = false;
+
+    function populateDiff() {
+        if (diffReady) return;
+        diffReady = true;
+        const opts = DATA.length
+            ? DATA.map(b => '<option value="' + b._i + '">' + esc((b.cr || '(no CR)') + ' · #' + (b.number || '—') + ' · ' + b.build_type + ' · ' + b.status) + '</option>').join('')
+            : '<option value="">No executions available</option>';
+        diffA.innerHTML = opts; diffB.innerHTML = opts;
+        if (DATA.length > 1) diffB.value = '1';
+    }
+    function diffSet(a, b) { populateDiff(); diffA.value = String(a); diffB.value = String(b); runDiff(); }
+
+    const BUILD_FIELDS = [
+        ['Build Number', b => b.number], ['Build / Deploy', b => b.build_type], ['Platform', b => b.platform],
+        ['Status', b => b.status], ['Triggered User', b => b.triggered_by],
+        ['Start Time', b => fmtTime(b.start_time)], ['End Time', b => fmtTime(b.end_time)],
+        ['Duration', b => { const d = durationOf(b); return d === null ? '' : fmtDur(d); }],
+        ['Jenkins URL', b => b.url]
+    ];
+    const REC_FIELDS = [
+        ['CR Number', b => b.cr], ['RFID', b => b.rfid], ['Application', b => b.app],
+        ['Deployment Date', b => b.date], ['Slot', b => b.slot_start ? b.slot_start + (b.slot_end ? ' – ' + b.slot_end : '') : ''],
+        ['Deployment Type', b => b.dtype], ['Change Type', b => b.ctype], ['Deployment Status', b => b.rstatus],
+        ['Change Requestor', b => b.requestor], ['Released By', b => b.released_by],
+        ['Verified & Deployed By', b => b.verified_by], ['Incident Number', b => b.incident], ['Roll Back', b => b.rollback]
+    ];
+
+    function runDiff() {
+        populateDiff();
+        const A = DATA[Number(diffA.value)], B = DATA[Number(diffB.value)];
+        if (!A || !B) { diffResult.innerHTML = '<div class="diff-empty">Select two Jenkins executions to compare.</div>'; return; }
+        const onlyDiff = diffOnly.checked;
+        let total = 0, changed = 0, rows = '';
+        [['BUILD DETAILS', BUILD_FIELDS], ['DEPLOYMENT RECORD', REC_FIELDS]].forEach(grp => {
+            let part = '';
+            grp[1].forEach(f => {
+                const va = String(dash(f[1](A))), vb = String(dash(f[1](B)));
+                const differs = va !== vb;
+                total++; if (differs) changed++;
+                if (onlyDiff && !differs) return;
+                part += '<tr class="' + (differs ? 'differs' : '') + '"><td>' + esc(f[0]) + '</td><td>' + esc(va) + '</td><td>' + esc(vb) + '</td></tr>';
+            });
+            if (part) rows += '<tr class="diff-group"><td colspan="3">' + grp[0] + '</td></tr>' + part;
+        });
+        const same = A._i === B._i;
+        diffResult.innerHTML =
+            '<div class="diff-summary">' +
+                '<span class="diff-chip ' + (changed ? 'bad' : 'good') + '">' + changed + ' of ' + total + ' fields differ</span>' +
+                (same ? '<span class="diff-chip bad">Same execution selected on both sides</span>' : '') +
+            '</div>' +
+            '<div class="tablewrap"><table class="diff-table"><thead><tr><th>Field</th><th>A · ' + esc(A.cr) + ' #' + esc(A.number || '—') + '</th><th>B · ' + esc(B.cr) + ' #' + esc(B.number || '—') + '</th></tr></thead><tbody>' +
+            (rows || '<tr><td colspan="3" class="diff-empty">No differences — both executions match on every field.</td></tr>') +
+            '</tbody></table></div>';
+    }
+    document.getElementById('jenkinsDiffModal').addEventListener('modal:open', () => { populateDiff(); runDiff(); });
+    document.getElementById('diffRun').addEventListener('click', runDiff);
+    diffOnly.addEventListener('change', runDiff);
+    diffA.addEventListener('change', runDiff);
+    diffB.addEventListener('change', runDiff);
+    document.getElementById('diffSwap').addEventListener('click', () => {
+        const t = diffA.value; diffA.value = diffB.value; diffB.value = t; runDiff();
+    });
+})();
+
+
+(function initViewsFab() {
+    const fab = document.getElementById('mgrFab'), main = document.getElementById('fabMain'), menu = document.getElementById('fabMenu');
+    if (!fab || !main || !menu) return;
+    function setOpen(open) {
+        menu.hidden = !open;
+        main.setAttribute('aria-expanded', open ? 'true' : 'false');
+        main.querySelector('.fab-main-ico').textContent = open ? '✕' : '☰';
+        if (open) { const first = menu.querySelector('.fab-item'); if (first) first.focus(); }
+    }
+    main.addEventListener('click', () => setOpen(menu.hidden));
+    menu.addEventListener('click', e => { if (e.target.closest('.fab-item')) setOpen(false); });
+    document.addEventListener('click', e => { if (!menu.hidden && !fab.contains(e.target)) setOpen(false); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !menu.hidden) { setOpen(false); main.focus(); }
+    });
+    const lb = document.getElementById('liveBadge'), fb = document.getElementById('fabBadge');
+    if (lb && fb && !lb.hidden) { fb.textContent = lb.textContent; fb.hidden = false; }
+})();
+
+const searchBox = document.getElementById('search');
+const rollbackFilter = document.getElementById('rollbackFilter');
+const statusFilter = document.getElementById('statusFilter');
+const recordsFromDate = document.getElementById('recordsFromDate');
+const recordsToDate = document.getElementById('recordsToDate');
+const recordsExportFormat = document.getElementById('recordsExportFormat');
+const tableBody = document.querySelector('#recordsTable tbody');
+let recordRows = [...tableBody.querySelectorAll('tr[data-status]')];
+const recordPageSize = 10;
+let recordPage = 1;
+let filteredRecordRows = recordRows.slice();
+let recordSort = { key: null, direction: 'asc' };
+
+const recordsPrev = document.getElementById('recordsPrev');
+const recordsNext = document.getElementById('recordsNext');
+const recordsPageLabel = document.getElementById('recordsPageLabel');
+const recordPageSummary = document.getElementById('recordPageSummary');
+
+function getRecordSortValue(row, key) {
+    if (key === 'date') return (row.dataset.date || '').trim();
+    if (key === 'slotStart') return (row.dataset.slotStart || '').trim();
+    return '';
+}
+
+function sortDeploymentRecords(key) {
+    if (recordSort.key === key) {
+        recordSort.direction = recordSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        recordSort = { key, direction: 'asc' };
+    }
+
+    const direction = recordSort.direction === 'asc' ? 1 : -1;
+    recordRows.sort((a, b) => {
+        const aValue = getRecordSortValue(a, key);
+        const bValue = getRecordSortValue(b, key);
+
+        if (!aValue && bValue) return 1;
+        if (aValue && !bValue) return -1;
+        return aValue.localeCompare(bValue, undefined, { numeric: true }) * direction;
+    });
+    recordRows.forEach(row => tableBody.appendChild(row));
+    updateRecordSortHeadings();
+    filterRows(true);
+}
+
+function updateRecordSortHeadings() {
+    document.querySelectorAll('[data-record-sort]').forEach(button => {
+        const active = button.dataset.recordSort === recordSort.key;
+        button.setAttribute('aria-sort', active
+            ? (recordSort.direction === 'asc' ? 'ascending' : 'descending')
+            : 'none');
+        const indicator = button.querySelector('.sort-indicator');
+        if (indicator) indicator.textContent = active
+            ? (recordSort.direction === 'asc' ? '↑' : '↓')
+            : '↕';
+    });
+}
+
+document.querySelectorAll('[data-record-sort]').forEach(button => {
+    button.addEventListener('click', () => sortDeploymentRecords(button.dataset.recordSort));
+});
+
+function renderRecordPage() {
+    const total = filteredRecordRows.length;
+    const pageCount = Math.ceil(total / recordPageSize);
+    recordPage = Math.max(1, Math.min(recordPage, pageCount || 1));
+    const start = total ? (recordPage - 1) * recordPageSize : 0;
+    const end = Math.min(start + recordPageSize, total);
+    const visibleRows = new Set(filteredRecordRows.slice(start, end));
+
+    recordRows.forEach(row => {
+        row.style.display = visibleRows.has(row) ? '' : 'none';
+    });
+    filteredRecordRows.forEach((row, index) => {
+        row.cells[0].textContent = String(index + 1);
+    });
+
+    recordPageSummary.textContent = total
+        ? `Showing ${start + 1}–${end} of ${total} matching record${total === 1 ? '' : 's'}`
+        : 'Showing 0 matching records';
+    recordsPageLabel.textContent = `Page ${total ? recordPage : 0} of ${pageCount}`;
+    recordsPrev.disabled = recordPage <= 1 || total === 0;
+    recordsNext.disabled = recordPage >= pageCount || total === 0;
+    document.getElementById('visibleCount').textContent =
+        `Showing ${total} of ${recordRows.length} records`;
+}
+
+function filterRows(resetPage = true) {
+    const query = searchBox.value.trim().toLocaleLowerCase();
+    filteredRecordRows = recordRows.filter(row => {
+        const matchText = row.innerText.toLocaleLowerCase().includes(query);
+        const matchRollback = !rollbackFilter.value || row.dataset.rollback === rollbackFilter.value;
+        const matchStatus = !statusFilter.value || row.dataset.status === statusFilter.value;
+        const rowDate = (row.dataset.date || '').trim();
+        const fromDate = recordsFromDate?.value || '';
+        const toDate = recordsToDate?.value || '';
+        const matchFromDate = !fromDate || (rowDate && rowDate >= fromDate);
+        const matchToDate = !toDate || (rowDate && rowDate <= toDate);
+        return matchText && matchRollback && matchStatus && matchFromDate && matchToDate;
+    });
+
+    if (resetPage) recordPage = 1;
+    renderRecordPage();
+    updateStatusBarSelection();
+}
+
+[searchBox, rollbackFilter, statusFilter].forEach(element => {
+    element.addEventListener('input', () => filterRows(true));
+    element.addEventListener('change', () => filterRows(true));
+});
+
+recordsPrev.addEventListener('click', () => {
+    if (recordPage > 1) { recordPage--; renderRecordPage(); }
+});
+recordsNext.addEventListener('click', () => {
+    const pageCount = Math.ceil(filteredRecordRows.length / recordPageSize);
+    if (recordPage < pageCount) { recordPage++; renderRecordPage(); }
+});
+
+function exportTableCSV() {
+    const headers = [
+        ...document.querySelectorAll('#recordsTable thead th')
+    ];
+
+    const rows = filteredRecordRows;
+
+    const escapeCSV = value =>
+        '"' + String(value ?? '').replace(/"/g, '""') + '"';
+
+    const csvRows = [
+        headers.map(th => escapeCSV(th.innerText.replace(/[↕↑↓]/g, '').trim())).join(','),
+        ...rows.map((tr, index) =>
+            [...tr.cells].map((td, cellIndex) =>
+                escapeCSV(cellIndex === 0 ? index + 1 : td.innerText.trim())
+            ).join(',')
+        )
+    ];
+
+    const blob = new Blob(
+        ['\ufeff' + csvRows.join('\r\n')],
+        { type: 'text/csv;charset=utf-8;' }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    const fromPart = recordsFromDate?.value || 'all';
+    const toPart = recordsToDate?.value || 'dates';
+    link.download = `deployment_records_${fromPart}_to_${toPart}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Apply the selected date range to the All Deployment Records table.
+document.getElementById('applyRecordDateFilter')?.addEventListener('click', () => {
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    filterRows(true);
+});
+
+[recordsFromDate, recordsToDate].forEach(input => {
+    input?.addEventListener('change', () => {
+        const fromDate = recordsFromDate.value;
+        const toDate = recordsToDate.value;
+        if (fromDate && toDate && toDate < fromDate) {
+            alert('To Date must be on or after From Date.');
+            input.value = '';
+        }
+    });
+});
+
+async function exportTableExcel() {
+    const headers = [...document.querySelectorAll('#recordsTable thead th')]
+        .map(th => th.innerText.replace(/[↕↑↓]/g, '').trim());
+    const rows = filteredRecordRows.map((tr, index) =>
+        [...tr.cells].map((td, cellIndex) =>
+            cellIndex === 0 ? String(index + 1) : td.innerText.trim()
+        )
+    );
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    const response = await fetch('/manager/export-deployment-records.xlsx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headers, rows, from_date: fromDate, to_date: toDate })
+    });
+    if (!response.ok) {
+        const message = await response.text();
+        alert(message || 'Unable to export Excel report.');
+        return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `deployment_records_${fromDate || 'all'}_to_${toDate || 'dates'}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.getElementById('exportRecordsButton')?.addEventListener('click', () => {
+    const fromDate = recordsFromDate.value;
+    const toDate = recordsToDate.value;
+    if (fromDate && toDate && toDate < fromDate) {
+        alert('To Date must be on or after From Date.');
+        return;
+    }
+    // Ensure the export uses the latest date range and all active table filters.
+    filterRows(true);
+    if (recordsExportFormat.value === 'xlsx') exportTableExcel();
+    else exportTableCSV();
+});
+
+function dateKey(date) {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-');
+}
+
+function parseDate(value) {
+    if (!value) return null;
+
+    const parts = value.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+let selectedWeekStart = getMonday(new Date());
+
+function getMonday(dateValue) {
+    const date = new Date(dateValue);
+    date.setHours(0, 0, 0, 0);
+    const daysSinceMonday = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - daysSinceMonday);
+    return date;
+}
+
+function addDays(dateValue, amount) {
+    const date = new Date(dateValue);
+    date.setDate(date.getDate() + amount);
+    return date;
+}
+
+function formatWeekDate(dateValue) {
+    return dateValue.toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+function updateWeekLabel() {
+    const weekEnd = addDays(selectedWeekStart, 6);
+    const range = `${formatWeekDate(selectedWeekStart)} – ${formatWeekDate(weekEnd)}`;
+    const rangeElement = document.getElementById('activityWeekRange');
+    const subtitle = document.getElementById('activitySubtitle');
+
+    if (rangeElement) rangeElement.textContent = range;
+    if (subtitle) subtitle.textContent = 'Deployment records for this Monday–Sunday week';
+}
+
+function drawActivity() {
+    const canvas = document.getElementById('activityChart');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const width = rect.width, height = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const pad = { left: 32, right: 16, top: 22, bottom: 48 };
+    const plotWidth = width - pad.left - pad.right;
+    const plotHeight = height - pad.top - pad.bottom;
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const date = addDays(selectedWeekStart, i);
+        days.push({
+            date,
+            label: date.toLocaleDateString(undefined, { weekday: 'short' }),
+            dateLabel: date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+            count: 0
+        });
+    }
+    recordRows.forEach(row => {
+        const date = parseDate(row.dataset.date);
+        if (!date) return;
+        const day = days.find(item => dateKey(item.date) === dateKey(date));
+        if (day) day.count++;
+    });
+
+    const maxCount = Math.max(4, ...days.map(day => day.count));
+    ctx.font = '10px Segoe UI, Arial';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        const value = Math.ceil(maxCount * i / 4);
+        const y = pad.top + plotHeight - (i / 4) * plotHeight;
+        ctx.strokeStyle = '#edf1f8'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
+        ctx.fillStyle = '#98a4b8'; ctx.fillText(String(value), pad.left - 9, y);
+    }
+
+    const step = plotWidth / Math.max(1, days.length - 1);
+    const points = days.map((day, i) => ({
+        x: pad.left + i * step,
+        y: pad.top + plotHeight - (day.count / maxCount) * (plotHeight - 8),
+        day
+    }));
+    // Soft area under the line.
+    const area = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotHeight);
+    area.addColorStop(0, 'rgba(79,103,246,.28)');
+    area.addColorStop(1, 'rgba(79,103,246,.015)');
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, pad.top + plotHeight);
+    points.forEach((point, i) => {
+        if (i === 0) ctx.lineTo(point.x, point.y);
+        else {
+            const prev = points[i - 1];
+            const midX = (prev.x + point.x) / 2;
+            ctx.bezierCurveTo(midX, prev.y, midX, point.y, point.x, point.y);
+        }
+    });
+    ctx.lineTo(points[points.length - 1].x, pad.top + plotHeight);
+    ctx.closePath(); ctx.fillStyle = area; ctx.fill();
+
+    // Smooth line with a subtle glow.
+    ctx.beginPath();
+    points.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else {
+            const prev = points[i - 1], midX = (prev.x + point.x) / 2;
+            ctx.bezierCurveTo(midX, prev.y, midX, point.y, point.x, point.y);
+        }
+    });
+    ctx.strokeStyle = 'rgba(79,103,246,.15)'; ctx.lineWidth = 9;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.strokeStyle = '#526bf6'; ctx.lineWidth = 3; ctx.stroke();
+
+    points.forEach(({x, y, day}) => {
+        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#526bf6'; ctx.stroke();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.font = 'bold 10px Segoe UI, Arial'; ctx.fillStyle = '#33436a';
+        if (day.count > 0) ctx.fillText(String(day.count), x, y - 10);
+        ctx.textBaseline = 'top'; ctx.font = '10px Segoe UI, Arial'; ctx.fillStyle = '#78859c';
+        ctx.fillText(day.label, x, pad.top + plotHeight + 10);
+        ctx.font = '9px Segoe UI, Arial'; ctx.fillStyle = '#a0aabd';
+        ctx.fillText(day.dateLabel, x, pad.top + plotHeight + 24);
+    });
+    updateWeekLabel();
+}
+
+function changeSelectedWeek(weekOffset) {
+    selectedWeekStart = addDays(selectedWeekStart, weekOffset * 7);
+    drawActivity();
+}
+
+document.getElementById('previousWeekButton').addEventListener('click', function () {
+    changeSelectedWeek(-1);
+});
+
+document.getElementById('nextWeekButton').addEventListener('click', function () {
+    changeSelectedWeek(1);
+});
+
+document.getElementById('currentWeekButton').addEventListener('click', function () {
+    selectedWeekStart = getMonday(new Date());
+    drawActivity();
+});
+
+function buildDonut() {
+    const types = [
+        { name: 'Automation', color: '#526bf6', count: 0 },
+        { name: 'Manual', color: '#10b99a', count: 0 },
+        { name: 'Other', color: '#a78bfa', count: 0 }
+    ];
+
+    recordRows.forEach(row => {
+        const type = (row.dataset.type || '').toLowerCase();
+        const item = types.find(t => t.name.toLowerCase() === type)
+            || types[2];
+
+        item.count++;
+    });
+
+    const active = types.filter(type => type.count > 0);
+    const total = types.reduce((sum, type) => sum + type.count, 0);
+
+    document.getElementById('typeTotal').textContent = total;
+
+    let offset = 0;
+
+    const segments = active.map(type => {
+        const start = offset;
+        offset += total ? type.count / total * 100 : 0;
+
+        return `${type.color} ${start}% ${offset}%`;
+    });
+
+    document.getElementById('typeDonut').style.background =
+        segments.length
+            ? `conic-gradient(${segments.join(',')})`
+            : '#edf1f7';
+
+    document.getElementById('typeLegend').innerHTML =
+        active.length
+            ? active.map(type => `
+                <div class="item">
+                    <span class="swatch" style="background:${type.color}"></span>
+                    <span>${type.name}</span>
+                    <b>${type.count}</b>
+                </div>
+            `).join('')
+            : '<div class="sub">No records yet</div>';
+}
+
+function buildStatusBars() {
+    // Keep this list synchronized with STATUSES and APPROVAL_STATUSES in app.py.
+    const statuses = [
+        'Scheduled Deployment',
+        'Deployment Completed',
+        'Deployment Failed',
+        'On Hold',
+        'Postponed',
+        'Rolled',
+        'Cancelled',
+        'Approved',
+        'Rejected'
+    ];
+
+    const colors = {
+        'Scheduled Deployment': 'linear-gradient(90deg,#d97706,#fbbf24)',
+        'Deployment Completed': 'linear-gradient(90deg,#059669,#6ee7b7)',
+        'Deployment Failed': 'linear-gradient(90deg,#dc2626,#fca5a5)',
+        'On Hold': 'linear-gradient(90deg,#64748b,#cbd5e1)',
+        'Postponed': 'linear-gradient(90deg,#d97706,#fdba74)',
+        'Rolled': 'linear-gradient(90deg,#7c3aed,#c4b5fd)',
+        'Cancelled': 'linear-gradient(90deg,#64748b,#cbd5e1)',
+        'Approved': 'linear-gradient(90deg,#2563eb,#93c5fd)',
+        'Rejected': 'linear-gradient(90deg,#be123c,#fda4af)'
+    };
+
+    const counts = {};
+    recordRows.forEach(row => {
+        const rawStatus = row.querySelector('td:last-child')?.innerText.trim() || 'Unknown';
+        const canonicalStatus = statuses.find(
+            status => status.toLowerCase() === rawStatus.toLowerCase()
+        ) || rawStatus;
+        counts[canonicalStatus] = (counts[canonicalStatus] || 0) + 1;
+    });
+
+    const knownStatuses = new Set(statuses.map(status => status.toLowerCase()));
+    const entries = statuses.map(status => ({
+        status,
+        count: counts[status] || 0
+    }));
+
+    // Preserve any legacy or future status values already present in the database.
+    Object.keys(counts)
+        .filter(status => !knownStatuses.has(status.toLowerCase()))
+        .sort()
+        .forEach(status => entries.push({ status, count: counts[status] }));
+
+    const maxCount = Math.max(1, ...entries.map(entry => entry.count));
+    const container = document.getElementById('statusBars');
+    container.replaceChildren();
+
+    entries.forEach(({ status, count }) => {
+        const row = document.createElement('div');
+        row.className = 'barrow status-option';
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('aria-label', `Filter records by status: ${status}`);
+        row.dataset.statusChoice = status.toLowerCase();
+        row.setAttribute('aria-pressed', String(statusFilter.value === status.toLowerCase()));
+        if (statusFilter.value === status.toLowerCase()) row.classList.add('is-selected');
+
+        const label = document.createElement('span');
+        label.className = 'status-name';
+        label.textContent = status;
+
+        const track = document.createElement('div');
+        track.className = 'track';
+        const fill = document.createElement('div');
+        fill.className = 'fill';
+        fill.style.width = `${count / maxCount * 100}%`;
+        fill.style.background = colors[status] || '#94a3b8';
+        track.appendChild(fill);
+
+        const number = document.createElement('strong');
+        number.textContent = String(count);
+
+        row.append(label, track, number);
+        container.appendChild(row);
+    });
+}
+function updateStatusBarSelection() {
+    const selectedValue = statusFilter.value;
+    document.querySelectorAll('#statusBars .status-option').forEach(row => {
+        const selected = Boolean(selectedValue) && row.dataset.statusChoice === selectedValue;
+        row.classList.toggle('is-selected', selected);
+        row.setAttribute('aria-pressed', String(selected));
+    });
+}
+
+function chooseStatus(statusValue) {
+
+    statusFilter.value = statusFilter.value === statusValue ? '' : statusValue;
+    filterRows();
+}
+
+const statusBars = document.getElementById('statusBars');
+statusBars.addEventListener('click', event => {
+    const row = event.target.closest('.status-option');
+    if (row) chooseStatus(row.dataset.statusChoice);
+});
+statusBars.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest('.status-option');
+    if (!row) return;
+    event.preventDefault();
+    chooseStatus(row.dataset.statusChoice);
+});
+
+document.getElementById('clearStatusChoice').addEventListener('click', () => {
+    statusFilter.value = '';
+    filterRows();
+});
+
+function redraw() {
+    drawActivity();
+}
+
+buildDonut();
+buildStatusBars();
+filterRows(true);
+redraw();
+
+
+(function initChangeHistoryTable() {
+    const table = document.getElementById('changeHistoryTable');
+    if (!table) return;
+
+    const body = table.querySelector('tbody');
+    const rows = [...body.querySelectorAll('tr[data-history-row="true"]')];
+    const search = document.getElementById('historySearch');
+    const clearButton = document.getElementById('clearHistorySearch');
+    const prevButton = document.getElementById('historyPrev');
+    const nextButton = document.getElementById('historyNext');
+    const count = document.getElementById('historyCount');
+    const summary = document.getElementById('historyPageSummary');
+    const pageLabel = document.getElementById('historyPageLabel');
+    const noResults = document.getElementById('historyNoResults');
+    const pageSize = 10;
+    let page = 1;
+    let filteredRows = rows;
+    let historySort = { key: 'modifiedAt', direction: 'desc' };
+    const historySortColumns = { modifiedAt: 1, deploymentDate: 6, slotStart: 7 };
+
+    function updateHistorySortHeaders() {
+        table.querySelectorAll('[data-history-sort]').forEach(button => {
+            const active = button.dataset.historySort === historySort.key;
+            button.setAttribute('aria-sort', active
+                ? (historySort.direction === 'asc' ? 'ascending' : 'descending')
+                : 'none');
+            const indicator = button.querySelector('.sort-indicator');
+            if (indicator) indicator.textContent = active
+                ? (historySort.direction === 'asc' ? '↑' : '↓')
+                : '↕';
+        });
+    }
+
+    table.querySelectorAll('[data-history-sort]').forEach(button => {
+        button.addEventListener('click', () => {
+            const key = button.dataset.historySort;
+            if (historySort.key === key) {
+                historySort.direction = historySort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                historySort = { key, direction: 'asc' };
+            }
+            const columnIndex = historySortColumns[key];
+            const direction = historySort.direction === 'asc' ? 1 : -1;
+            rows.sort((a, b) => {
+                const av = a.cells[columnIndex]?.dataset.sortValue || '';
+                const bv = b.cells[columnIndex]?.dataset.sortValue || '';
+                if (!av && bv) return 1;
+                if (av && !bv) return -1;
+                return av.localeCompare(bv, undefined, { numeric: true }) * direction;
+            });
+            rows.forEach(row => body.appendChild(row));
+            updateHistorySortHeaders();
+            applyHistoryView(true);
+        });
+    });
+    updateHistorySortHeaders();
+
+    function applyHistoryView(resetPage = false) {
+        const query = search.value.trim().toLocaleLowerCase();
+        filteredRows = rows.filter(row => {
+            const modifiedBy = (row.cells[2]?.textContent || '').toLocaleLowerCase();
+            const crNumber = (row.cells[4]?.textContent || '').toLocaleLowerCase();
+            return modifiedBy.includes(query) || crNumber.includes(query);
+        });
+
+        const total = filteredRows.length;
+        const pageCount = Math.ceil(total / pageSize);
+        if (resetPage) page = 1;
+        page = Math.max(1, Math.min(page, pageCount || 1));
+
+
+        filteredRows.forEach((row, index) => {
+            if (row.cells[0]) row.cells[0].textContent = String(index + 1);
+        });
+
+        rows.forEach(row => { row.hidden = true; });
+        const start = total ? (page - 1) * pageSize : 0;
+        const end = Math.min(start + pageSize, total);
+        filteredRows.slice(start, end).forEach(row => { row.hidden = false; });
+
+        noResults.hidden = total !== 0;
+        count.textContent = query
+            ? `${total} matching change${total === 1 ? '' : 's'}`
+            : `${rows.length} total change${rows.length === 1 ? '' : 's'}`;
+        summary.textContent = total
+            ? `Showing ${start + 1}–${end} of ${total} change${total === 1 ? '' : 's'}`
+            : 'Showing 0 changes';
+        pageLabel.textContent = `Page ${total ? page : 0} of ${pageCount}`;
+        prevButton.disabled = page <= 1 || total === 0;
+        nextButton.disabled = page >= pageCount || total === 0;
+    }
+
+    search.addEventListener('input', () => applyHistoryView(true));
+    clearButton.addEventListener('click', () => {
+        search.value = '';
+        applyHistoryView(true);
+        search.focus();
+    });
+    prevButton.addEventListener('click', () => {
+        if (page > 1) { page--; applyHistoryView(); }
+    });
+    nextButton.addEventListener('click', () => {
+        const pageCount = Math.ceil(filteredRows.length / pageSize);
+        if (page < pageCount) { page++; applyHistoryView(); }
+    });
+
+    applyHistoryView(true);
+})();
+
+// Apply team bar widths from data attributes. Keeping dynamic values out of
+// inline CSS avoids VS Code CSS parser errors on Jinja template expressions.
+document.querySelectorAll('.team-deployment-fill[data-percent]').forEach(bar => {
+    const percent = Number.parseFloat(bar.dataset.percent);
+    bar.style.width = `${Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0}%`;
+});
+
+window.addEventListener('resize', redraw);
+</script>
+
+
+<script>
+(function runningStatusModal() {
+    const modal = document.getElementById('runningStatusModal');
+    if (!modal) return;
+    const body = document.getElementById('rsBody'), head = document.getElementById('rsHead');
+    const search = document.getElementById('rsSearch'), countEl = document.getElementById('rsCount');
+    const tabLive = document.getElementById('rsTabLive'), tabHist = document.getElementById('rsTabHistory');
+    const liveCount = document.getElementById('rsLiveCount'), badge = document.getElementById('rsBadge');
+    let tab = 'live', live = [], history = [], pollId = null, tickId = null;
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmtT = iso => iso ? new Date(iso).toLocaleString() : '—';
+    const fmtD = s => { s = Math.max(0, s|0); const p = n => String(n).padStart(2,'0');
+        return p(Math.floor(s/3600)) + ':' + p(Math.floor(s%3600/60)) + ':' + p(s%60); };
+    const state = r => r.is_running
+        ? '<span class="jenkins-state running">● Running</span>'
+        : '<span class="jenkins-state">■ Stopped</span>';
+
+    function render() {
+        const q = search.value.trim().toLowerCase();
+        const match = r => !q || String(r.cr_number || '').toLowerCase().includes(q);
+        if (tab === 'live') {
+            head.innerHTML = '<tr><th>CR Number</th><th>RFID</th><th>Application</th><th>Deployment Status</th><th>Started At</th><th>Stopped At</th><th>Elapsed (total)</th><th>Running Status</th></tr>';
+            const rows = live.filter(match);
+            countEl.textContent = rows.length + ' timer' + (rows.length === 1 ? '' : 's');
+            body.innerHTML = rows.length ? rows.map(r =>
+                '<tr><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                '</td><td>' + esc(r.deployment_status) + '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                '</td><td data-live-id="' + r.deployment_id + '">' + fmtD(r.elapsed_seconds) + '</td><td>' + state(r) + '</td></tr>'
+            ).join('') : '<tr><td colspan="8" class="empty">No deployment has been started yet.</td></tr>';
+        } else {
+            head.innerHTML = '<tr><th>SR No.</th><th>CR Number</th><th>RFID</th><th>Application</th><th>Started At</th><th>Stopped At</th><th>Duration</th><th>Status</th></tr>';
+            const rows = history.filter(match);
+            countEl.textContent = rows.length + ' session' + (rows.length === 1 ? '' : 's');
+            body.innerHTML = rows.length ? rows.map((r, i) =>
+                '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.cr_number) + '</strong></td><td>' + esc(r.rfid) + '</td><td>' + esc(r.application_name) +
+                '</td><td>' + fmtT(r.started_at) + '</td><td>' + (r.is_running ? '—' : fmtT(r.stopped_at)) +
+                '</td><td data-hist-id="' + r.id + '">' + fmtD(r.duration_seconds) + '</td><td>' + state(r) + '</td></tr>'
+            ).join('') : '<tr><td colspan="8" class="empty">No Start/Stop history found.</td></tr>';
+        }
+    }
+
+    async function load() {
+        try {
+            const [a, b] = await Promise.all([
+                fetch('/api/running-status', {cache:'no-store'}).then(r => r.json()),
+                fetch('/api/running-history', {cache:'no-store'}).then(r => r.json())
+            ]);
+            if (a.success) { live = a.timers; liveCount.textContent = a.running_count;
+                badge.textContent = a.running_count; badge.hidden = !a.running_count; }
+            if (b.success) history = b.history;
+            render();
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="8" class="empty">Could not load running status.</td></tr>';
+        }
+    }
+
+    function setTab(t) {
+        tab = t;
+        tabLive.className = 'btn' + (t === 'live' ? '' : ' light');
+        tabHist.className = 'btn' + (t === 'history' ? '' : ' light');
+        render();
+    }
+
+    tabLive.addEventListener('click', () => setTab('live'));
+    tabHist.addEventListener('click', () => setTab('history'));
+    search.addEventListener('input', render);
+    document.getElementById('rsClear').addEventListener('click', () => { search.value = ''; render(); });
+
+    modal.addEventListener('modal:open', () => {
+        load(); setTab('live');
+        clearInterval(pollId); clearInterval(tickId);
+        pollId = setInterval(() => { if (modal.hidden) { clearInterval(pollId); clearInterval(tickId); } else load(); }, 10000);
+        tickId = setInterval(() => {   // tick running timers locally every second
+            if (modal.hidden) return;
+            live.forEach(r => { if (!r.is_running) return; r.elapsed_seconds++;
+                const c = body.querySelector('[data-live-id="' + r.deployment_id + '"]'); if (c) c.textContent = fmtD(r.elapsed_seconds); });
+            history.forEach(r => { if (!r.is_running) return; r.duration_seconds++;
+                const c = body.querySelector('[data-hist-id="' + r.id + '"]'); if (c) c.textContent = fmtD(r.duration_seconds); });
+        }, 1000);
+    });
+
+    load();   // preload so the Views badge shows the running count on page load
+})();
+</script>
+
+<script>
+(function liveRunningStatusPanel() {
+    const box = document.getElementById('rsLiveCards');
+    if (!box) return;
+    const sub = document.getElementById('rsLiveSub');
+    const cRun = document.getElementById('rsChipRun'), cStop = document.getElementById('rsChipStop'), cTot = document.getElementById('rsChipTot');
+    const MAX = 6;
+    let timers = [], fetchedAt = Date.now();
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,
+        c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const p2 = n => String(n).padStart(2, '0');
+    const fmtD = s => { s = Math.max(0, Math.floor(s)); return p2(Math.floor(s / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60); };
+    function fmtStart(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        const today = new Date().toDateString() === d.toDateString();
+        const t = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return today ? t : d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + t;
+    }
+    const elapsed = t => t.elapsed_seconds + (t.is_running ? (Date.now() - fetchedAt) / 1000 : 0);
+
+    function render() {
+        const run = timers.filter(t => t.is_running).length;
+        cRun.textContent = run; cStop.textContent = timers.length - run; cTot.textContent = timers.length;
+        if (!timers.length) {
+            box.innerHTML = '<div class="rs-empty" style="grid-column:1/-1"><b>No deployment started yet</b>Click Start on a deployment in the DevOps workspace and it will appear here live.</div>';
+            return;
+        }
+        const shown = timers.slice(0, MAX);
+        box.innerHTML = shown.map(t =>
+            '<div class="rs-card ' + (t.is_running ? 'running' : 'stopped') + '">' +
+              '<div class="rs-card-top"><span class="rs-cr" title="' + esc(t.cr_number) + '">' + esc(t.cr_number || '—') + '</span>' +
+              '<span class="rs-pill">' + (t.is_running ? 'LIVE' : 'DONE') + '</span></div>' +
+              '<div class="rs-app" title="' + esc(t.application_name) + '">' + esc(t.application_name || 'Application not set') + '</div>' +
+              '<div class="rs-time" data-rs-id="' + esc(t.deployment_id) + '">' + fmtD(elapsed(t)) + '</div>' +
+              '<div class="rs-meta">' + (t.is_running ? 'Started ' + esc(fmtStart(t.started_at)) : 'Stopped ' + esc(fmtStart(t.stopped_at))) + '</div>' +
+              '<div class="rs-bar"></div></div>'
+        ).join('') + (timers.length > MAX
+            ? '<button type="button" class="rs-more" data-open-modal="runningStatusModal">+' + (timers.length - MAX) + ' more · View all</button>' : '');
+    }
+
+    async function load() {
+        if (document.hidden) return;
+        try {
+            const r = await fetch('/api/running-status', { cache: 'no-store' });
+            const data = await r.json();
+            if (!data.success) throw new Error(data.message || 'failed');
+            timers = data.timers || [];
+            fetchedAt = Date.now();
+            sub.textContent = 'Updated ' + new Date().toLocaleTimeString() + ' · refreshes every 5s';
+            render();
+        } catch (e) {
+            sub.textContent = 'Could not refresh — retrying…';
+        }
+    }
+
+    setInterval(() => {   // tick running timers every second without refetching
+        if (document.hidden) return;
+        timers.forEach(t => {
+            if (!t.is_running) return;
+            const el = box.querySelector('[data-rs-id="' + t.deployment_id + '"]');
+            if (el) el.textContent = fmtD(elapsed(t));
+        });
+    }, 1000);
+    setInterval(load, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+    load();
+})();
+</script>
+
+<!-- ===== Page Assistant (answers only from data on this page; no AI model) ===== -->
+<button class="bot-launcher" id="botLauncher" type="button" aria-label="Open page assistant" aria-expanded="false" aria-controls="botWindow" title="Ask about this page">
+    <span class="bot-l-avatar" aria-hidden="true"><span class="bot-l-face">🤖</span><span class="bot-l-x">✕</span><i class="bot-l-dot"></i></span>
+</button>
+<section class="bot-window" id="botWindow" role="dialog" aria-label="Page assistant" hidden>
+    <header class="bot-head">
+        <div class="bot-avatar" aria-hidden="true">🤖</div>
+        <div class="bot-title"><strong>Page Assistant</strong><small>Answers only from this page's data</small></div>
+        <button class="bot-icon-btn" id="botClear" type="button" title="Clear chat" aria-label="Clear chat">⟲</button>
+        <button class="bot-icon-btn" id="botClose" type="button" aria-label="Close assistant">✕</button>
+    </header>
+    <div class="bot-msgs" id="botMsgs" aria-live="polite"></div>
+    <div class="bot-chips" id="botChips"></div>
+    <form class="bot-form" id="botForm" autocomplete="off">
+        <input id="botInput" type="text" placeholder="Ask about deployments, CRs, Jenkins…" aria-label="Ask a question about this page">
+        <button class="bot-send" type="submit" aria-label="Send">➤</button>
+    </form>
+    <div class="bot-foot">Rule-based helper · no AI model · reads only this page</div>
+</section>
+
+<script>
+(function pageAssistant() {
+    const $ = id => document.getElementById(id);
+    const win = $('botWindow'), msgs = $('botMsgs'), input = $('botInput'), launcher = $('botLauncher'), chipsBox = $('botChips');
+    if (!win || !msgs || !input || !launcher) return;
+
+    /* ---------- helpers ---------- */
+    const esc = s => String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const clean = t => String(t || '').replace(/\s+/g, ' ').trim();
+    const escRe = s => s.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+    const has = (q, term) => !!term && new RegExp('(^|[^a-z0-9])' + escRe(term.toLowerCase()) + '([^a-z0-9]|$)').test(q);
+    const pad = n => String(n).padStart(2, '0');
+    const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+    const dash = v => v ? v : '—';
+
+    /* ---------- read the page ---------- */
+    let RECORDS = [], HIST = [], BUILDS = [], METRICS = {};
+    function load() {
+        RECORDS = []; HIST = []; BUILDS = []; METRICS = {};
+        const table = document.getElementById('recordsTable');
+        if (table) {
+            const heads = [...table.querySelectorAll('thead th')].map(th => clean(th.textContent).replace(/[↕↓↑]/g, '').trim().toLowerCase());
+            const find = name => heads.findIndex(h => h.includes(name));
+            const c = {
+                cr: find('cr number'), rfid: find('rfid'), date: find('deployment date'), ss: find('slot start'), se: find('slot end'),
+                app: find('application'), team: find('team'), type: heads.indexOf('type'), ctype: find('change type'),
+                rel: find('released'), ver: find('verified'), req: find('requestor'), inc: find('incident'),
+                rb: find('roll back'), st: heads.indexOf('status')
+            };
+            table.querySelectorAll('tbody tr[data-status]').forEach(tr => {
+                const g = i => (i >= 0 && tr.cells[i]) ? clean(tr.cells[i].textContent) : '';
+                RECORDS.push({
+                    cr: g(c.cr), rfid: g(c.rfid), date: g(c.date), ss: g(c.ss), se: g(c.se), app: g(c.app), team: g(c.team),
+                    type: g(c.type), ctype: g(c.ctype), rel: g(c.rel), ver: g(c.ver), req: g(c.req), inc: g(c.inc),
+                    rb: g(c.rb) || 'No', st: g(c.st)
+                });
+            });
+        }
+        document.querySelectorAll('#changeHistoryTable tbody tr[data-history-row]').forEach(tr => {
+            const g = i => tr.cells[i] ? clean(tr.cells[i].textContent) : '';
+            HIST.push({ at: g(1), by: g(2), action: g(3), cr: g(4), rfid: g(5), field: g(8), oldV: g(9), newV: g(10) });
+        });
+        try { BUILDS = JSON.parse(document.getElementById('jenkinsData').textContent || '[]'); } catch (e) { BUILDS = []; }
+        document.querySelectorAll('.metric').forEach(m => {
+            const l = m.querySelector('.label'), n = m.querySelector('.number');
+            if (l && n) METRICS[clean(l.textContent).toLowerCase()] = clean(n.textContent);
+        });
+    }
+    function bstate(b) {
+        const s = String(b.status || '').toLowerCase();
+        if (b.building || ['running', 'in progress', 'in_progress', 'building'].includes(s)) return 'running';
+        if (['success', 'successful', 'stable'].includes(s)) return 'success';
+        if (['failure', 'failed', 'aborted', 'cancelled', 'unstable'].includes(s)) return 'failure';
+        return 'unknown';
+    }
+    const countBy = (arr, fn) => {
+        const m = new Map();
+        arr.forEach(x => { const k = fn(x) || 'Unknown'; m.set(k, (m.get(k) || 0) + 1); });
+        return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    };
+    const pairs = list => list.map(p => esc(p[0]) + ': <b>' + p[1] + '</b>').join(' · ');
+    const uniq = arr => [...new Set(arr.filter(Boolean))];
+
+    /* ---------- rendering pieces ---------- */
+    const crLink = cr => '<button type="button" class="bot-link" data-bot-q="details of ' + esc(cr) + '">' + esc(cr || '—') + '</button>';
+    const recLine = r => crLink(r.cr) + ' · ' + esc(dash(r.app)) + ' · ' + esc(dash(r.date)) + (r.ss ? ' ' + esc(r.ss) : '') + ' · ' + esc(dash(r.st));
+    const buildLine = b => crLink(b.cr) + ' · #' + esc(b.number || '—') + ' · ' + esc(b.build_type) + ' · ' + esc(b.platform) + ' · <b>' + esc(b.status) + '</b> · ' + esc(b.triggered_by);
+    function ul(items, limit) {
+        limit = limit || 8;
+        if (!items.length) return '';
+        return '<ul class="bot-list">' + items.slice(0, limit).map(i => '<li>' + i + '</li>').join('') + '</ul>' +
+            (items.length > limit ? '<div class="bot-more">…and ' + (items.length - limit) + ' more.</div>' : '');
+    }
+    const OPEN = {
+        records: { open: 'allRecordsModal', label: 'Open All Deployment Records' },
+        history: { open: 'changeHistoryModal', label: 'Open Change History' },
+        status: { open: 'jenkinsStatusModal', label: 'Open Jenkins Build Status' },
+        live: { open: 'jenkinsLiveModal', label: 'Open Jenkins Live Room' },
+        diff: { open: 'jenkinsDiffModal', label: 'Open Jenkins Build Diff' }
+    };
+
+    /* ---------- answers ---------- */
+    function greet() {
+        return { html: '<p>Hi! 👋 I\'m the page assistant. I can answer questions using only the data on this dashboard: deployments, CRs, Jenkins builds and change history.</p><p>Try one of the suggestions below, or type a CR number.</p>' };
+    }
+    function help() {
+        return {
+            html: '<p>I can help with:</p>' + ul([
+                '<b>CR / RFID lookup</b> – “details of CR1234”',
+                '<b>Counts &amp; status</b> – “how many failed deployments?”',
+                '<b>Dates</b> – “deployments today / this week / this month / 2026-11-10”',
+                '<b>Jenkins</b> – “which builds are running?”, “failed builds”, “who triggered builds?”',
+                '<b>Change history</b> – “latest changes”, “who changed CR1234?”',
+                '<b>People &amp; apps</b> – “deployments by &lt;name&gt;”, “records for &lt;application&gt;”',
+                '<b>Page guide</b> – “what is the Live Room?”, “open Build Diff”'
+            ], 12),
+            actions: [{ q: 'page overview', label: 'Page overview' }]
+        };
+    }
+    function overview() {
+        const total = RECORDS.length;
+        const st = countBy(RECORDS, r => r.st), ty = countBy(RECORDS, r => r.type);
+        const live = BUILDS.filter(b => bstate(b) === 'running');
+        const fail = BUILDS.filter(b => bstate(b) === 'failure');
+        const rb = RECORDS.filter(r => /^yes$/i.test(r.rb)).length;
+        let h = '<p><b>Dashboard overview</b></p>' + ul([
+            'Deployment records: <b>' + total + '</b>' + (METRICS['today'] ? ' · Today: <b>' + esc(METRICS['today']) + '</b> · This week: <b>' + esc(METRICS['this week'] || '—') + '</b> · This month: <b>' + esc(METRICS['this month'] || '—') + '</b>' : ''),
+            'By status: ' + (pairs(st) || '—'),
+            'By type: ' + (pairs(ty) || '—'),
+            'Roll back requests: <b>' + rb + '</b>',
+            'Jenkins executions: <b>' + BUILDS.length + '</b> (running <b>' + live.length + '</b>, failed <b>' + fail.length + '</b>)',
+            'Change history entries: <b>' + HIST.length + '</b>'
+        ], 10);
+        return { html: h, actions: [OPEN.records, OPEN.live] };
+    }
+    function crAnswer(recs) {
+        let h = '';
+        const actions = [];
+        recs.slice(0, 3).forEach(r => {
+            const bl = BUILDS.filter(b => b.cr === r.cr), hl = HIST.filter(x => x.cr === r.cr);
+            h += '<div class="bot-card"><h5>' + esc(r.cr) + (r.rfid ? ' · RFID ' + esc(r.rfid) : '') + '</h5><div class="bot-kv">' +
+                '<span>Application</span><b>' + esc(dash(r.app)) + '</b>' +
+                '<span>Date</span><b>' + esc(dash(r.date)) + '</b>' +
+                '<span>Slot</span><b>' + esc(r.ss ? r.ss + (r.se ? ' – ' + r.se : '') : '—') + '</b>' +
+                '<span>Status</span><b>' + esc(dash(r.st)) + '</b>' +
+                '<span>Type</span><b>' + esc(dash(r.type)) + (r.ctype ? ' · ' + esc(r.ctype) : '') + '</b>' +
+                '<span>Requestor</span><b>' + esc(dash(r.req)) + '</b>' +
+                '<span>Released by</span><b>' + esc(dash(r.rel)) + '</b>' +
+                '<span>Verified by</span><b>' + esc(dash(r.ver)) + '</b>' +
+                '<span>Incident</span><b>' + esc(dash(r.inc)) + '</b>' +
+                '<span>Roll back</span><b>' + esc(dash(r.rb)) + '</b>' +
+                '<span>Teams</span><b>' + esc(dash(r.team)) + '</b></div>' +
+                '<div class="bot-sub">JENKINS · ' + plural(bl.length, 'execution') + '</div>' +
+                (bl.length ? ul(bl.map(b => '#' + esc(b.number || '—') + ' · ' + esc(b.build_type) + ' · ' + esc(b.platform) + ' · <b>' + esc(b.status) + '</b> · ' + esc(b.triggered_by) + (b.start_time ? ' · ' + esc(String(b.start_time).replace('T', ' ')) : '')), 5) : '<div class="bot-more">No Jenkins executions linked.</div>') +
+                '<div class="bot-sub">CHANGES · ' + plural(hl.length, 'entry') + '</div>' +
+                (hl.length ? ul(hl.slice(0, 3).map(x => esc(x.at) + ' · ' + esc(x.by) + ' · ' + esc(x.field) + ': ' + esc(x.oldV) + ' → ' + esc(x.newV)), 3) : '<div class="bot-more">No recorded changes.</div>') +
+                '</div>';
+        });
+        if (recs.length > 3) h += '<div class="bot-more">Showing 3 of ' + recs.length + ' matching records.</div>';
+        actions.push({ filter: recs[0].cr, label: 'Show in Records table' });
+        if (BUILDS.some(b => b.cr === recs[0].cr)) actions.push(OPEN.status);
+        return { html: h, actions: actions };
+    }
+    function liveAnswer() {
+        const live = BUILDS.filter(b => bstate(b) === 'running');
+        if (!live.length) return { html: '<p>No Jenkins builds are running right now (based on the data loaded on this page).</p>', actions: [OPEN.status, { q: 'failed builds', label: 'Failed builds' }] };
+        const crs = uniq(live.map(b => b.cr));
+        return { html: '<p><b>' + plural(crs.length, 'CR') + '</b> running now (' + plural(live.length, 'build') + '):</p>' + ul(live.map(buildLine), 8), actions: [OPEN.live] };
+    }
+    function failedBuildsAnswer() {
+        const f = BUILDS.filter(b => bstate(b) === 'failure');
+        if (!f.length) return { html: '<p>No failed Jenkins builds on this page. 🎉</p>', actions: [OPEN.status] };
+        return { html: '<p><b>' + plural(f.length, 'failed build') + '</b> across ' + plural(uniq(f.map(b => b.cr)).length, 'CR') + ':</p>' + ul(f.map(buildLine), 8), actions: [OPEN.status, OPEN.diff] };
+    }
+    function buildsSummary(q, list, title) {
+        list = list || BUILDS;
+        if (!list.length) return { html: '<p>There are no Jenkins executions on this page.</p>' };
+        const by = countBy(list, b => bstate(b));
+        let h = '<p><b>' + (title || 'Jenkins summary') + '</b> – ' + plural(list.length, 'execution') + ' across ' + plural(uniq(list.map(b => b.cr)).length, 'CR') + '</p>';
+        if (/who|trigger|user|people/.test(q)) {
+            h += '<p>Triggered by: ' + pairs(countBy(list, b => b.triggered_by)) + '</p>';
+        } else if (/platform/.test(q)) {
+            h += '<p>By platform: ' + pairs(countBy(list, b => b.platform)) + '</p>';
+        } else {
+            h += '<p>By state: ' + pairs(by) + '</p><p>By type: ' + pairs(countBy(list, b => b.build_type)) + '</p><p>By platform: ' + pairs(countBy(list, b => b.platform)) + '</p>';
+        }
+        const sorted = list.slice().sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)));
+        h += '<div class="bot-sub">LATEST</div>' + ul(sorted.slice(0, 3).map(buildLine), 3);
+        return { html: h, actions: [OPEN.status, OPEN.live, OPEN.diff] };
+    }
+    function changesAnswer(q, who) {
+        let list = HIST;
+        let title = 'Latest changes';
+        if (who) { list = HIST.filter(x => x.by.toLowerCase().includes(who.toLowerCase())); title = 'Changes made by ' + esc(who); }
+        if (!list.length) return { html: '<p>No change history entries found' + (who ? ' for that person' : '') + '.</p>', actions: [OPEN.history] };
+        const sorted = list.slice().sort((a, b) => b.at.localeCompare(a.at));
+        return { html: '<p><b>' + title + '</b> (' + list.length + ' total):</p>' + ul(sorted.map(x => esc(x.at) + ' · <b>' + esc(x.by) + '</b> · ' + crLink(x.cr) + ' · ' + esc(x.field) + ': ' + esc(x.oldV) + ' → ' + esc(x.newV)), 6), actions: [OPEN.history] };
+    }
+    function recordsAnswer(list, title, extraActions) {
+        if (!list.length) return { html: '<p>No deployment records found for <b>' + esc(title) + '</b>.</p>', actions: [OPEN.records] };
+        return { html: '<p><b>' + plural(list.length, 'record') + '</b> – ' + esc(title) + ':</p>' + ul(list.map(recLine), 8), actions: (extraActions || []).concat([OPEN.records]) };
+    }
+
+    /* ---------- intent routing ---------- */
+    const VIEWS = [
+        { key: 'diff', re: /\b(diff|compare|comparison)\b/, about: 'The <b>Jenkins Build Diff</b> lets you pick any two Jenkins executions and compare build details and linked deployment records side by side. Differences are highlighted.' },
+        { key: 'live', re: /live room|live view|\bteams\b|meeting|\blive\b/, about: 'The <b>Jenkins Live Room</b> shows one tile per CR (like a video-call grid). Running CRs glow green with a ticking timer. Click a tile to see all details for that CR.' },
+        { key: 'status', re: /jenkins|build status|executions?/, about: '<b>Jenkins Build Status</b> lists every Jenkins execution linked to a deployment CR, with start/end time, type, platform, status, triggered user and a link to the build.' },
+        { key: 'history', re: /history|audit|change ?log/, about: '<b>Deployment &amp; Change History</b> shows who changed which field on a deployment, with previous and new values. You can search by name or CR number.' },
+        { key: 'records', re: /records|deployment table|all deployments?/, about: '<b>All Deployment Records</b> is the full table with search, status filters, date range, sorting and CSV/Excel export.' }
+    ];
+    function route(raw) {
+        const q = raw.toLowerCase().trim();
+        if (!q) return null;
+        load();
+
+        if (/^(hi+|hello|hey|namaste|good (morning|afternoon|evening))\b/.test(q) && q.split(/\s+/).length <= 4) return greet();
+        if (/\b(thanks|thank you|thx)\b/.test(q)) return { html: 'You\'re welcome! Ask me anything else about this page. 😊' };
+        if (/^(help|\?)$|what can you|what (all )?can i ask|how (do|can) i use (you|this)|capabilit/.test(q)) return help();
+        if (/(overview|summary|dashboard|stats|statistics|at a glance)/.test(q) && !/jenkins|build/.test(q)) return overview();
+
+        /* CR / RFID lookup */
+        const hit = RECORDS.filter(r => has(q, r.cr) || has(q, r.rfid));
+        if (hit.length) {
+            const asksBuilds = /jenkins|build|pipeline|execution/.test(q);
+            const res = crAnswer(hit);
+            if (asksBuilds && hit.length === 1) res.actions.push(OPEN.live);
+            return res;
+        }
+        const crLike = q.match(/\bcr[-_ ]?\d{3,}\b/i);
+        if (crLike) return { html: '<p>I couldn\'t find <b>' + esc(crLike[0].toUpperCase()) + '</b> on this page. Check the number or search the Records view.</p>', actions: [OPEN.records] };
+
+        /* page guide */
+        const asksOpen = /\b(open|launch|take me|go to|navigate|where (is|can i find)|how (do|can) i (see|open|view|find))\b/.test(q);
+        const asksWhat = /\b(what is|what's|what does|explain|tell me about|purpose|describe|how does)\b/.test(q);
+        const dataWords = /\b(which|how many|list|who|count|any)\b/.test(q);
+        if ((asksOpen || asksWhat) && !dataWords) {
+            const v = VIEWS.find(x => x.re.test(q));
+            if (v) return { html: '<p>' + v.about + '</p>', actions: [OPEN[v.key]] };
+        }
+        if (/button|menu|views|options|what can i open|where are/.test(q) && /(view|button|menu|open|options)/.test(q))
+            return { html: '<p>Tap the <b>Views</b> button (bottom-right) to open any of these views:</p>' + ul(VIEWS.map(v => v.about), 5), actions: Object.values(OPEN) };
+
+        /* Jenkins live / failed */
+        if (/(running|live|in[- ]progress|ongoing|currently|right now|active)/.test(q) && /(build|jenkins|cr\b|crs|pipeline|execution|deploy)/.test(q)) return liveAnswer();
+        if (/(fail|failed|failure|error|aborted)/.test(q) && /(build|jenkins|pipeline|execution)/.test(q)) return failedBuildsAnswer();
+        if (/(success|successful|passed)/.test(q) && /(build|jenkins|pipeline|execution)/.test(q)) {
+            const s = BUILDS.filter(b => bstate(b) === 'success');
+            return s.length ? { html: '<p><b>' + plural(s.length, 'successful build') + '</b>:</p>' + ul(s.map(buildLine), 8), actions: [OPEN.status] } : { html: '<p>No successful builds found on this page.</p>' };
+        }
+
+        /* date questions */
+        const now = new Date(), today = ymd(now);
+        const dmatch = q.match(/\b(\d{4})-(\d{2})-(\d{2})\b/) || null;
+        const dmy = q.match(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})\b/);
+        let range = null, label = '';
+        if (dmatch) { range = [dmatch[0], dmatch[0]]; label = dmatch[0]; }
+        else if (dmy) { const s = dmy[3] + '-' + pad(dmy[2]) + '-' + pad(dmy[1]); range = [s, s]; label = s; }
+        else if (/\btoday\b/.test(q)) { range = [today, today]; label = 'today (' + today + ')'; }
+        else if (/\btomorrow\b/.test(q)) { const d = new Date(now); d.setDate(d.getDate() + 1); range = [ymd(d), ymd(d)]; label = 'tomorrow (' + ymd(d) + ')'; }
+        else if (/\byesterday\b/.test(q)) { const d = new Date(now); d.setDate(d.getDate() - 1); range = [ymd(d), ymd(d)]; label = 'yesterday (' + ymd(d) + ')'; }
+        else if (/\b(this|current) week\b|\bweek\b/.test(q)) {
+            const s = new Date(now.getFullYear(), now.getMonth(), now.getDate()); s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
+            const e = new Date(s); e.setDate(e.getDate() + 6); range = [ymd(s), ymd(e)]; label = 'this week (' + ymd(s) + ' to ' + ymd(e) + ')';
+        }
+        else if (/\b(this|current) month\b|\bmonth\b/.test(q)) {
+            const s = new Date(now.getFullYear(), now.getMonth(), 1), e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            range = [ymd(s), ymd(e)]; label = 'this month';
+        }
+        if (range && !/(change|modified|history)/.test(q)) {
+            const list = RECORDS.filter(r => r.date >= range[0] && r.date <= range[1]);
+            const res = recordsAnswer(list, 'scheduled ' + label);
+            if (list.length) res.html = '<p>' + plural(list.length, 'deployment') + ' ' + esc(label) + ' · ' + esc(pairs(countBy(list, r => r.st)).replace(/<[^>]+>/g, '')) + '</p>' + ul(list.map(recLine), 8);
+            return res;
+        }
+
+        /* roll back / incidents */
+        if (/roll ?back/.test(q)) {
+            const rb = RECORDS.filter(r => /^yes$/i.test(r.rb));
+            return rb.length ? recordsAnswer(rb, 'Roll Back = Yes') : { html: '<p>No rollback requests found on this page (Roll Back = Yes).</p>', actions: [OPEN.records] };
+        }
+        if (/incident/.test(q)) {
+            const inc = RECORDS.filter(r => r.inc && r.inc !== '—');
+            return inc.length ? recordsAnswer(inc, 'with an incident number') : { html: '<p>No deployment records have an incident number.</p>' };
+        }
+
+        /* people (requestor / released / verified / triggered) */
+        const people = uniq(RECORDS.flatMap(r => [r.req, r.rel, r.ver]).concat(BUILDS.map(b => b.triggered_by)).filter(n => n && n !== 'Unknown' && n.length >= 3));
+        const person = people.find(n => has(q, n));
+        if (/(change|modified|edited|updated)/.test(q) && /(who|by|latest|last|recent|history|changes)/.test(q)) return changesAnswer(q, person);
+        if (person) {
+            const pl = person.toLowerCase();
+            const recs = RECORDS.filter(r => [r.req, r.rel, r.ver].some(n => n.toLowerCase() === pl));
+            const bl = BUILDS.filter(b => String(b.triggered_by).toLowerCase() === pl);
+            let h = '<p><b>' + esc(person) + '</b>: ' + plural(recs.length, 'deployment record') + ' (requestor / released / verified) and ' + plural(bl.length, 'Jenkins build') + ' triggered.</p>';
+            if (recs.length) h += '<div class="bot-sub">RECORDS</div>' + ul(recs.map(recLine), 5);
+            if (bl.length) h += '<div class="bot-sub">BUILDS</div>' + ul(bl.map(buildLine), 5);
+            return { html: h, actions: [{ filter: person, label: 'Show in Records table' }, OPEN.status] };
+        }
+
+        /* application / team */
+        const apps = uniq(RECORDS.map(r => r.app));
+        const app = apps.find(a => has(q, a));
+        if (app) {
+            const list = RECORDS.filter(r => r.app === app), bl = BUILDS.filter(b => list.some(r => r.cr === b.cr));
+            const res = recordsAnswer(list, 'application ' + app, [{ filter: app, label: 'Show in Records table' }]);
+            res.html += '<p>Linked Jenkins executions: <b>' + bl.length + '</b></p>';
+            return res;
+        }
+        const teams = uniq(RECORDS.flatMap(r => r.team.split('|').map(t => clean(t.split(':')[0]))).filter(t => t && !/not allocated/i.test(t)));
+        const team = teams.find(t => has(q, t));
+        if (team) {
+            const list = RECORDS.filter(r => r.team.toLowerCase().includes(team.toLowerCase()));
+            return recordsAnswer(list, 'team ' + team);
+        }
+
+        /* status / type of deployment records */
+        const statuses = uniq(RECORDS.map(r => r.st));
+        const stHits = statuses.filter(s => {
+            const sl = s.toLowerCase(), last = (sl.split(' ').filter(w => w !== 'deployment').pop() || sl);
+            return has(q, sl) || (last.length >= 4 && q.includes(last.slice(0, 5)) && !(/(build|jenkins)/.test(q)));
+        });
+        if (stHits.length && !/(jenkins|build)/.test(q)) {
+            const list = RECORDS.filter(r => stHits.includes(r.st));
+            return recordsAnswer(list, 'status ' + stHits.join(' / '));
+        }
+        const types = uniq(RECORDS.map(r => r.type));
+        const tHit = types.find(t => t.length >= 3 && has(q, t));
+        if (tHit) return recordsAnswer(RECORDS.filter(r => r.type === tHit), 'type ' + tHit);
+
+        /* generic Jenkins / changes / totals */
+        if (/(jenkins|build|pipeline|execution|trigger)/.test(q)) return buildsSummary(q);
+        if (/(change|changes|modified|audit|history|edited)/.test(q)) return changesAnswer(q, null);
+        if (/(how many|total|count|number of)/.test(q) && /(deploy|record|cr)/.test(q)) {
+            return { html: '<p>There are <b>' + RECORDS.length + '</b> deployment records. By status: ' + (pairs(countBy(RECORDS, r => r.st)) || '—') + '</p>', actions: [OPEN.records] };
+        }
+        if (/(application|app)s?\b/.test(q) && /(list|which|all|how many)/.test(q)) {
+            return { html: '<p>Applications on this page (' + apps.length + '): ' + (apps.map(esc).join(', ') || '—') + '</p>' };
+        }
+        if (/(status(es)?|breakdown|types?)/.test(q) && /(list|all|which|breakdown|how)/.test(q)) return overview();
+
+        return {
+            html: '<p>I can only answer using the data on this page, and I couldn\'t match that question. Try asking about a <b>CR number</b>, <b>deployment status</b>, <b>dates</b>, <b>Jenkins builds</b> or <b>change history</b>.</p>',
+            actions: [{ q: 'help', label: 'What can I ask?' }, { q: 'page overview', label: 'Page overview' }]
+        };
+    }
+
+    /* ---------- chat UI ---------- */
+    const actBtn = a => a.open
+        ? '<button type="button" class="bot-act" data-open-modal="' + a.open + '">' + esc(a.label) + '</button>'
+        : (a.filter !== undefined
+            ? '<button type="button" class="bot-act" data-bot-filter="' + esc(a.filter) + '">' + esc(a.label) + '</button>'
+            : '<button type="button" class="bot-act" data-bot-q="' + esc(a.q) + '">' + esc(a.label) + '</button>');
+    function addMsg(role, html, actions) {
+        const d = document.createElement('div');
+        d.className = 'bot-msg ' + role;
+        d.innerHTML = '<div class="bot-bubble">' + html + (actions && actions.length ? '<div class="bot-actions">' + actions.map(actBtn).join('') + '</div>' : '') + '</div>';
+        msgs.appendChild(d);
+        msgs.scrollTop = msgs.scrollHeight;
+        return d;
+    }
+    function send(text) {
+        text = String(text || '').trim();
+        if (!text) return;
+        addMsg('user', esc(text));
+        input.value = '';
+        const typing = addMsg('bot', '<span class="bot-typing"><i></i><i></i><i></i></span>');
+        setTimeout(() => {
+            typing.remove();
+            let res;
+            try { res = route(text); } catch (err) { res = { html: '<p>Sorry, something went wrong while reading this page. Please try rephrasing.</p>' }; }
+            if (!res) res = greet();
+            addMsg('bot', res.html, res.actions);
+        }, 320);
+    }
+    function suggestions() {
+        load();
+        const list = ['Page overview', 'Which builds are running?', 'Failed builds', 'Latest changes', 'Rollback requests', 'Deployments this week', 'What is the Live Room?'];
+        if (RECORDS[0] && RECORDS[0].cr) list.splice(1, 0, 'Details of ' + RECORDS[0].cr);
+        chipsBox.innerHTML = list.map(t => '<button type="button" class="bot-chip" data-bot-q="' + esc(t) + '">' + esc(t) + '</button>').join('');
+    }
+    function reset() { msgs.innerHTML = ''; const g = greet(); addMsg('bot', g.html); suggestions(); }
+    function setOpen(open) {
+        win.hidden = !open;
+        launcher.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) { if (!msgs.children.length) reset(); input.focus(); }
+    }
+
+    launcher.addEventListener('click', () => setOpen(win.hidden));
+    $('botClose').addEventListener('click', () => { setOpen(false); launcher.focus(); });
+    $('botClear').addEventListener('click', reset);
+    $('botForm').addEventListener('submit', e => { e.preventDefault(); send(input.value); });
+    win.addEventListener('click', e => {
+        const q = e.target.closest('[data-bot-q]');
+        if (q) { send(q.dataset.botQ); return; }
+        const f = e.target.closest('[data-bot-filter]');
+        if (f) {
+            const s = document.getElementById('search');
+            if (s) { s.value = f.dataset.botFilter; s.dispatchEvent(new Event('input', { bubbles: true })); }
+            const opener = document.getElementById('toggleAllRecords');
+            if (opener) opener.click();
+        }
+    });
+    document.addEventListener('click', e => {
+        const fab = document.getElementById('mgrFab');
+        if (!win.hidden && fab && fab.contains(e.target) && e.target.closest('#fabMain')) setOpen(false);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !win.hidden && win.contains(document.activeElement)) { setOpen(false); launcher.focus(); }
+    });
+})();
+
+</script>
+
+</body>
+</html>

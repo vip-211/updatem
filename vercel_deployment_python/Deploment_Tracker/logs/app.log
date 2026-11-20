@@ -1,6 +1,65 @@
-2026-11-18 11:02:41,100 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+2026-11-19 11:22:55,440 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:5050
-2026-11-18 11:02:41,116 INFO werkzeug: [33mPress CTRL+C to quit[0m
-2026-11-18 12:19:28,131 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+2026-11-19 11:22:55,445 INFO werkzeug: [33mPress CTRL+C to quit[0m
+2026-11-19 11:23:17,154 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:23:17] "GET / HTTP/1.1" 200 -
+2026-11-19 11:23:17,710 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:23:17] "GET /static/images/rbl_logo.png HTTP/1.1" 200 -
+2026-11-19 11:23:35,585 ERROR tracker.core: Unable to load manager dashboard
+Traceback (most recent call last):
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\manager.py", line 60, in manager_dashboard
+    conn = get_connection()
+           ^^^^^^^^^^^^^^^^
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\core.py", line 79, in get_connection
+    host=os.environ["DB_HOST"],
+         ~~~~~~~~~~^^^^^^^^^^^
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'DB_HOST'
+2026-11-19 11:23:35,585 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:23:35] "[35m[1mGET /manager HTTP/1.1[0m" 500 -
+2026-11-19 11:23:50,996 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:23:50] "[33mGET /governance-tracker HTTP/1.1[0m" 404 -
+2026-11-19 11:24:05,495 ERROR tracker.core: Could not load Released By users
+Traceback (most recent call last):
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\governance.py", line 98, in get_released_by_users
+    conn = get_connection()
+           ^^^^^^^^^^^^^^^^
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\core.py", line 79, in get_connection
+    host=os.environ["DB_HOST"],
+         ~~~~~~~~~~^^^^^^^^^^^
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'DB_HOST'
+2026-11-19 11:24:05,496 ERROR tracker.core: Could not load audit user registry; run audit_user_registry.sql
+Traceback (most recent call last):
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\audit_users.py", line 50, in get_audit_user_emails
+    conn = get_connection()
+           ^^^^^^^^^^^^^^^^
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\core.py", line 79, in get_connection
+    host=os.environ["DB_HOST"],
+         ~~~~~~~~~~^^^^^^^^^^^
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'DB_HOST'
+2026-11-19 11:24:05,553 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:24:05] "GET /governance_tracker HTTP/1.1" 200 -
+2026-11-19 11:24:05,634 ERROR tracker.core: Unable to load pending requests
+Traceback (most recent call last):
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\governance.py", line 545, in pending_deployments
+    conn = get_connection()
+           ^^^^^^^^^^^^^^^^
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\core.py", line 79, in get_connection
+    host=os.environ["DB_HOST"],
+         ~~~~~~~~~~^^^^^^^^^^^
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'DB_HOST'
+2026-11-19 11:24:05,639 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:24:05] "[35m[1mGET /api/pending-deployments HTTP/1.1[0m" 500 -
+2026-11-19 11:24:05,640 ERROR tracker.core: Unable to load deployments for selected date 2026-11-19
+Traceback (most recent call last):
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\governance.py", line 616, in deployments_by_date
+    conn = get_connection()
+           ^^^^^^^^^^^^^^^^
+  File "F:\govter\govter\vercel_deployment_python\Deploment_Tracker\tracker\core.py", line 79, in get_connection
+    host=os.environ["DB_HOST"],
+         ~~~~~~~~~~^^^^^^^^^^^
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'DB_HOST'
+2026-11-19 11:24:05,646 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:24:05] "[35m[1mGET /api/deployments-by-date?date=2026-11-19 HTTP/1.1[0m" 500 -
+2026-11-19 11:25:03,187 INFO werkzeug: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:5050
-2026-11-18 12:19:28,131 INFO werkzeug: [33mPress CTRL+C to quit[0m
+2026-11-19 11:25:03,187 INFO werkzeug: [33mPress CTRL+C to quit[0m
+2026-11-19 11:25:06,617 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:25:06] "GET / HTTP/1.1" 200 -
+2026-11-19 11:25:06,828 INFO werkzeug: 127.0.0.1 - - [19/Nov/2026 11:25:06] "[36mGET /static/images/rbl_logo.png HTTP/1.1[0m" 304 -

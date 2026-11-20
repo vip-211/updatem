@@ -1,0 +1,9 @@
+2026-10-13 18:11:47,416 INFO daily_deployment_report: Building daily report for 2026-10-13; manager recipient count=1
+2026-10-13 18:11:47,760 INFO daily_deployment_report: Excel report built: F:\RBL1\rbl2 update\RBL backup with email sending\RBL\Deploment_Tracker\reports\Deployment_Report_2026-10-13.xlsx | total=5 successful=3 failed=0 automation=3 manual=2
+2026-10-13 18:11:52,470 INFO daily_deployment_report: Daily report emailed successfully to the configured manager recipient(s) only.
+2026-10-14 10:22:26,362 INFO daily_deployment_report: Building daily report for 2026-10-14; manager recipient count=1
+2026-10-14 10:22:26,726 INFO daily_deployment_report: Excel report built: F:\RBL1\rbl2 update\RBL backup with email sending\RBL\Deploment_Tracker\reports\Deployment_Report_2026-10-14.xlsx | total=1 successful=1 failed=0 automation=1 manual=0
+2026-10-14 10:22:34,035 INFO daily_deployment_report: Daily report emailed successfully to the configured manager recipient(s) only.
+2026-10-14 10:26:31,048 INFO daily_deployment_report: Building daily report for 2026-10-14; manager recipient count=1
+2026-10-14 10:26:31,286 INFO daily_deployment_report: Excel report built: F:\RBL1\rbl2 update\RBL backup with email sending\RBL\Deploment_Tracker\reports\Deployment_Report_2026-10-14.xlsx | total=1 successful=1 failed=0 automation=1 manual=0
+2026-10-14 10:26:39,249 INFO daily_deployment_report: Daily report emailed successfully to the configured manager recipient(s) only.
